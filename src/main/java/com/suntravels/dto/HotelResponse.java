@@ -22,7 +22,7 @@ public class HotelResponse {
 
     private String email;
 
-    private Integer starRating;
+    private Byte starRating;
 
     private HotelStatus status;
 
@@ -96,13 +96,11 @@ public class HotelResponse {
         this.email = email;
     }
 
-    public Integer getStarRating()
-    {
+    public Byte getStarRating() {
         return starRating;
     }
 
-    public void setStarRating( Integer starRating )
-    {
+    public void setStarRating(Byte starRating) {
         this.starRating = starRating;
     }
 

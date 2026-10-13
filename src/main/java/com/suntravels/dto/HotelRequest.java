@@ -36,7 +36,7 @@ public class HotelRequest {
     @NotNull(message = "Star rating is required")
     @Min(value = 1, message = "Star rating must be at least 1")
     @Max(value = 5, message = "Star rating cannot exceed 5")
-    private Integer starRating;
+    private Byte starRating;
 
     @NotNull(message = "Hotel status is required")
     private HotelStatus status;
@@ -101,13 +101,11 @@ public class HotelRequest {
         this.email = email;
     }
 
-    public Integer getStarRating()
-    {
+    public Byte getStarRating() {
         return starRating;
     }
 
-    public void setStarRating( Integer starRating )
-    {
+    public void setStarRating(Byte starRating) {
         this.starRating = starRating;
     }
 

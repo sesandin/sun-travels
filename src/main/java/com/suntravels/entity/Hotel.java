@@ -44,7 +44,7 @@ public class Hotel {
     @Column(name = "status", nullable = false, length = 20)
     private HotelStatus status;
 
-    protected Hotel() {
+    public Hotel() {
         // Required by JPA.
     }
 
