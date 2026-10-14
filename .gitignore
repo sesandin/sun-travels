@@ -1,50 +1,206 @@
-HELP.md
+
+# ============================================================
+# SUN TRAVELS - FULL-STACK MONOREPO
+# Backend: Java 21 + Spring Boot + Maven
+# Frontend: Angular 22 + TypeScript + npm
+# Database: MySQL
+# ============================================================
+
+
+# ============================================================
+# 1. SPRING BOOT / MAVEN
+# ============================================================
+
+# Maven build output
 target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+**/target/
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+# Java compiled files
+*.class
 
-### IntelliJ IDEA ###
-.idea
-*.iws
+# Packaged applications
+*.jar
+*.war
+*.ear
+
+# Keep Maven wrapper JAR if present
+!.mvn/wrapper/maven-wrapper.jar
+!backend/.mvn/wrapper/maven-wrapper.jar
+
+# Maven release and temporary files
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+dependency-reduced-pom.xml
+
+# Maven logs
+mvn-debug.log
+mvn-debug.log.*
+
+
+# ============================================================
+# 2. ANGULAR / NODE.JS / NPM
+# ============================================================
+
+# Installed dependencies
+node_modules/
+**/node_modules/
+
+# Angular build cache
+.angular/
+**/.angular/
+
+# Compiled frontend output
+/frontend/dist/
+dist/
+
+# Test coverage
+coverage/
+**/coverage/
+
+# Temporary frontend files
+*.tsbuildinfo
+*.local
+
+
+# ============================================================
+# 3. IDE CONFIGURATION
+# ============================================================
+
+# IntelliJ IDEA
+.idea/
+**/.idea/
 *.iml
 *.ipr
+*.iws
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
+# VS Code
 .vscode/
+**/.vscode/
 
-# Environment and local secrets
+# Eclipse / Spring Tool Suite
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated/
+.springBeans
+.sts4-cache/
+
+# NetBeans
+nbproject/private/
+nbbuild/
+nbdist/
+.nb-gradle/
+
+
+# ============================================================
+# 4. ENVIRONMENT VARIABLES AND SECRETS
+# ============================================================
+
+# Environment variable files
 .env
 .env.*
+**/.env
+**/.env.*
+
+# Permit safe environment templates
 !.env.example
+!**/.env.example
+
+# Local Spring Boot configuration containing secrets
 application-local.properties
 application-secret.properties
+application-local.yml
+application-secret.yml
+application-local.yaml
+application-secret.yaml
 
-# Local database backups and temporary files
+# Certificates, private keys and keystores
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Local credential files
+credentials.json
+secrets.json
+
+
+# ============================================================
+# 5. DATABASE BACKUPS AND LOCAL DATA
+# ============================================================
+
+# Database dumps and backups
 *.sql.bak
+*.sql.gz
+*.dump
+*.backup
+
+# Local database files
+*.db
+*.sqlite
+*.sqlite3
+
+
+# ============================================================
+# 6. LOGS AND TEMPORARY FILES
+# ============================================================
+
 *.log
+logs/
 *.tmp
+*.temp
+*.swp
+*.swo
+*~
 
-# Operating system files
-.DS_Store
+# Node and npm logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Test reports
+test-results/
+playwright-report/
+
+
+# ============================================================
+# 7. OPERATING SYSTEM FILES
+# ============================================================
+
+# Windows
 Thumbs.db
+Thumbs.db:encryptable
+Desktop.ini
+$RECYCLE.BIN/
 
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux / editors
+.directory
+
+
+# ============================================================
+# 8. FILES THAT MUST REMAIN VERSION CONTROLLED
+# ============================================================
+
+# Do NOT ignore these:
+# backend/pom.xml
+# backend/mvnw
+# backend/mvnw.cmd
+# backend/.mvn/wrapper/maven-wrapper.properties
+# frontend/package.json
+# frontend/package-lock.json
+# frontend/angular.json
+# frontend/src/
+# backend/src/
+# README.md
+# .gitignore

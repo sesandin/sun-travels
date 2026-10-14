@@ -1,0 +1,18 @@
+<form [formGroup]="form" (ngSubmit)="submit()">
+  <div class="form-heading"><p class="eyebrow">HOTEL PARTNERS</p><h2 id="editor-title">{{ editing ? 'Edit hotel' : 'Register a hotel' }}</h2><p>{{ editing ? 'Update partner details. ID and status are preserved.' : 'Add a hotel partner to your accommodation network.' }}</p></div>
+  @if (error()) { <p class="error-message" role="alert">{{ error() }}</p> }
+  <fieldset [disabled]="busy()">
+    <div class="fields">
+      @for (field of fields; track field.key) {
+        <div [class.wide]="field.key === 'address' || field.key === 'name'">
+          <label [for]="field.key">{{ field.label }} <span>{{ field.required ? '*' : '(optional)' }}</span></label>
+          <input [id]="field.key" [type]="field.type" [formControlName]="field.key" [attr.aria-required]="field.required" [attr.aria-invalid]="!!validationMessage(field.key)" [attr.aria-describedby]="field.key + '-error'" />
+          <small class="field-error" [id]="field.key + '-error'">{{ validationMessage(field.key) }}</small>
+        </div>
+      }
+      <div><label for="starRating">Star rating *</label><select id="starRating" formControlName="starRating">@for (rating of [1,2,3,4,5]; track rating) { <option [ngValue]="rating">{{ rating }} {{ rating === 1 ? 'star' : 'stars' }}</option> }</select><small class="field-error">{{ validationMessage('starRating') }}</small></div>
+      @if (!editing) { <div><label for="status">Status *</label><select id="status" formControlName="status"><option value="ACTIVE">Active</option><option value="INACTIVE">Inactive</option></select><small class="field-error">{{ validationMessage('status') }}</small></div> }
+    </div>
+  </fieldset>
+  <div class="form-footer"><button type="button" class="secondary" [disabled]="busy()" (click)="cancelled.emit()">Cancel</button><button type="submit" class="primary" [disabled]="busy() || form.invalid">{{ busy() ? 'Saving…' : editing ? 'Save changes' : 'Register hotel' }}</button></div>
+</form>

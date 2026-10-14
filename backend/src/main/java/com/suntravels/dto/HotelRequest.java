@@ -20,17 +20,22 @@ public class HotelRequest {
     private String name;
 
     @NotBlank(message = "Address is required")
+    @Size(max = 255)
     private String address;
 
     @NotBlank(message = "City is required")
+    @Size(max = 100)
     private String city;
 
     @NotBlank(message = "Country is required")
+    @Size(max = 100)
     private String country;
 
+    @Size(max = 20)
     private String phone;
 
     @Email(message = "Invalid email format")
+    @Size(max = 100)
     private String email;
 
     @NotNull(message = "Star rating is required")
