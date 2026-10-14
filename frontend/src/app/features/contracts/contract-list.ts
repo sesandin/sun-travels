@@ -1,0 +1,276 @@
+import {
+  Component,
+  DestroyRef,
+  ElementRef,
+  Injector,
+  OnInit,
+  afterNextRender,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { ActivatedRoute, ParamMap } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  FormControl,
+  FormGroup,
+  ReactiveFormsModule,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
+import { Contract, ContractStatus } from '../../models/contract.model';
+import { Hotel } from '../../models/hotel.model';
+import { ContractService } from '../../services/contract.service';
+import { HotelService } from '../../services/hotel.service';
+import { OfferingPanel } from './offering-panel';
+import { apiError } from '../../services/api-error';
+const decimal: ValidatorFn = (c) =>
+  /^\d{1,3}(\.\d{1,2})?$/.test(String(c.value)) ? null : { decimal: true };
+const dateRange: ValidatorFn = (group) => {
+  const from = group.get('validFrom')?.value,
+    to = group.get('validTo')?.value;
+  return from && to && from > to ? { dateRange: true } : null;
+};
+@Component({
+  selector: 'app-contract-list',
+  imports: [ReactiveFormsModule, OfferingPanel],
+  templateUrl: './contract-list.html',
+  styleUrl: './contract-list.scss',
+})
+export class ContractList implements OnInit {
+  private readonly route = inject(ActivatedRoute, { optional: true });
+  private detailRequest?: Subscription;
+  readonly linkedOffering = signal<number | null>(null);
+  readonly linkError = signal('');
+  private readonly service = inject(ContractService);
+  private readonly hotelService = inject(HotelService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private readonly editor = viewChild<ElementRef<HTMLElement>>('editor');
+  readonly contracts = signal<Contract[]>([]);
+  readonly hotels = signal<Hotel[]>([]);
+  readonly loading = signal(false);
+  readonly hotelsLoading = signal(false);
+  readonly saving = signal(false);
+  readonly error = signal('');
+  readonly hotelError = signal('');
+  readonly submissionError = signal('');
+  readonly notice = signal('');
+  readonly query = signal('');
+  readonly statusFilter = signal('');
+  readonly statuses: ContractStatus[] = ['DRAFT', 'APPROVED', 'SUSPENDED', 'TERMINATED'];
+  readonly selected = signal<Contract | null>(null);
+  readonly mode = signal<
+    | 'create'
+    | 'edit'
+    | 'markup'
+    | 'details'
+    | 'approve'
+    | 'reapprove'
+    | 'suspend'
+    | 'terminate'
+    | null
+  >(null);
+  readonly detailsLoading = signal(false);
+  readonly filtered = computed(() => {
+    const q = this.query().trim().toLowerCase();
+    return this.contracts().filter(
+      (c) =>
+        (!this.statusFilter() || c.status === this.statusFilter()) &&
+        [c.contractCode, c.hotelName, c.currencyCode].some((v) => v.toLowerCase().includes(q)),
+    );
+  });
+  readonly form = new FormGroup(
+    {
+      hotelId: new FormControl<number | null>(null, [Validators.required, Validators.min(1)]),
+      validFrom: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+      validTo: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
+      markupPercentage: new FormControl<number | null>(0, [Validators.required, decimal]),
+      currencyCode: new FormControl('', {
+        nonNullable: true,
+        validators: [Validators.required, Validators.pattern(/^[A-Z]{3}$/)],
+      }),
+    },
+    { validators: dateRange },
+  );
+  readonly markupForm = new FormGroup({
+    markupPercentage: new FormControl<number | null>(0, [Validators.required, decimal]),
+  });
+  ngOnInit() {
+    this.loadContracts();
+    this.loadHotels();
+    this.route?.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((params) => this.openLink(params));
+  }
+  loadContracts() {
+    if (this.loading()) return;
+    this.loading.set(true);
+    this.error.set('');
+    this.service
+      .getAllContracts()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (rows) => {
+          this.contracts.set(rows);
+          this.loading.set(false);
+        },
+        error: (e) => {
+          this.error.set(apiError(e));
+          this.loading.set(false);
+        },
+      });
+  }
+  loadHotels() {
+    if (this.hotelsLoading()) return;
+    this.hotelsLoading.set(true);
+    this.hotelError.set('');
+    this.hotelService
+      .getAllHotels()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (rows) => {
+          this.hotels.set(rows);
+          this.hotelsLoading.set(false);
+        },
+        error: (e) => {
+          this.hotelError.set(apiError(e));
+          this.hotelsLoading.set(false);
+        },
+      });
+  }
+  openEditor(row: Contract | null = null) {
+    if (this.saving() || this.detailsLoading()) return;
+    if (row && row.status !== 'DRAFT' && row.status !== 'APPROVED') return;
+    this.selected.set(row);
+    this.mode.set(!row ? 'create' : row.status === 'DRAFT' ? 'edit' : 'markup');
+    this.submissionError.set('');
+    this.notice.set('');
+    this.form.reset({
+      hotelId: row?.hotelId ?? null,
+      validFrom: row?.validFrom ?? '',
+      validTo: row?.validTo ?? '',
+      markupPercentage: row?.markupPercentage ?? 0,
+      currencyCode: row?.currencyCode ?? '',
+    });
+    this.markupForm.reset({ markupPercentage: row?.markupPercentage ?? 0 });
+    this.focusEditor();
+  }
+  showDetails(row: Contract) {
+    if (this.saving() || this.detailsLoading()) return;
+    this.linkedOffering.set(null);
+    this.linkError.set('');
+    this.fetchDetails(row.contractId, row);
+  }
+  private openLink(params: ParamMap) {
+    if (!params.has('contractId') && !params.has('offeringId')) return;
+    const parseId = (value: string | null) =>
+      value && /^[1-9]\d*$/.test(value) && Number(value) <= 2147483647 ? Number(value) : null;
+    const contractId = parseId(params.get('contractId')),
+      offeringId = parseId(params.get('offeringId'));
+    if (!contractId || (params.has('offeringId') && !offeringId)) {
+      this.linkError.set(
+        'Invalid contract or offering link. Use the Room Offerings directory to open the record.',
+      );
+      return;
+    }
+    if (this.saving()) {
+      this.linkError.set('Finish the current save before opening another contract.');
+      return;
+    }
+    this.linkError.set('');
+    this.linkedOffering.set(offeringId);
+    this.fetchDetails(contractId);
+  }
+  private fetchDetails(id: number, row: Contract | null = null) {
+    this.detailRequest?.unsubscribe();
+    this.selected.set(row);
+    this.mode.set('details');
+    this.submissionError.set('');
+    this.detailsLoading.set(true);
+    this.focusEditor();
+    this.detailRequest = this.service
+      .getContractById(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (detail) => {
+          this.selected.set(detail);
+          this.detailsLoading.set(false);
+        },
+        error: (e) => {
+          this.submissionError.set(apiError(e));
+          this.detailsLoading.set(false);
+        },
+      });
+  }
+  closeEditor() {
+    if (!this.saving() && !this.detailsLoading()) this.mode.set(null);
+  }
+  confirmAction(row: Contract, action: 'approve' | 'reapprove' | 'suspend' | 'terminate') {
+    if (this.saving() || this.detailsLoading()) return;
+    if (
+      (action === 'approve' && row.status !== 'DRAFT') ||
+      (action === 'reapprove' && row.status !== 'SUSPENDED')
+    )
+      return;
+    if ((action === 'suspend' && row.status !== 'APPROVED') || row.status === 'TERMINATED') return;
+    this.selected.set(row);
+    this.mode.set(action);
+    this.submissionError.set('');
+    this.notice.set('');
+    this.focusEditor();
+  }
+  private focusEditor() {
+    afterNextRender(() => this.editor()?.nativeElement.focus(), { injector: this.injector });
+  }
+  save() {
+    if (this.saving() || this.detailsLoading()) return;
+    const mode = this.mode(),
+      row = this.selected();
+    let request;
+    if (mode === 'markup' && row?.status === 'APPROVED') {
+      this.markupForm.markAllAsTouched();
+      if (this.markupForm.invalid) return;
+      request = this.service.updateMarkup(
+        row.contractId,
+        this.markupForm.getRawValue().markupPercentage!,
+      );
+    } else if (mode === 'create' || (mode === 'edit' && row?.status === 'DRAFT')) {
+      this.form.markAllAsTouched();
+      if (this.form.invalid || this.hotelsLoading() || this.hotelError()) return;
+      const raw = this.form.getRawValue();
+      const payload = { ...raw, hotelId: raw.hotelId!, markupPercentage: raw.markupPercentage! };
+      request =
+        mode === 'create'
+          ? this.service.createContract(payload)
+          : this.service.updateContract(row!.contractId, payload);
+    } else if (mode === 'approve' && row?.status === 'DRAFT')
+      request = this.service.approveContract(row.contractId);
+    else if (mode === 'reapprove' && row?.status === 'SUSPENDED')
+      request = this.service.reapproveContract(row.contractId);
+    else if (mode === 'suspend' && row?.status === 'APPROVED')
+      request = this.service.suspendContract(row.contractId);
+    else if (mode === 'terminate' && row && row.status !== 'TERMINATED')
+      request = this.service.terminateContract(row.contractId);
+    else return;
+    this.saving.set(true);
+    this.submissionError.set('');
+    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (saved) => {
+        this.contracts.update((rows) =>
+          row ? rows.map((c) => (c.contractId === saved.contractId ? saved : c)) : [saved, ...rows],
+        );
+        this.saving.set(false);
+        this.mode.set(null);
+        this.selected.set(saved);
+        this.notice.set('Contract ' + saved.contractCode + ' saved successfully.');
+      },
+      error: (e) => {
+        this.saving.set(false);
+        this.submissionError.set(apiError(e));
+      },
+    });
+  }
+}

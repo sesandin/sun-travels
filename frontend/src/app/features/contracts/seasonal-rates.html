@@ -1,0 +1,100 @@
+<section aria-label="Seasonal rates">
+  <h4>Seasonal rates</h4>
+  <p>
+    Seasonal rates override the base rate for applicable occupied nights. All rates share the
+    offering's allocated rooms.
+  </p>
+  @if (loading()) {
+    <p role="status">Loading seasonal rates...</p>
+  } @else if (error()) {
+    <p role="alert" class="error-message">{{ error() }}</p>
+    <button type="button" (click)="load()">Retry seasonal rates</button>
+  } @else {
+    @if (!rows().length) {
+      <p>No seasonal periods. The base rate applies.</p>
+    }
+    @for (row of rows(); track row.seasonalRateId) {
+      <div class="season">
+        <span
+          >{{ row.validFrom }} to {{ row.validTo }} (inclusive): {{ row.ratePerPersonPerNight }}
+          {{ contract().currencyCode }} per adult per night</span
+        >
+        @if (canMaintain()) {
+          <button type="button" (click)="open(row)" [disabled]="saving()">
+            Edit seasonal rate
+          </button>
+        }
+      </div>
+    }
+    @if (canMaintain()) {
+      <button type="button" (click)="open()" [disabled]="saving()">Add Seasonal Rate</button>
+    }
+  }
+  @if (notice()) {
+    <p role="status" class="success-message">{{ notice() }}</p>
+  }
+  @if (editing()) {
+    <form
+      #editor
+      tabindex="-1"
+      [formGroup]="form"
+      (ngSubmit)="save()"
+      aria-label="Seasonal rate editor"
+    >
+      <fieldset [disabled]="saving()">
+        <legend>{{ selected() ? 'Edit seasonal period' : 'Add seasonal period' }}</legend>
+        <div class="form-grid">
+          <div>
+            <label [for]="'season-from-' + offering().offeringId">Start date</label
+            ><input
+              [id]="'season-from-' + offering().offeringId"
+              type="date"
+              formControlName="validFrom"
+              [min]="contract().validFrom"
+              [max]="contract().validTo"
+            />
+          </div>
+          <div>
+            <label [for]="'season-to-' + offering().offeringId">End date</label
+            ><input
+              [id]="'season-to-' + offering().offeringId"
+              type="date"
+              formControlName="validTo"
+              [min]="contract().validFrom"
+              [max]="contract().validTo"
+            />
+          </div>
+          <div>
+            <label [for]="'season-rate-' + offering().offeringId"
+              >Rate per adult per night ({{ contract().currencyCode }})</label
+            ><input
+              [id]="'season-rate-' + offering().offeringId"
+              type="number"
+              min="0.01"
+              max="99999999.99"
+              step="0.01"
+              formControlName="ratePerPersonPerNight"
+            />
+          </div>
+        </div>
+        @if (form.touched && form.invalid) {
+          <p class="field-error">
+            Enter both dates in order and a positive rate up to 99999999.99 with at most two decimal
+            places.
+          </p>
+        }
+        @if (failure()) {
+          <p role="alert" class="error-message">{{ failure() }}</p>
+        }
+        <p>
+          Dates must be within {{ contract().validFrom }} to {{ contract().validTo }} and must not
+          overlap another seasonal period.
+        </p>
+        <div class="actions">
+          <button type="button" (click)="cancel()">Cancel</button
+          ><button type="submit">{{ saving() ? 'Saving...' : 'Save seasonal rate' }}</button>
+        </div>
+      </fieldset>
+    </form>
+  }
+</section>

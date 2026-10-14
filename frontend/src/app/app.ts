@@ -10,8 +10,6 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 export class App {
   readonly menuOpen = signal(false);
   readonly upcoming = [
-    { icon: '▤', name: 'Contracts' },
-    { icon: '◇', name: 'Room Offerings' },
     { icon: '⌕', name: 'Search & Quotations' },
     { icon: '♙', name: 'Customers' },
     { icon: '▣', name: 'Reservations' },
