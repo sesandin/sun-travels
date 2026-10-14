@@ -1,10 +1,12 @@
 package com.suntravels.service;
 
+import java.util.List;
 import com.suntravels.repository.HotelRepository;
 import org.springframework.stereotype.Service;
 import com.suntravels.dto.HotelRequest;
 import com.suntravels.dto.HotelResponse;
 import com.suntravels.entity.Hotel;
+import com.suntravels.exception.HotelNotFoundException;
 
 @Service
 public class HotelService {
@@ -30,19 +32,40 @@ public class HotelService {
 
         Hotel savedHotel = hotelRepository.save(hotel);
 
+        return toResponse(savedHotel);
+    }
+
+    public List<HotelResponse> getAllHotels() {
+
+        List<Hotel> hotels = hotelRepository.findAll();
+
+        return hotels.stream()
+                     .map(this::toResponse)
+                     .toList();
+    }
+
+    public HotelResponse getHotelById(Integer hotelId) {
+
+        Hotel hotel = hotelRepository.findById(hotelId)
+                                     .orElseThrow(() -> new HotelNotFoundException(hotelId));
+
+        return toResponse(hotel);
+    }
+
+    private HotelResponse toResponse(Hotel hotel) {
+
         HotelResponse response = new HotelResponse();
 
-        response.setHotelId(savedHotel.getHotelId());
-        response.setName(savedHotel.getName());
-        response.setAddress(savedHotel.getAddress());
-        response.setCity(savedHotel.getCity());
-        response.setCountry(savedHotel.getCountry());
-        response.setPhone(savedHotel.getPhone());
-        response.setEmail(savedHotel.getEmail());
-        response.setStarRating(savedHotel.getStarRating());
-        response.setStatus(savedHotel.getStatus());
+        response.setHotelId(hotel.getHotelId());
+        response.setName(hotel.getName());
+        response.setAddress(hotel.getAddress());
+        response.setCity(hotel.getCity());
+        response.setCountry(hotel.getCountry());
+        response.setPhone(hotel.getPhone());
+        response.setEmail(hotel.getEmail());
+        response.setStarRating(hotel.getStarRating());
+        response.setStatus(hotel.getStatus());
 
         return response;
-
     }
 }

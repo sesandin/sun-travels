@@ -17,6 +17,19 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import com.suntravels.exception.HotelNotFoundException;
+
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 @ExtendWith(MockitoExtension.class)
 class HotelServiceTest {
 
@@ -94,6 +107,127 @@ class HotelServiceTest {
         assertEquals(25, response.getHotelId());
 
         verify(hotelRepository).save(any(Hotel.class));
+    }
+
+    @Test
+    void getAllHotels_shouldReturnHotelResponses() {
+
+        // Arrange
+        Hotel hotel1 = new Hotel();
+        hotel1.setName("Hilton Colombo");
+        hotel1.setCity("Colombo");
+        hotel1.setCountry("Sri Lanka");
+        hotel1.setStarRating((byte) 5);
+        hotel1.setStatus(HotelStatus.ACTIVE);
+
+        Hotel hotel2 = new Hotel();
+        hotel2.setName("Grand Hotel");
+        hotel2.setCity("Nuwara Eliya");
+        hotel2.setCountry("Sri Lanka");
+        hotel2.setStarRating((byte) 4);
+        hotel2.setStatus(HotelStatus.INACTIVE);
+
+        when(hotelRepository.findAll())
+                .thenReturn(List.of(hotel1, hotel2));
+
+        // Act
+        List<HotelResponse> responses = hotelService.getAllHotels();
+
+        // Assert
+        assertNotNull(responses);
+        assertEquals(2, responses.size());
+
+        assertEquals("Hilton Colombo", responses.get(0).getName());
+        assertEquals("Colombo", responses.get(0).getCity());
+        assertEquals(Byte.valueOf((byte) 5),
+                responses.get(0).getStarRating());
+        assertEquals(HotelStatus.ACTIVE,
+                responses.get(0).getStatus());
+
+        assertEquals("Grand Hotel", responses.get(1).getName());
+        assertEquals("Nuwara Eliya", responses.get(1).getCity());
+        assertEquals(Byte.valueOf((byte) 4),
+                responses.get(1).getStarRating());
+        assertEquals(HotelStatus.INACTIVE,
+                responses.get(1).getStatus());
+
+        verify(hotelRepository).findAll();
+    }
+
+    @Test
+    void getAllHotels_shouldReturnEmptyListWhenNoHotelsExist() {
+
+        // Arrange
+        when(hotelRepository.findAll())
+                .thenReturn(List.of());
+
+        // Act
+        List<HotelResponse> responses = hotelService.getAllHotels();
+
+        // Assert
+        assertNotNull(responses);
+        assertEquals(0, responses.size());
+
+        verify(hotelRepository).findAll();
+    }
+
+    @Test
+    void getHotelById_shouldReturnHotelWhenFound() {
+
+        // Arrange
+        Integer hotelId = 1;
+
+        Hotel hotel = new Hotel();
+        hotel.setName("Hilton Colombo");
+        hotel.setAddress("Colombo 02");
+        hotel.setCity("Colombo");
+        hotel.setCountry("Sri Lanka");
+        hotel.setPhone("0112492492");
+        hotel.setEmail("hotel@example.com");
+        hotel.setStarRating((byte) 5);
+        hotel.setStatus(HotelStatus.ACTIVE);
+
+        when(hotelRepository.findById(hotelId))
+                .thenReturn(Optional.of(hotel));
+
+        // Act
+        HotelResponse response = hotelService.getHotelById(hotelId);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals("Hilton Colombo", response.getName());
+        assertEquals("Colombo 02", response.getAddress());
+        assertEquals("Colombo", response.getCity());
+        assertEquals("Sri Lanka", response.getCountry());
+        assertEquals("0112492492", response.getPhone());
+        assertEquals("hotel@example.com", response.getEmail());
+        assertEquals(Byte.valueOf((byte) 5), response.getStarRating());
+        assertEquals(HotelStatus.ACTIVE, response.getStatus());
+
+        verify(hotelRepository).findById(hotelId);
+    }
+
+    @Test
+    void getHotelById_shouldThrowExceptionWhenNotFound() {
+
+        // Arrange
+        Integer hotelId = 99999;
+
+        when(hotelRepository.findById(hotelId))
+                .thenReturn(Optional.empty());
+
+        // Act and Assert
+        HotelNotFoundException exception = assertThrows(
+                HotelNotFoundException.class,
+                () -> hotelService.getHotelById(hotelId)
+        );
+
+        assertEquals(
+                "Hotel not found with ID: 99999",
+                exception.getMessage()
+        );
+
+        verify(hotelRepository).findById(hotelId);
     }
 
 }
