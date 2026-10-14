@@ -1,12 +1,15 @@
 package com.suntravels.service;
 
 import java.util.List;
+
+import com.suntravels.dto.HotelStatusUpdateRequest;
 import com.suntravels.repository.HotelRepository;
 import org.springframework.stereotype.Service;
 import com.suntravels.dto.HotelRequest;
 import com.suntravels.dto.HotelResponse;
 import com.suntravels.entity.Hotel;
 import com.suntravels.exception.HotelNotFoundException;
+import com.suntravels.dto.HotelUpdateRequest;
 
 @Service
 public class HotelService {
@@ -52,6 +55,26 @@ public class HotelService {
         return toResponse(hotel);
     }
 
+    public HotelResponse updateHotel(
+            Integer hotelId,
+            HotelUpdateRequest request) {
+
+        Hotel hotel = hotelRepository.findById(hotelId)
+                                     .orElseThrow(() -> new HotelNotFoundException(hotelId));
+
+        hotel.setName(request.getName());
+        hotel.setAddress(request.getAddress());
+        hotel.setCity(request.getCity());
+        hotel.setCountry(request.getCountry());
+        hotel.setPhone(request.getPhone());
+        hotel.setEmail(request.getEmail());
+        hotel.setStarRating(request.getStarRating());
+
+        Hotel updatedHotel = hotelRepository.save(hotel);
+
+        return toResponse(updatedHotel);
+    }
+
     private HotelResponse toResponse(Hotel hotel) {
 
         HotelResponse response = new HotelResponse();
@@ -67,5 +90,19 @@ public class HotelService {
         response.setStatus(hotel.getStatus());
 
         return response;
+    }
+
+    public HotelResponse updateHotelStatus(
+            Integer hotelId,
+            HotelStatusUpdateRequest request) {
+
+        Hotel hotel = hotelRepository.findById(hotelId)
+                                     .orElseThrow(() -> new HotelNotFoundException(hotelId));
+
+        hotel.setStatus(request.getStatus());
+
+        Hotel updatedHotel = hotelRepository.save(hotel);
+
+        return toResponse(updatedHotel);
     }
 }
