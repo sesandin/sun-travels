@@ -3,6 +3,7 @@ package com.suntravels.service;
 import com.suntravels.dto.*;
 import com.suntravels.dto.QuotationSearchResponse.*;
 import com.suntravels.entity.OfferingStatus;
+import com.suntravels.entity.HotelStatus;
 import com.suntravels.exception.QuotationSearchException;
 import com.suntravels.repository.*;
 import com.suntravels.repository.QuotationSearchRepository.*;
@@ -13,6 +14,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.*;
 
 @Service
@@ -27,6 +29,14 @@ public class QuotationSearchService {
   this.data=data;this.hotels=hotels;this.rooms=rooms;this.validator=validator;this.clock=clock;this.pricing=pricing;this.inventory=inventory;this.allocator=allocator;
  }
  public Limits limits() { return new Limits(LocalDate.now(clock),MAX_ROOMS,MAX_ADULTS,MAX_NIGHTS,MAX_ADVANCE_DAYS,MAX_RESULTS,POLICY); }
+ public QuotationSearchFilters filters() {
+  var hotelOptions=hotels.findAll(Sort.by(Sort.Order.asc("name"),Sort.Order.asc("hotelId"))).stream()
+   .filter(h->h.getStatus()==HotelStatus.ACTIVE)
+   .map(h->new QuotationSearchFilters.HotelOption(h.getHotelId(),h.getName(),h.getCity())).toList();
+  var roomOptions=rooms.findAll(Sort.by(Sort.Order.asc("name"),Sort.Order.asc("roomTypeId"))).stream()
+   .map(r->new QuotationSearchFilters.RoomTypeOption(r.getRoomTypeId(),r.getName())).toList();
+  return new QuotationSearchFilters(hotelOptions,roomOptions);
+ }
  public QuotationSearchResponse search(QuotationSearchRequest request) {
   LocalDate today=LocalDate.now(clock); validate(request,today);
   List<Candidate> candidates=data.candidates(request);

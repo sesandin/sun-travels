@@ -15,6 +15,10 @@ export interface SearchLimits {
   maxResults: number;
   allocationPolicy: string;
 }
+export interface QuotationSearchFilters {
+  hotels: { hotelId: number; name: string; city: string | null }[];
+  roomTypes: { roomTypeId: number; name: string }[];
+}
 export interface NightlyPrice {
   occupiedDate: string;
   source: 'BASE' | 'SEASONAL';

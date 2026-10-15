@@ -5,6 +5,8 @@ import { QuotationSearch } from './features/search/quotation-search';
 import { OfferingDirectory } from './features/room-offerings/offering-directory';
 import { Router, provideRouter } from '@angular/router';
 import { App } from './app';
+import { AuthState } from './services/auth-state';
+const admin = { userId: 1, username: 'admin01', fullName: 'Administrator', role: 'ADMIN' as const };
 describe('App', () => {
   it('activates Search and Quotations navigation without a Soon duplicate', async () => {
     await TestBed.configureTestingModule({
@@ -16,12 +18,13 @@ describe('App', () => {
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(App);
+    TestBed.inject(AuthState).setUser(admin);
     fixture.detectChanges();
     await TestBed.inject(Router).navigateByUrl('/search');
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
     http
-      .expectOne('http://localhost:8080/api/search/limits')
+      .expectOne('/api/search/limits')
       .flush({
         businessDate: '2026-10-15',
         maxRooms: 8,
@@ -31,8 +34,7 @@ describe('App', () => {
         maxResults: 20,
         allocationPolicy: 'LOWEST_TOTAL_PER_CONTRACT',
       });
-    http.expectOne('http://localhost:8080/api/hotels').flush([]);
-    http.expectOne('http://localhost:8080/api/room-types').flush([]);
+    http.expectOne('/api/search/filters').flush({ hotels: [], roomTypes: [] });
     await fixture.whenStable();
     fixture.detectChanges();
     const link: HTMLAnchorElement = fixture.nativeElement.querySelector('a[href="/search"]');
@@ -54,11 +56,12 @@ describe('App', () => {
       ],
     }).compileComponents();
     const fixture = TestBed.createComponent(App);
+    TestBed.inject(AuthState).setUser(admin);
     fixture.detectChanges();
     await TestBed.inject(Router).navigateByUrl('/room-offerings');
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
-    http.expectOne('http://localhost:8080/api/offerings').flush([]);
+    http.expectOne('/api/offerings').flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
     const link: HTMLAnchorElement = fixture.nativeElement.querySelector(
@@ -76,9 +79,10 @@ describe('App', () => {
   it('renders branding and clearly marks upcoming modules', async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [provideRouter([])],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     const fixture = TestBed.createComponent(App);
+    TestBed.inject(AuthState).setUser(admin);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Sun Travels');
     expect(fixture.nativeElement.querySelectorAll('.upcoming').length).toBe(2);
@@ -94,5 +98,15 @@ describe('App', () => {
     fixture.componentInstance.menuOpen.set(true);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.sidebar').classList.contains('open')).toBe(true);
+  });
+  it('shows an agent only the shared search navigation', async () => {
+    await TestBed.configureTestingModule({ imports: [App], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] }).compileComponents();
+    const fixture = TestBed.createComponent(App);
+    TestBed.inject(AuthState).setUser({ userId: 2, username: 'agent01', fullName: 'Agent', role: 'AGENT' });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('a[href="/search"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('a[href="/contracts"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('a[href="/hotels"]')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('AGENT');
   });
 });

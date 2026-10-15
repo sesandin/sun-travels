@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Contract } from '../../models/contract.model';
 import { Offering } from '../../models/offering.model';
-const api = 'http://localhost:8080/api';
+const api = '/api';
 const contract: Contract = {
   contractId: 7,
   contractCode: 'C7',

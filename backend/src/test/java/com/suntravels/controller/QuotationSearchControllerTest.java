@@ -33,6 +33,10 @@ class QuotationSearchControllerTest {
   when(service.limits()).thenReturn(new QuotationSearchResponse.Limits(LocalDate.of(2026,10,15),8,10,31,730,20,"LOWEST_TOTAL_PER_CONTRACT"));
   mvc.perform(get("/api/search/limits")).andExpect(status().isOk()).andExpect(jsonPath("$.businessDate").value("2026-10-15")).andExpect(jsonPath("$.maxRooms").value(8));
  }
+ @Test void publishesLeastPrivilegeSearchFilterOptions() throws Exception {
+  when(service.filters()).thenReturn(new QuotationSearchFilters(List.of(new QuotationSearchFilters.HotelOption(7,"Ocean","Colombo")),List.of(new QuotationSearchFilters.RoomTypeOption(3,"Double"))));
+  mvc.perform(get("/api/search/filters")).andExpect(status().isOk()).andExpect(jsonPath("$.hotels[0].name").value("Ocean")).andExpect(jsonPath("$.roomTypes[0].roomTypeId").value(3)).andExpect(jsonPath("$.hotels[0].phone").doesNotExist());
+ }
  @Test void validatesRequiredAndNestedRoomFields() throws Exception {
   for(String body:List.of("{}",json.replace("2}","0}"),json.replace("2}","-1}"),json.replace("2}","11}"),json.replace("2}","null}"),json.replace("[{\"adults\":2},{\"adults\":1}]","[]"),json.replace("[{\"adults\":2},{\"adults\":1}]","[null]")))
    mvc.perform(post("/api/search/quotations").contentType("application/json").content(body)).andExpect(status().isBadRequest());

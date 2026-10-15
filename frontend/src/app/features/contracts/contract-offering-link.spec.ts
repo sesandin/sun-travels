@@ -5,7 +5,7 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { ContractList } from './contract-list';
 import { Contract } from '../../models/contract.model';
-const api = 'http://localhost:8080/api';
+const api = '/api';
 const contract: Contract = {
   contractId: 4,
   contractCode: 'C004',

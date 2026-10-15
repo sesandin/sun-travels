@@ -8,6 +8,8 @@ describe('API error messages', () => {
   it('provides useful fallbacks without exposing server internals', () => {
     expect(apiError(new HttpErrorResponse({ status: 400 }))).toContain('rejected');
     expect(apiError(new HttpErrorResponse({ status: 409 }))).toContain('conflict');
+    expect(apiError(new HttpErrorResponse({ status: 401 }))).toContain('session');
+    expect(apiError(new HttpErrorResponse({ status: 403 }))).toContain('permission');
     expect(apiError(new HttpErrorResponse({ status: 500, error: { message: 'SQL secret' } }))).not.toContain('SQL');
     expect(apiError(new HttpErrorResponse({ status: 0 }))).toContain('Cannot reach');
   });

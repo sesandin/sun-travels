@@ -9,7 +9,7 @@ describe('RoomTypeService', () => {
   const row = { roomTypeId: 2, name: 'Standard', description: null };
   let result: unknown;
   TestBed.inject(RoomTypeService).getRoomTypeById(2).subscribe(value => result = value);
-  const request = http.expectOne('http://localhost:8080/api/room-types/2');
+  const request = http.expectOne('/api/room-types/2');
   expect(request.request.method).toBe('GET'); request.flush(row); expect(result).toEqual(row); http.verify();
  });
 });

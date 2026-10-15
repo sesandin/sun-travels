@@ -4,7 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router, provideRouter } from '@angular/router';
 import { OfferingDirectory } from './offering-directory';
 import { OfferingDirectoryEntry } from '../../models/offering.model';
-const url = 'http://localhost:8080/api/offerings';
+const url = '/api/offerings';
 const row: OfferingDirectoryEntry = {
   offeringId: 8,
   hotelId: 7,

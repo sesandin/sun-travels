@@ -8,5 +8,6 @@ public class QuotationSearchController {
  private final QuotationSearchService service;
  public QuotationSearchController(QuotationSearchService service) { this.service=service; }
  @GetMapping("/limits") public QuotationSearchResponse.Limits limits() { return service.limits(); }
+ @GetMapping("/filters") public QuotationSearchFilters filters() { return service.filters(); }
  @PostMapping("/quotations") public QuotationSearchResponse search(@Valid @RequestBody QuotationSearchRequest request) { return service.search(request); }
 }

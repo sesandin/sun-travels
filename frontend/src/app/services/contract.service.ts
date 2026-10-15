@@ -4,7 +4,7 @@ import { Contract, ContractRequest } from '../models/contract.model';
 @Injectable({ providedIn: 'root' })
 export class ContractService {
   private readonly http = inject(HttpClient);
-  private readonly url = 'http://localhost:8080/api/contracts';
+  private readonly url = '/api/contracts';
   getAllContracts() {
     return this.http.get<Contract[]>(this.url);
   }

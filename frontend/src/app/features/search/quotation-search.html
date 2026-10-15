@@ -70,7 +70,7 @@
             <option [ngValue]="null">All hotels</option>
             @for (hotel of hotels(); track hotel.hotelId) {
               <option [ngValue]="hotel.hotelId">
-                {{ hotel.name }}{{ hotel.status === 'INACTIVE' ? ' (inactive)' : '' }}
+                {{ hotel.name }}{{ hotel.city ? ' · ' + hotel.city : '' }}
               </option>
             }
           </select>

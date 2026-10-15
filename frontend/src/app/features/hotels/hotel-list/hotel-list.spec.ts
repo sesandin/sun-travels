@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { HotelList } from './hotel-list';
 import { Hotel } from '../../../models/hotel.model';
-const url = 'http://localhost:8080/api/hotels';
+const url = '/api/hotels';
 const hotel: Hotel = { hotelId: 7, name: 'Coastal Hotel', address: 'Beach Road', city: 'Galle', country: 'Sri Lanka', phone: null, email: null, starRating: 4, status: 'ACTIVE' };
 describe('Hotel management API workflows', () => {
   let http: HttpTestingController;

@@ -3,8 +3,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ContractList } from './contract-list';
 import { Contract } from '../../models/contract.model';
-const url = 'http://localhost:8080/api/contracts';
-const hotelsUrl = 'http://localhost:8080/api/hotels';
+const url = '/api/contracts';
+const hotelsUrl = '/api/hotels';
 const row: Contract = {
   contractId: 7,
   contractCode: 'C-2026',

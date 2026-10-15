@@ -11,7 +11,7 @@ import {
 @Injectable({ providedIn: 'root' })
 export class OfferingService {
   private readonly http = inject(HttpClient);
-  private readonly url = 'http://localhost:8080/api';
+  private readonly url = '/api';
   directory() {
     return this.http.get<OfferingDirectoryEntry[]>(this.url + '/offerings');
   }

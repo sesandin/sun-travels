@@ -2,6 +2,7 @@ package com.suntravels.service;
 import com.suntravels.dto.*;
 import com.suntravels.dto.QuotationSearchRequest.RequestedRoom;
 import com.suntravels.exception.QuotationSearchException;
+import com.suntravels.entity.*;
 import com.suntravels.repository.*;
 import com.suntravels.repository.QuotationSearchRepository.*;
 import jakarta.validation.*;
@@ -14,6 +15,8 @@ import org.junit.jupiter.params.provider.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Sort;
+import org.springframework.test.util.ReflectionTestUtils;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
@@ -29,6 +32,13 @@ class QuotationSearchServiceTest {
  void candidates(Candidate... values) { when(data.candidates(any())).thenReturn(Arrays.asList(values)); }
  void error(int status,QuotationSearchRequest r) { assertEquals(status,assertThrows(QuotationSearchException.class,()->service.search(r)).getStatus()); }
  @Test void businessClockAndLimitsComeFromColombo() { assertEquals(today,service.limits().businessDate()); assertEquals(8,service.limits().maxRooms()); }
+ @Test void searchFiltersExposeOnlyActiveHotelIdentityAndGenericRoomNames() {
+  Hotel active=new Hotel();active.setName("Ocean");active.setCity("Colombo");active.setStatus(HotelStatus.ACTIVE);ReflectionTestUtils.setField(active,"hotelId",7);
+  Hotel inactive=new Hotel();inactive.setName("Closed");inactive.setStatus(HotelStatus.INACTIVE);ReflectionTestUtils.setField(inactive,"hotelId",8);
+  RoomType room=new RoomType();room.setName("Double");ReflectionTestUtils.setField(room,"roomTypeId",3);
+  when(hotels.findAll(any(Sort.class))).thenReturn(List.of(active,inactive));when(rooms.findAll(any(Sort.class))).thenReturn(List.of(room));
+  var filters=service.filters();assertEquals(List.of("Ocean"),filters.hotels().stream().map(QuotationSearchFilters.HotelOption::name).toList());assertEquals("Double",filters.roomTypes().get(0).name());
+ }
  @ParameterizedTest @ValueSource(ints={-1,0}) void rejectsPastOrSameDayCheckout(int offset) { error(400,new QuotationSearchRequest(today.plusDays(offset),today.plusDays(offset),List.of(new RequestedRoom(1)),null,null,null)); verifyNoInteractions(data); }
  @Test void pastCheckInIsRejectedEvenWithValidCheckout() { error(400,new QuotationSearchRequest(today.minusDays(1),out,List.of(new RequestedRoom(1)),null,null,null)); }
  @Test void rejectsReversedAndExcessiveDateRanges() { error(400,new QuotationSearchRequest(in,in.minusDays(1),List.of(new RequestedRoom(1)),null,null,null)); error(400,new QuotationSearchRequest(in,in.plusDays(32),List.of(new RequestedRoom(1)),null,null,null)); error(400,new QuotationSearchRequest(today.plusDays(731),today.plusDays(732),List.of(new RequestedRoom(1)),null,null,null)); }

@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { QuotationSearch } from './quotation-search';
 import { QuotationResponse, SearchLimits } from '../../models/quotation.model';
-const api = 'http://localhost:8080/api';
+const api = '/api';
 const limits: SearchLimits = {
   businessDate: '2026-10-15',
   maxRooms: 8,
@@ -96,8 +96,7 @@ describe('Search and nightly quotations', () => {
   afterEach(() => http.verify());
   function setup() {
     http.expectOne(api + '/search/limits').flush(limits);
-    http.expectOne(api + '/hotels').flush([{ hotelId: 7, name: 'Ocean Hotel', status: 'ACTIVE' }]);
-    http.expectOne(api + '/room-types').flush([{ roomTypeId: 3, name: 'Double' }]);
+    http.expectOne(api + '/search/filters').flush({ hotels: [{ hotelId: 7, name: 'Ocean Hotel', city: 'Colombo' }], roomTypes: [{ roomTypeId: 3, name: 'Double' }] });
     fixture.detectChanges();
   }
   function fill() {
@@ -253,8 +252,7 @@ describe('Search and nightly quotations', () => {
     expect(c.searching()).toBe(false);
   });
   it('handles setup failure and retries all reference APIs', () => {
-    http.expectOne(api + '/hotels').flush([]);
-    http.expectOne(api + '/room-types').flush([]);
+    http.expectOne(api + '/search/filters').flush({ hotels: [], roomTypes: [] });
     http.expectOne(api + '/search/limits').error(new ProgressEvent('error'));
     c.search();
     http.expectNone(api + '/search/quotations');

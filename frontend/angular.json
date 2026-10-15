@@ -64,7 +64,8 @@
               "buildTarget": "suntravels-frontend:build:production"
             },
             "development": {
-              "buildTarget": "suntravels-frontend:build:development"
+              "buildTarget": "suntravels-frontend:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"

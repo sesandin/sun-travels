@@ -1,31 +1,36 @@
-﻿<a class="skip-link" href="#main-content">Skip to content</a>
-<div class="app-shell">
-  <aside class="sidebar" [class.open]="menuOpen()" id="main-navigation">
-    <a class="brand" routerLink="/hotels" (click)="menuOpen.set(false)" aria-label="Sun Travels home">
-      <span class="brand-mark" aria-hidden="true">☀</span><span>Sun Travels<small>PARTNER MANAGEMENT</small></span>
-    </a>
-    <p class="nav-label">WORKSPACE</p>
-    <nav aria-label="Main navigation">
-      <a routerLink="/hotels" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">▥</span> Hotels</a>
-      <a routerLink="/room-types" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">&#9638;</span> Room Types</a>
-      <a routerLink="/contracts" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">&#9636;</span> Contracts</a>
-      <a routerLink="/room-offerings" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">&#9671;</span> Room Offerings</a>
-      <a routerLink="/search" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">&#8981;</span> Search &amp; Quotations</a>
-      @for (item of upcoming; track item.name) {
-        <div class="upcoming" aria-disabled="true"><span aria-hidden="true">{{ item.icon }}</span><span>{{ item.name }}</span><small>Soon</small></div>
-      }
-    </nav>
-    <div class="sidebar-note"><span aria-hidden="true">✧</span><strong>Great journeys start here.</strong><p>Manage your hotel partners with confidence.</p></div>
-    <div class="sidebar-footer">Sun Travels · Administration</div>
-  </aside>
-  @if (menuOpen()) { <button class="scrim" type="button" aria-label="Close navigation" (click)="menuOpen.set(false)"></button> }
-  <div class="workspace">
-    <header class="topbar">
-      <button type="button" class="menu-button" aria-label="Toggle navigation" aria-controls="main-navigation" [attr.aria-expanded]="menuOpen()" (click)="menuOpen.set(!menuOpen())">☰</button>
-      <div class="breadcrumb">Workspace <span aria-hidden="true">/</span> <strong>Partner management</strong></div>
-      <span class="workspace-label">Hotel partner administration</span>
-    </header>
-    <main id="main-content" tabindex="-1"><router-outlet /></main>
-    <footer class="page-footer">Sun Travels <span>Hotel contract & accommodation management</span></footer>
+@if (auth.user(); as user) {
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="app-shell">
+    <aside class="sidebar" [class.open]="menuOpen()" id="main-navigation">
+      <a class="brand" [routerLink]="user.role === 'ADMIN' ? '/hotels' : '/search'" (click)="menuOpen.set(false)" aria-label="Sun Travels home">
+        <span class="brand-mark" aria-hidden="true">&#9728;</span><span>Sun Travels<small>STAFF WORKSPACE</small></span>
+      </a>
+      <p class="nav-label">WORKSPACE</p>
+      <nav aria-label="Main navigation">
+        @if (user.role === 'ADMIN') {
+          <a routerLink="/hotels" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">&#9637;</span> Hotels</a>
+          <a routerLink="/room-types" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">&#9638;</span> Room Types</a>
+          <a routerLink="/contracts" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">&#9636;</span> Contracts</a>
+          <a routerLink="/room-offerings" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">&#9671;</span> Room Offerings</a>
+        }
+        <a routerLink="/search" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">&#8981;</span> Search &amp; Quotations</a>
+        @for (item of upcoming; track item.name) { <div class="upcoming" aria-disabled="true"><span aria-hidden="true">{{ item.icon }}</span><span>{{ item.name }}</span><small>Soon</small></div> }
+      </nav>
+      <div class="sidebar-note"><span aria-hidden="true">&#10023;</span><strong>Great journeys start here.</strong><p>Serve hotel partners and travellers with confidence.</p></div>
+      <div class="sidebar-footer">Sun Travels · {{ user.role === 'ADMIN' ? 'Administration' : 'Reservations' }}</div>
+    </aside>
+    @if (menuOpen()) { <button class="scrim" type="button" aria-label="Close navigation" (click)="menuOpen.set(false)"></button> }
+    <div class="workspace">
+      <header class="topbar">
+        <button type="button" class="menu-button" aria-label="Toggle navigation" aria-controls="main-navigation" [attr.aria-expanded]="menuOpen()" (click)="menuOpen.set(!menuOpen())">&#9776;</button>
+        <div class="breadcrumb">Workspace <span aria-hidden="true">/</span> <strong>{{ user.role === 'ADMIN' ? 'Partner management' : 'Reservations desk' }}</strong></div>
+        <div class="account"><span><strong>{{ user.fullName }}</strong><small>{{ user.role }}</small></span><button type="button" class="secondary" (click)="logout()" [disabled]="loggingOut()">{{ loggingOut() ? 'Signing out...' : 'Sign out' }}</button></div>
+      </header>
+      <main id="main-content" tabindex="-1">
+        @if (router.url.includes('forbidden=1')) { <p class="error-message" role="alert">You do not have permission to open that administration page.</p> }
+        <router-outlet />
+      </main>
+      <footer class="page-footer">Sun Travels <span>Hotel contract &amp; accommodation management</span></footer>
+    </div>
   </div>
-</div>
+} @else { <router-outlet /> }

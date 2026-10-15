@@ -9,12 +9,8 @@ import {
   ValidatorFn,
   Validators,
 } from '@angular/forms';
-import { Hotel } from '../../models/hotel.model';
-import { RoomType } from '../../models/room-type.model';
-import { QuotationResponse, SearchLimits } from '../../models/quotation.model';
+import { QuotationResponse, QuotationSearchFilters, SearchLimits } from '../../models/quotation.model';
 import { QuotationSearchService } from '../../services/quotation-search.service';
-import { HotelService } from '../../services/hotel.service';
-import { RoomTypeService } from '../../services/room-type.service';
 import { apiError } from '../../services/api-error';
 import { forkJoin } from 'rxjs';
 const date = (value: string) =>
@@ -30,12 +26,10 @@ const integer: ValidatorFn = (c) => (Number.isInteger(c.value) ? null : { intege
 })
 export class QuotationSearch implements OnInit {
   private readonly service = inject(QuotationSearchService);
-  private readonly hotelService = inject(HotelService);
-  private readonly roomService = inject(RoomTypeService);
   private readonly destroyRef = inject(DestroyRef);
   readonly limits = signal<SearchLimits | null>(null);
-  readonly hotels = signal<Hotel[]>([]);
-  readonly roomTypes = signal<RoomType[]>([]);
+  readonly hotels = signal<QuotationSearchFilters['hotels']>([]);
+  readonly roomTypes = signal<QuotationSearchFilters['roomTypes']>([]);
   readonly setupLoading = signal(false);
   readonly setupError = signal('');
   readonly searching = signal(false);
@@ -98,15 +92,14 @@ export class QuotationSearch implements OnInit {
     this.setupError.set('');
     forkJoin({
       limits: this.service.limits(),
-      hotels: this.hotelService.getAllHotels(),
-      rooms: this.roomService.getAllRoomTypes(),
+      filters: this.service.filters(),
     })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data) => {
           this.limits.set(data.limits);
-          this.hotels.set(data.hotels);
-          this.roomTypes.set(data.rooms);
+          this.hotels.set(data.filters.hotels);
+          this.roomTypes.set(data.filters.roomTypes);
           this.rooms.controls.forEach((r) =>
             r.controls.adults.setValidators([
               Validators.required,

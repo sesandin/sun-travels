@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { RoomTypeList } from './room-type-list';
-const url = 'http://localhost:8080/api/room-types';
+const url = '/api/room-types';
 const row = { roomTypeId: 7, name: 'Deluxe', description: 'Sea view' };
 describe('Room type management', () => {
  let http: HttpTestingController;
