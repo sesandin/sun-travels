@@ -85,7 +85,8 @@ describe('App', () => {
     TestBed.inject(AuthState).setUser(admin);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Sun Travels');
-    expect(fixture.nativeElement.querySelectorAll('.upcoming').length).toBe(2);
+    expect(fixture.nativeElement.querySelectorAll('.upcoming').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('a[href="/customers"]')?.textContent).toContain('Customers');
     expect(fixture.nativeElement.querySelector('a[href="/room-types"]')?.textContent).toContain(
       'Room Types',
     );
@@ -105,6 +106,7 @@ describe('App', () => {
     TestBed.inject(AuthState).setUser({ userId: 2, username: 'agent01', fullName: 'Agent', role: 'AGENT' });
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('a[href="/search"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('a[href="/customers"]')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('a[href="/contracts"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('a[href="/hotels"]')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('AGENT');

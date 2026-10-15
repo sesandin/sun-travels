@@ -6,6 +6,7 @@ import { HotelList } from './features/hotels/hotel-list/hotel-list';
 
 import { RoomTypeList } from './features/room-types/room-type-list';
 import { Login } from './features/auth/login';
+import { CustomerList } from './features/customers/customer-list';
 import { adminGuard, authenticatedGuard, loginGuard } from './auth.guards';
 
 export const routes: Routes = [
@@ -16,5 +17,6 @@ export const routes: Routes = [
   { path: 'contracts', component: ContractList, canActivate: [adminGuard] },
   { path: 'room-offerings', component: OfferingDirectory, canActivate: [adminGuard] },
   { path: 'search', component: QuotationSearch, canActivate: [authenticatedGuard] },
+  { path: 'customers', component: CustomerList, canActivate: [authenticatedGuard] },
   { path: '**', redirectTo: 'search' },
 ];

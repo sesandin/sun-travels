@@ -27,7 +27,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest({AuthController.class, ContractController.class, QuotationSearchController.class})
+@WebMvcTest({AuthController.class, ContractController.class, QuotationSearchController.class, CustomerController.class})
 @Import({SecurityConfig.class, DatabaseUserDetailsService.class, JsonAuthenticationEntryPoint.class, JsonAccessDeniedHandler.class})
 class AuthenticationSecurityTest {
     @Autowired MockMvc mvc;
@@ -35,6 +35,7 @@ class AuthenticationSecurityTest {
     @MockitoBean UserRepository users;
     @MockitoBean ContractService contracts;
     @MockitoBean QuotationSearchService search;
+    @MockitoBean CustomerService customers;
 
     @BeforeEach void users() {
         when(users.findByUsernameIgnoreCase("admin01")).thenReturn(Optional.of(user(1,"admin01",UserRole.ADMIN,UserStatus.ACTIVE)));
@@ -90,6 +91,20 @@ class AuthenticationSecurityTest {
         }
         mvc.perform(get("/api/contracts").session(login("agent01"))).andExpect(status().isForbidden());
         mvc.perform(get("/api/hotels").session(login("agent01"))).andExpect(status().isForbidden());
+    }
+
+    @Test void bothRolesCanManageCustomersButAnonymousIsRejectedAndWritesNeedCsrf() throws Exception {
+        when(customers.searchCustomers(null,0,20)).thenReturn(new CustomerPageResponse(List.of(),0,20,0,0));
+        when(customers.createCustomer(any())).thenReturn(new CustomerResponse(1,"Alice","+94771234567",null));
+        mvc.perform(get("/api/customers")).andExpect(status().isUnauthorized());
+        for (String username : List.of("admin01","agent01")) {
+            MockHttpSession session=login(username);
+            mvc.perform(get("/api/customers").session(session)).andExpect(status().isOk());
+            mvc.perform(post("/api/customers").session(session).contentType("application/json").content("{\"name\":\"Alice\",\"phone\":\"+94771234567\"}"))
+                    .andExpect(status().isForbidden());
+            mvc.perform(post("/api/customers").session(session).with(csrf()).contentType("application/json").content("{\"name\":\"Alice\",\"phone\":\"+94771234567\"}"))
+                    .andExpect(status().isCreated());
+        }
     }
 
     @Test void logoutInvalidatesSessionAndRequiresCsrf() throws Exception {
