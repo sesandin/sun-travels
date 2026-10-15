@@ -10,6 +10,7 @@
       <a routerLink="/room-types" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">&#9638;</span> Room Types</a>
       <a routerLink="/contracts" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">&#9636;</span> Contracts</a>
       <a routerLink="/room-offerings" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">&#9671;</span> Room Offerings</a>
+      <a routerLink="/search" routerLinkActive="selected" ariaCurrentWhenActive="page" (click)="menuOpen.set(false)"><span aria-hidden="true">&#8981;</span> Search &amp; Quotations</a>
       @for (item of upcoming; track item.name) {
         <div class="upcoming" aria-disabled="true"><span aria-hidden="true">{{ item.icon }}</span><span>{{ item.name }}</span><small>Soon</small></div>
       }

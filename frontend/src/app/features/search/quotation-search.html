@@ -1,0 +1,275 @@
+<header class="page-heading">
+  <span class="eyebrow">ACCOMMODATION PLANNING</span>
+  <h1>Search &amp; Quotations</h1>
+  <p>
+    Find a complete room combination for your guests, with a clear price for every occupied night.
+  </p>
+</header>
+<aside class="notice">
+  <strong>Plan with confidence. Confirm separately.</strong>
+  <p>
+    Availability and prices are informational snapshots. They must be rechecked at reservation
+    confirmation. This screen does not book or hold rooms.
+  </p>
+</aside>
+<section class="panel" aria-labelledby="search-title">
+  <h2 id="search-title">Stay and requested rooms</h2>
+  @if (setupLoading()) {
+    <p role="status">Loading search dates, hotels and room types...</p>
+  }
+  @if (setupError()) {
+    <p role="alert" class="error-message">{{ setupError() }}</p>
+    <button class="secondary" type="button" (click)="loadSetup()">Retry search setup</button>
+  }
+  @if (limits(); as l) {
+    <p class="muted">
+      Business date: {{ l.businessDate }} (Asia/Colombo). Up to {{ l.maxRooms }} rooms,
+      {{ l.maxAdultsPerRoom }} adults per room and {{ l.maxNights }} nights.
+    </p>
+  }
+  <form [formGroup]="form" (ngSubmit)="search()">
+    <fieldset [disabled]="searching() || setupLoading() || !!setupError()">
+      <div class="form-grid">
+        <div>
+          <label for="search-in">Check-in</label
+          ><input
+            id="search-in"
+            type="date"
+            formControlName="checkIn"
+            [min]="limits()?.businessDate ?? ''"
+            [max]="latestCheckIn()"
+          />
+          @if (form.controls.checkIn.touched && form.controls.checkIn.invalid) {
+            <p class="field-error">Choose a check-in date.</p>
+          }
+        </div>
+        <div>
+          <label for="search-out">Checkout</label
+          ><input
+            id="search-out"
+            type="date"
+            formControlName="checkOut"
+            [min]="form.controls.checkIn.value"
+          />
+          @if (form.controls.checkOut.touched && form.controls.checkOut.invalid) {
+            <p class="field-error">Choose a checkout date.</p>
+          }
+        </div>
+        <div>
+          <label for="search-city">City (optional)</label
+          ><input
+            id="search-city"
+            formControlName="city"
+            maxlength="100"
+            placeholder="Exact city name"
+          /><small>Matches the city name, ignoring case.</small>
+        </div>
+        <div>
+          <label for="search-hotel">Hotel (optional)</label
+          ><select id="search-hotel" formControlName="hotelId">
+            <option [ngValue]="null">All hotels</option>
+            @for (hotel of hotels(); track hotel.hotelId) {
+              <option [ngValue]="hotel.hotelId">
+                {{ hotel.name }}{{ hotel.status === 'INACTIVE' ? ' (inactive)' : '' }}
+              </option>
+            }
+          </select>
+        </div>
+        <div>
+          <label for="search-room-type">Room type (optional)</label
+          ><select id="search-room-type" formControlName="roomTypeId">
+            <option [ngValue]="null">Any room type, including mixed types</option>
+            @for (room of roomTypes(); track room.roomTypeId) {
+              <option [ngValue]="room.roomTypeId">{{ room.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      @if (form.touched && (form.hasError('dates') || form.hasError('stay'))) {
+        <p class="field-error" role="alert">
+          Use valid dates: check-in must be on or after the business date and within
+          {{ limits()?.maxAdvanceDays }} days. Checkout must be later, with no more than
+          {{ limits()?.maxNights }} occupied nights.
+        </p>
+      }
+      <div formArrayName="rooms" class="room-requests">
+        <h3>Individual rooms</h3>
+        @for (room of rooms.controls; track room; let i = $index) {
+          <div class="requested-room" [formGroupName]="i">
+            <div>
+              <label [for]="'requested-adults-' + i">Adults in room {{ i + 1 }}</label
+              ><input
+                [id]="'requested-adults-' + i"
+                type="number"
+                formControlName="adults"
+                min="1"
+                [max]="limits()?.maxAdultsPerRoom ?? 10"
+                step="1"
+              />
+              @if (room.controls.adults.touched && room.invalid) {
+                <p class="field-error">
+                  Use a whole number from 1 to {{ limits()?.maxAdultsPerRoom }}.
+                </p>
+              }
+            </div>
+            <button
+              type="button"
+              class="text-button"
+              [attr.aria-label]="'Remove requested room ' + (i + 1)"
+              (click)="removeRoom(i)"
+              [disabled]="rooms.length === 1"
+            >
+              Remove room
+            </button>
+          </div>
+        }
+      </div>
+      <div class="actions">
+        <button
+          type="button"
+          class="secondary"
+          (click)="addRoom()"
+          [disabled]="!limits() || rooms.length >= (limits()?.maxRooms ?? 0)"
+        >
+          Add room</button
+        ><button class="primary" type="submit" [disabled]="!limits()">
+          {{ searching() ? 'Searching...' : 'Search accommodation' }}
+        </button>
+      </div>
+    </fieldset>
+  </form>
+</section>
+@if (searching()) {
+  <section class="panel state" role="status">
+    Checking eligible rooms, nightly inventory and prices...
+  </section>
+}
+@if (error()) {
+  <section class="panel">
+    <p role="alert" class="error-message">{{ error() }}</p>
+    <button type="button" class="secondary" (click)="search()">Retry quotation search</button>
+  </section>
+}
+@if (response(); as result) {
+  <section class="results" aria-label="Quotation results">
+    <div class="results-heading">
+      <h2>{{ result.quotations.length }} quotation options</h2>
+      <p>
+        {{ result.checkIn }} to {{ result.checkOut }} &middot; {{ result.nights }} occupied nights
+      </p>
+    </div>
+    @if (edited()) {
+      <p role="status" class="notice">
+        The form has changed. Results still describe the dates and rooms shown below; search again
+        to update them.
+      </p>
+    }
+    <p class="muted">
+      {{ result.notice }} One lowest-price complete allocation per contract; different currencies
+      are grouped, not converted.
+    </p>
+    @if (result.truncated) {
+      <p role="status">
+        Showing the first {{ result.quotations.length }} of {{ result.matchingOptions }} options.
+        Use a hotel or city filter to narrow your search.
+      </p>
+    }
+    @if (!result.quotations.length) {
+      <div class="panel state" role="status">
+        <h3>No complete room combination found</h3>
+        <p>Try another hotel, room type, adult mix or stay dates. No reservation was created.</p>
+      </div>
+    }
+    @for (quote of result.quotations; track quote.contractId) {
+      <article class="panel quotation">
+        <header class="quote-heading">
+          <div>
+            <h3>{{ quote.hotelName }}</h3>
+            <p>
+              {{ quote.city }} &middot; Contract {{ quote.contractCode }} &middot;
+              {{ quote.currencyCode }}
+            </p>
+          </div>
+          <div class="quote-total">
+            <span>Complete stay total</span
+            ><strong>{{ quote.totalPrice | number: '1.2-2' }} {{ quote.currencyCode }}</strong
+            ><small>Informational quotation</small>
+          </div>
+        </header>
+        @for (room of quote.rooms; track room.roomNumber) {
+          <section class="quoted-room">
+            <h4>
+              Room {{ room.roomNumber }} &middot; {{ room.roomTypeName }} &middot;
+              {{ room.adults }} adults
+            </h4>
+            <dl class="inventory">
+              <div>
+                <dt>Contracted rooms</dt>
+                <dd>{{ room.contractedRooms }}</dd>
+              </div>
+              <div>
+                <dt>Available throughout stay (before this request)</dt>
+                <dd>{{ room.availableRoomsForStay }}</dd>
+              </div>
+              <div>
+                <dt>Rooms allocated to this offering</dt>
+                <dd>{{ room.allocatedRoomsForOffering }}</dd>
+              </div>
+              <div>
+                <dt>Remaining after this allocation</dt>
+                <dd>{{ room.remainingRoomsAfterAllocation }}</dd>
+              </div>
+            </dl>
+            <p class="room-total">
+              Room total:
+              <strong>{{ room.totalPrice | number: '1.2-2' }} {{ quote.currencyCode }}</strong>
+            </p>
+            <details>
+              <summary>Nightly price breakdown for room {{ room.roomNumber }}</summary>
+              <div class="table-scroll">
+                <table>
+                  <caption class="sr-only">
+                    Room
+                    {{
+                      room.roomNumber
+                    }}
+                    nightly selling prices in
+                    {{
+                      quote.currencyCode
+                    }}
+                  </caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Occupied night</th>
+                      <th scope="col">Rate source</th>
+                      <th scope="col">Hotelier rate / adult</th>
+                      <th scope="col">Adults</th>
+                      <th scope="col">Markup</th>
+                      <th scope="col">Selling price / room</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (night of room.nightlyPrices; track night.occupiedDate) {
+                      <tr>
+                        <td>{{ night.occupiedDate }}</td>
+                        <td>
+                          <span class="badge" [class.seasonal]="night.source === 'SEASONAL'">{{
+                            night.source
+                          }}</span>
+                        </td>
+                        <td>{{ night.hotelierRate | number: '1.2-2' }} {{ quote.currencyCode }}</td>
+                        <td>{{ room.adults }}</td>
+                        <td>{{ night.markupPercentage }}%</td>
+                        <td>{{ night.sellingPrice | number: '1.2-2' }} {{ quote.currencyCode }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          </section>
+        }
+      </article>
+    }
+  </section>
+}

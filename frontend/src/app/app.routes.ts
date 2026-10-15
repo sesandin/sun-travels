@@ -1,3 +1,4 @@
+import { QuotationSearch } from './features/search/quotation-search';
 import { OfferingDirectory } from './features/room-offerings/offering-directory';
 import { ContractList } from './features/contracts/contract-list';
 import { Routes } from '@angular/router';
@@ -11,5 +12,6 @@ export const routes: Routes = [
   { path: 'room-types', component: RoomTypeList },
   { path: 'contracts', component: ContractList },
   { path: 'room-offerings', component: OfferingDirectory },
+  { path: 'search', component: QuotationSearch },
   { path: '**', redirectTo: 'hotels' },
 ];
