@@ -37,7 +37,9 @@ public class ReservationService {
  }
  public ReservationResponse detail(int id) { return reservations.detail(id); }
  public Page list(String query,String status,int page,int size) { return list(query,status,page,size,null,null); }
- public Page list(String query,String status,int page,int size,LocalDate stayFrom,LocalDate stayTo) { return reservations.list(query.trim(),status,page,size,stayFrom,stayTo); }
+ public Page list(String query,String status,int page,int size,LocalDate stayFrom,LocalDate stayTo) { return list(query,status,page,size,stayFrom,stayTo,""); }
+
+ public Page list(String query,String status,int page,int size,LocalDate stayFrom,LocalDate stayTo,String stayPeriod) { return reservations.list(query.trim(),status,page,size,stayFrom,stayTo,stayPeriod); }
 
  // READ_COMMITTED makes all JDBC revalidation reads fresh AFTER the shared hotel mutex is acquired.
  // Contract lifecycle uses this hotel mutex; offering/seasonal maintenance also uses the contract lock.

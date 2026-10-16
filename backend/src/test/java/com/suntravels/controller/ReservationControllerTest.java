@@ -28,7 +28,7 @@ class ReservationControllerTest {
   {"customerId":9,"hotelId":1,"contractId":4,"checkIn":"2026-10-25","checkOut":"2026-10-28","rooms":[{"offeringId":7,"adults":2}],"acceptedTotal":690,"acceptedCurrency":"USD"}
   """;
  @Test void adminAndAgentCanUseAllReservationEndpointsWithCsrf() throws Exception {
-  when(reservations.list("","",0,20,null,null)).thenReturn(new ReservationResponse.Page(List.of(),0,20,0));
+  when(reservations.list("","",0,10,null,null,"")).thenReturn(new ReservationResponse.Page(List.of(),0,10,0));
   for(String role:List.of("ADMIN","AGENT")) {
    mvc.perform(get("/api/reservations").with(user("staff").roles(role))).andExpect(status().isOk());
    mvc.perform(get("/api/reservations/1").with(user("staff").roles(role))).andExpect(status().isOk());
@@ -81,7 +81,12 @@ class ReservationControllerTest {
 
  @Test void dateFiltersAreParsedAndMalformedDatesAreRejected() throws Exception {
   mvc.perform(get("/api/reservations").with(user("agent").roles("AGENT")).param("stayFrom","2026-10-25").param("stayTo","2026-10-27")).andExpect(status().isOk());
-  verify(reservations).list("","",0,20,java.time.LocalDate.of(2026,10,25),java.time.LocalDate.of(2026,10,27));
+  verify(reservations).list("","",0,10,java.time.LocalDate.of(2026,10,25),java.time.LocalDate.of(2026,10,27),"");
   mvc.perform(get("/api/reservations").with(user("agent").roles("AGENT")).param("stayFrom","invalid")).andExpect(status().isBadRequest());
+ }
+
+ @Test void stayPeriodIsPassedWithTheTenRecordDefault() throws Exception {
+  mvc.perform(get("/api/reservations").with(user("agent").roles("AGENT")).param("status","CONFIRMED").param("stayPeriod","ONGOING")).andExpect(status().isOk());
+  verify(reservations).list("","CONFIRMED",0,10,null,null,"ONGOING");
  }
 }

@@ -218,7 +218,7 @@ class ContractMySqlIntegrationTest {
 
     static Stream<Arguments> terminationCases() {
         return Stream.of(Arguments.of("CONFIRMED",-1,1,true),Arguments.of("CONFIRMED",1,2,true),
-                Arguments.of("CONFIRMED",-2,0,false),Arguments.of("PENDING",1,2,false),Arguments.of("CANCELLED",1,2,false));
+                Arguments.of("CONFIRMED",-2,0,false),Arguments.of("CONFIRMED",-3,-1,false),Arguments.of("PENDING",1,2,false),Arguments.of("CANCELLED",1,2,false));
     }
 
     @ParameterizedTest @MethodSource("terminationCases")

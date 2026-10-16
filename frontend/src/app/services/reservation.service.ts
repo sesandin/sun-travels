@@ -1,13 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Reservation, ReservationPage, ReservationQuote, ReservationRequest } from '../models/reservation.model';
+import { StayPeriod, Reservation, ReservationPage, ReservationQuote, ReservationRequest } from '../models/reservation.model';
 @Injectable({ providedIn: 'root' })
 export class ReservationService {
  private readonly http = inject(HttpClient);
  private readonly url = '/api/reservations';
  confirm(request: ReservationRequest) { return this.http.post<Reservation>(this.url, request); }
- list(query = '', status = '', page = 0, stayFrom = '', stayTo = '') {
-  let params = new HttpParams().set('query', query).set('status', status).set('page', page).set('size', 20);
+ list(query = '', status = '', page = 0, stayFrom = '', stayTo = '', stayPeriod: StayPeriod = '') {
+  let params = new HttpParams().set('query', query).set('status', status).set('page', page).set('size', 10);
+  if (stayPeriod) params = params.set('stayPeriod', stayPeriod);
   if (stayFrom) params = params.set('stayFrom', stayFrom);
   if (stayTo) params = params.set('stayTo', stayTo);
   return this.http.get<ReservationPage>(this.url, { params });

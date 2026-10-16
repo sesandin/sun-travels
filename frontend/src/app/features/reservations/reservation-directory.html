@@ -1,14 +1,14 @@
 <header class="page-heading"><div><span class="eyebrow">RESERVATIONS</span><h1>Reservations</h1><p>Find confirmed and cancelled accommodation bookings.</p></div><a routerLink="/search">New reservation</a></header>
-<section class="panel"><form class="filters" [formGroup]="filters" (ngSubmit)="search()"><label>Reservation ID or customer<input [formControl]="query" maxlength="150" placeholder="Name, email, phone or reference"></label><label>Status<select [formControl]="status"><option value="">All statuses</option><option value="CONFIRMED">Confirmed</option><option value="CANCELLED">Cancelled</option></select></label><label>Stay from<input type="date" [formControl]="stayFrom"></label><label>Stay to<input type="date" [formControl]="stayTo" [min]="stayFrom.value"></label><button class="primary" [disabled]="loading() || filters.invalid">Search</button></form>
+<section class="panel"><form class="filters" [formGroup]="filters" (ngSubmit)="search()"><label>Reservation ID or customer<input [formControl]="query" maxlength="150" placeholder="Name, email, phone or reference"></label><label>Reservation Status<select [formControl]="status" (change)="search()"><option value="">All statuses</option><option value="CONFIRMED">Confirmed</option><option value="CANCELLED">Cancelled</option></select></label><label>Stay Period<select [formControl]="stayPeriod" (change)="search()"><option value="">All Stays</option><option value="UPCOMING">Upcoming</option><option value="ONGOING">Ongoing</option><option value="PAST">Past</option></select></label><label>Stay from<input type="date" [formControl]="stayFrom"></label><label>Stay to<input type="date" [formControl]="stayTo" [min]="stayFrom.value"></label><button class="primary" [disabled]="loading() || filters.invalid">Search</button></form>
  <small>Find stays overlapping these dates, including the To date. Checkout day is excluded.</small>
  @if (filters.touched && filters.hasError('dates')) { <p role="alert" class="error-message">Enter valid dates with Stay from on or before Stay to.</p> }
  @if (loading()) { <p role="status">Loading reservations…</p> }
- @if (error()) { <p role="alert" class="error-message">{{ error() }}</p><button class="secondary" (click)="load(result()?.page ?? 0)" [disabled]="loading()">Retry</button> }
+ @if (error()) { <p role="alert" class="error-message">{{ error() }}</p><button class="secondary" (click)="retry()" [disabled]="loading()">Retry</button> }
  @if (result(); as r) { <div class="table-scroll"><table><thead><tr><th>Reference</th><th>Customer</th><th>Hotel</th><th>Stay</th><th>Status</th><th>Booked total</th><th>Actions</th></tr></thead><tbody>
   @for (booking of r.reservations; track booking.reservationId) { <tr><td><button type="button" class="reference-button" (click)="openDetails(booking)" [attr.aria-label]="'View reservation #' + booking.reservationId">#{{ booking.reservationId }}</button></td><td>{{ booking.customerName }}</td><td>{{ booking.rooms[0]?.hotelName }}</td><td>{{ booking.checkIn }} → {{ booking.checkOut }}</td><td>{{ booking.status }}@if (booking.status === 'CONFIRMED' && booking.warnings?.length) { <span class="reservation-warning-indicator">Verify hotel arrangements</span> }</td><td>{{ booking.totalPrice | number:'1.2-2' }} {{ booking.currencyCode }}</td><td><button type="button" class="reference-button reservation-view" (click)="openDetails(booking)" [attr.aria-label]="'View details for reservation #' + booking.reservationId">View / Manage</button></td></tr> }
  </tbody></table></div>
- @if (!r.reservations.length && !loading()) { <p role="status">No reservations found.</p> }
- <div class="actions"><button class="secondary" (click)="load(r.page - 1)" [disabled]="loading() || r.page === 0">Previous</button><span>Page {{ r.page + 1 }} · {{ r.totalElements }} reservations</span><button class="secondary" (click)="load(r.page + 1)" [disabled]="loading() || (r.page + 1) * r.size >= r.totalElements">Next</button></div> }
+ @if (!r.reservations.length && !loading()) { <p role="status">No reservations match these filters. Try another search, status or stay period.</p> }
+ <div class="actions"><button class="secondary" (click)="load(r.page - 1)" [disabled]="loading() || r.page === 0">Previous</button><span>Page {{ r.page + 1 }} of {{ totalPages() }} · {{ r.totalElements }} reservations</span><button class="secondary" (click)="load(r.page + 1)" [disabled]="loading() || (r.page + 1) * r.size >= r.totalElements">Next</button></div> }
 </section>
 <dialog #detailsDialog class="reservation-modal" aria-labelledby="reservation-modal-title">
  @if (selected(); as booking) {
@@ -20,8 +20,8 @@
   @if (booking.status === 'CONFIRMED' && booking.warnings?.length) {
   <aside class="reservation-warning" role="status" aria-label="Hotel operational warnings">
    <strong>This reservation remains confirmed. Verify arrangements with the hotel.</strong>
-   <ul>@for (warning of booking.warnings; track warning.hotelId + ':' + warning.code) {
-    <li><strong>{{ warning.hotelName }} &mdash; {{ warning.code === 'HOTEL_INACTIVE' ? 'Hotel inactive' : warning.code === 'HOTEL_CLOSURE' ? 'Hotel closure overlaps this stay' : 'Verify hotel arrangements' }}</strong><p>{{ warning.message }}</p></li>
+   <ul>@for (warning of booking.warnings; track warning.hotelId + ':' + warning.code + ':' + (warning.contractId ?? 0) + ':' + (warning.offeringId ?? 0)) {
+    <li><strong>{{ warning.hotelName }}{{ warning.roomTypeName ? ' - ' + warning.roomTypeName : '' }} &mdash; {{ warning.code === 'HOTEL_INACTIVE' ? 'Hotel inactive' : warning.code === 'HOTEL_CLOSURE' ? 'Hotel closure overlaps this stay' : warning.code === 'CONTRACT_SUSPENDED' ? 'Contract suspended' : warning.code === 'OFFERING_SUSPENDED' ? 'Room offering suspended' : 'Verify hotel arrangements' }}</strong><p>{{ warning.message }}</p></li>
    }</ul>
   </aside>
  }

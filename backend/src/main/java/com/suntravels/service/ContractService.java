@@ -113,8 +113,10 @@ public class ContractService {
         invalidCommitments(commitments.invalidForContract(id));
         List<Integer> outstanding = commitments.outstanding(id, LocalDate.now(clock));
         if (!outstanding.isEmpty()) {
-            throw ContractException.conflict("Cannot terminate: outstanding CONFIRMED reservation "
-                    + outstanding.get(0) + " remains. Suspend the contract to stop new sales.");
+            long count=outstanding.stream().distinct().count();
+            throw ContractException.conflict("Cannot terminate this contract because it has " + count
+                    + (count==1?" ongoing or upcoming confirmed reservation. ":" ongoing or upcoming confirmed reservations. ")
+                    + "Wait until these stays are completed or resolve them through the existing cancellation process. Suspend the contract to stop new sales.");
         }
         contract.setStatus(ContractStatus.TERMINATED);
         return persist(contract);

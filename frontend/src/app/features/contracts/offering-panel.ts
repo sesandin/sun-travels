@@ -129,6 +129,7 @@ export class OfferingPanel implements OnInit, OnChanges {
   ngOnInit() {
     this.load();
   }
+  canChangeStatus() { return this.contract().status !== 'TERMINATED'; }
   canMaintain() {
     return this.contract().status === 'DRAFT' || this.contract().status === 'APPROVED';
   }
@@ -172,7 +173,7 @@ export class OfferingPanel implements OnInit, OnChanges {
   open(row: Offering | null = null, mode: 'draft' | 'rate' | 'status' = 'draft') {
     if (
       this.saving() ||
-      !this.canMaintain() ||
+      (mode === 'status' ? !this.canChangeStatus() : !this.canMaintain()) ||
       (mode === 'draft' && this.contract().status !== 'DRAFT') ||
       (mode === 'rate' && this.contract().status !== 'APPROVED') ||
       (mode !== 'draft' && !row)
@@ -198,7 +199,7 @@ export class OfferingPanel implements OnInit, OnChanges {
     if (!this.saving()) this.mode.set(null);
   }
   save() {
-    if (this.saving() || !this.canMaintain()) return;
+    if (this.saving() || (this.mode() === 'status' ? !this.canChangeStatus() : !this.canMaintain())) return;
     const row = this.selected(),
       mode = this.mode();
     let req;

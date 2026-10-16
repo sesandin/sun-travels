@@ -136,10 +136,10 @@ describe('Reservation directory and details', () => {
  afterEach(() => http.verify());
  it('loads the directory with customer and status filters and selling totals', () => {
   const f = TestBed.createComponent(ReservationDirectory); f.detectChanges();
-  http.expectOne(r => r.url === '/api/reservations').flush({ reservations: [saved], page: 0, size: 20, totalElements: 1 });
+  http.expectOne(r => r.url === '/api/reservations').flush({ reservations: [saved], page: 0, size: 10, totalElements: 1 });
   f.detectChanges(); expect(f.nativeElement.textContent).toContain('230.00 USD');
   f.componentInstance.query.setValue('Traveller'); f.componentInstance.status.setValue('CONFIRMED'); f.componentInstance.search();
-  http.expectOne(r => r.params.get('query') === 'Traveller' && r.params.get('status') === 'CONFIRMED').flush({ reservations: [saved], page: 0, size: 20, totalElements: 1 });
+  http.expectOne(r => r.params.get('query') === 'Traveller' && r.params.get('status') === 'CONFIRMED').flush({ reservations: [saved], page: 0, size: 10, totalElements: 1 });
  });
  it('loads immutable nightly prices and cancels only after confirmation', () => {
   const f = TestBed.createComponent(ReservationDetail); f.detectChanges();
@@ -192,7 +192,7 @@ describe('Reservation directory and details', () => {
  it('shows an operational list indicator and explanatory messages in the details popup', () => {
   const f=TestBed.createComponent(ReservationDirectory);f.detectChanges();
   const affected={...saved,warnings:operationalWarnings};
-  http.expectOne(r=>r.url==='/api/reservations').flush({reservations:[affected,{...saved,reservationId:102,status:'CANCELLED',warnings:operationalWarnings}],page:0,size:20,totalElements:2});f.detectChanges();
+  http.expectOne(r=>r.url==='/api/reservations').flush({reservations:[affected,{...saved,reservationId:102,status:'CANCELLED',warnings:operationalWarnings}],page:0,size:10,totalElements:2});f.detectChanges();
   expect(f.nativeElement.querySelectorAll('.reservation-warning-indicator')).toHaveLength(1);
   expect(f.nativeElement.querySelector('.reservation-warning-indicator').textContent).toContain('Verify hotel arrangements');
   const dialog=f.componentInstance.detailsDialog().nativeElement;dialog.showModal=vi.fn();
@@ -204,7 +204,7 @@ describe('Reservation directory and details', () => {
  it('opens the selected reservation using its View button and explains why arrangements need verification', () => {
   const f=TestBed.createComponent(ReservationDirectory);f.detectChanges();
   const affected={...saved,warnings:operationalWarnings};
-  http.expectOne(r=>r.url==='/api/reservations').flush({reservations:[affected,{...saved,reservationId:102,warnings:[]}],page:0,size:20,totalElements:2});f.detectChanges();
+  http.expectOne(r=>r.url==='/api/reservations').flush({reservations:[affected,{...saved,reservationId:102,warnings:[]}],page:0,size:10,totalElements:2});f.detectChanges();
   const dialog=f.componentInstance.detailsDialog().nativeElement;dialog.showModal=vi.fn();dialog.close=vi.fn();
   const buttons=f.nativeElement.querySelectorAll('.reservation-view') as NodeListOf<HTMLButtonElement>;
   expect(buttons).toHaveLength(2);expect(buttons[0].textContent?.trim()).toBe('View / Manage');
@@ -221,25 +221,119 @@ describe('Reservation directory and details', () => {
 
  it('applies stay dates with status and customer filters and retains them when paging', () => {
   const f=TestBed.createComponent(ReservationDirectory);f.detectChanges();
-  http.expectOne(r=>r.url==='/api/reservations').flush({reservations:[],page:0,size:20,totalElements:40});
+  http.expectOne(r=>r.url==='/api/reservations').flush({reservations:[],page:0,size:10,totalElements:40});
   const c=f.componentInstance;c.query.setValue('Traveller');c.status.setValue('CONFIRMED');
   c.stayFrom.setValue('2026-10-25');c.stayTo.setValue('2026-10-27');c.search();
   const first=http.expectOne(r=>r.url==='/api/reservations' && r.params.get('stayFrom')==='2026-10-25' && r.params.get('stayTo')==='2026-10-27');
   expect(first.request.params.get('query')).toBe('Traveller');expect(first.request.params.get('status')).toBe('CONFIRMED');
-  expect(first.request.params.get('page')).toBe('0');first.flush({reservations:[],page:0,size:20,totalElements:40});
+  expect(first.request.params.get('page')).toBe('0');first.flush({reservations:[],page:0,size:10,totalElements:40});
   c.stayTo.setValue('2026-11-01');c.load(1);
   const next=http.expectOne(r=>r.params.get('page')==='1');expect(next.request.params.get('stayTo')).toBe('2026-10-27');
-  next.flush({reservations:[],page:1,size:20,totalElements:40});
+  next.flush({reservations:[],page:1,size:10,totalElements:40});
   c.stayFrom.setValue('');c.stayTo.setValue('');c.search();
   const cleared=http.expectOne(r=>r.url==='/api/reservations');expect(cleared.request.params.has('stayFrom')).toBe(false);expect(cleared.request.params.has('stayTo')).toBe(false);
-  cleared.flush({reservations:[],page:0,size:20,totalElements:0});
+  cleared.flush({reservations:[],page:0,size:10,totalElements:0});
  });
  it('rejects reversed or malformed date filters before sending a request', () => {
   const f=TestBed.createComponent(ReservationDirectory);f.detectChanges();
-  http.expectOne(r=>r.url==='/api/reservations').flush({reservations:[],page:0,size:20,totalElements:0});
+  http.expectOne(r=>r.url==='/api/reservations').flush({reservations:[],page:0,size:10,totalElements:0});
   const c=f.componentInstance;c.stayFrom.setValue('2026-10-28');c.stayTo.setValue('2026-10-25');c.search();f.detectChanges();
   expect(c.filters.invalid).toBe(true);expect(f.nativeElement.textContent).toContain('Stay from on or before Stay to');http.expectNone('/api/reservations');
   c.stayFrom.setValue('2026-02-30');c.stayTo.setValue('');c.search();expect(c.filters.invalid).toBe(true);http.expectNone('/api/reservations');
+ });
+
+ it('explains contract and multiple offering suspensions without duplicate tracking or changing status', () => {
+  const f=TestBed.createComponent(ReservationDetail);f.detectChanges();
+  const warnings=[...operationalWarnings,
+   {hotelId:1,hotelName:'Ocean',code:'CONTRACT_SUSPENDED',contractId:4,message:'Its hotel contract is currently suspended. Please verify the booking arrangements with the hotel.'},
+   {hotelId:1,hotelName:'Ocean',code:'OFFERING_SUSPENDED',contractId:4,offeringId:7,roomTypeName:'Standard',message:'This room offering has been suspended for new sales.'},
+   {hotelId:1,hotelName:'Ocean',code:'OFFERING_SUSPENDED',contractId:4,offeringId:8,roomTypeName:'Sea View',message:'This room offering has been suspended for new sales.'}];
+  http.expectOne('/api/reservations/101').flush({...saved,warnings});f.detectChanges();
+  expect(f.nativeElement.querySelectorAll('.reservation-warning li')).toHaveLength(5);
+  for(const text of ['Contract suspended','Room offering suspended','Standard','Sea View','CONFIRMED']) expect(f.nativeElement.textContent).toContain(text);
+  f.componentInstance.load();http.expectOne('/api/reservations/101').flush({...saved,warnings:[]});f.detectChanges();
+  expect(f.nativeElement.querySelector('.reservation-warning')).toBeNull();
+ });
+
+ it('automatically resets filters to page one and cancels obsolete requests', () => {
+  vi.useFakeTimers();const f=TestBed.createComponent(ReservationDirectory);
+  try {
+   f.detectChanges();const initial=http.expectOne(r=>r.url==='/api/reservations');expect(initial.request.params.get('size')).toBe('10');
+   initial.flush({reservations:[saved],page:0,size:10,totalElements:25});
+   f.componentInstance.load(2);const old=http.expectOne(r=>r.params.get('page')==='2');
+   f.componentInstance.stayPeriod.setValue('UPCOMING');expect(old.cancelled).toBe(true);expect(f.componentInstance.result()).toBeNull();
+   vi.advanceTimersByTime(250);const filtered=http.expectOne(r=>r.params.get('stayPeriod')==='UPCOMING');expect(filtered.request.params.get('page')).toBe('0');
+   filtered.flush({reservations:[saved],page:0,size:10,totalElements:25});f.detectChanges();
+   expect(f.nativeElement.textContent).toContain('Page 1 of 3');
+   f.componentInstance.status.setValue('CONFIRMED');f.componentInstance.query.setValue('Traveller');vi.advanceTimersByTime(250);
+   const combined=http.expectOne(r=>r.params.get('query')==='Traveller');expect(combined.request.params.get('status')).toBe('CONFIRMED');expect(combined.request.params.get('stayPeriod')).toBe('UPCOMING');expect(combined.request.params.get('page')).toBe('0');
+   combined.flush({reservations:[],page:0,size:10,totalElements:0});f.detectChanges();expect(f.nativeElement.textContent).toContain('No reservations match these filters');
+   f.componentInstance.stayPeriod.setValue('PAST');vi.advanceTimersByTime(250);
+   http.expectOne(r=>r.params.get('stayPeriod')==='PAST').flush({message:'Temporarily unavailable'},{status:503,statusText:'Unavailable'});f.detectChanges();
+   expect(f.componentInstance.loading()).toBe(false);expect(f.componentInstance.result()).toBeNull();expect(f.componentInstance.error()).not.toBe('');
+  } finally {f.destroy();vi.useRealTimers();}
+ });
+ it('renders the final five records on page three with correct totals and disabled Next', () => {
+  const f=TestBed.createComponent(ReservationDirectory);f.detectChanges();http.expectOne(r=>r.url==='/api/reservations').flush({reservations:[],page:0,size:10,totalElements:25});
+  f.componentInstance.load(2);http.expectOne(r=>r.params.get('page')==='2').flush({reservations:Array.from({length:5},(_,i)=>({...saved,reservationId:5-i})),page:2,size:10,totalElements:25});f.detectChanges();
+  expect(f.nativeElement.querySelectorAll('tbody tr')).toHaveLength(5);expect(f.nativeElement.textContent).toContain('Page 3 of 3');
+  const next=Array.from(f.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>).find(b=>b.textContent?.trim()==='Next')!;expect(next.disabled).toBe(true);
+ });
+
+ it('reloads All Stays when a quick period change returns to the original filter', () => {
+  vi.useFakeTimers();const f=TestBed.createComponent(ReservationDirectory);
+  try {
+   f.detectChanges();http.expectOne(r=>r.url==='/api/reservations').flush({reservations:[saved],page:0,size:10,totalElements:1});
+   f.componentInstance.stayPeriod.setValue('UPCOMING');
+   f.componentInstance.stayPeriod.setValue('');
+   expect(f.componentInstance.result()).toBeNull();
+   vi.advanceTimersByTime(250);
+   const request=http.expectOne(r=>r.url==='/api/reservations');
+   expect(request.request.params.has('stayPeriod')).toBe(false);expect(request.request.params.get('page')).toBe('0');
+   request.flush({reservations:[saved],page:0,size:10,totalElements:1});
+   expect(f.componentInstance.result()?.reservations).toHaveLength(1);
+  } finally {f.destroy();vi.useRealTimers();}
+ });
+ it('reissues a cancelled initial query when Stay Period returns to All Stays', () => {
+  vi.useFakeTimers();const f=TestBed.createComponent(ReservationDirectory);
+  try {
+   f.detectChanges();const initial=http.expectOne(r=>r.url==='/api/reservations');
+   f.componentInstance.stayPeriod.setValue('PAST');expect(initial.cancelled).toBe(true);
+   f.componentInstance.stayPeriod.setValue('');vi.advanceTimersByTime(250);
+   const replacement=http.expectOne(r=>r.url==='/api/reservations');
+   expect(replacement.request.params.has('stayPeriod')).toBe(false);
+   replacement.flush({reservations:[saved],page:0,size:10,totalElements:1});
+   expect(f.componentInstance.loading()).toBe(false);expect(f.componentInstance.result()?.totalElements).toBe(1);
+  } finally {f.destroy();vi.useRealTimers();}
+ });
+ it('sends each period correctly and does not duplicate a manually submitted request', () => {
+  vi.useFakeTimers();const f=TestBed.createComponent(ReservationDirectory);
+  try {
+   f.detectChanges();http.expectOne(r=>r.url==='/api/reservations').flush({reservations:[],page:0,size:10,totalElements:0});
+   for(const period of ['UPCOMING','ONGOING','PAST',''] as const) {
+    f.componentInstance.stayPeriod.setValue(period);f.componentInstance.search();
+    const request=http.expectOne(r=>r.url==='/api/reservations');
+    expect(request.request.params.get('stayPeriod')).toBe(period || null);
+    vi.advanceTimersByTime(250);http.expectNone('/api/reservations');
+    request.flush({reservations:[],page:0,size:10,totalElements:0});
+   }
+  } finally {f.destroy();vi.useRealTimers();}
+ });
+
+ it('applies the actual Stay Period dropdown immediately and updates the rendered rows', () => {
+  vi.useFakeTimers();const f=TestBed.createComponent(ReservationDirectory);
+  try {
+   f.detectChanges();http.expectOne(r=>r.url==='/api/reservations').flush({reservations:[saved],page:0,size:10,totalElements:1});f.detectChanges();
+   const select=Array.from(f.nativeElement.querySelectorAll('select') as NodeListOf<HTMLSelectElement>)
+    .find(element=>Array.from(element.options).some(option=>option.value==='UPCOMING'))!;
+   select.value='PAST';select.dispatchEvent(new Event('change',{bubbles:true}));
+   const request=http.expectOne(r=>r.url==='/api/reservations');expect(request.request.params.get('stayPeriod')).toBe('PAST');
+   expect(request.request.params.get('page')).toBe('0');
+   request.flush({reservations:[],page:0,size:10,totalElements:0});f.detectChanges();
+   expect(f.nativeElement.querySelectorAll('tbody tr')).toHaveLength(0);
+   expect(f.nativeElement.textContent).toContain('No reservations match these filters');
+   vi.advanceTimersByTime(250);http.expectNone('/api/reservations');
+  } finally {f.destroy();vi.useRealTimers();}
  });
 });
 

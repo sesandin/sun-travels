@@ -177,7 +177,7 @@ describe('Contract offerings', () => {
     r.flush({ ...offering, status: 'SUSPENDED' });
     expect(c.rows()[0].status).toBe('SUSPENDED');
   });
-  for (const status of ['SUSPENDED', 'TERMINATED'] as const)
+  for (const status of ['TERMINATED'] as const)
     it(status + ' exposes history with no maintenance actions', () => {
       fixture.componentRef.setInput('contract', { ...contract, status });
       load([offering]);
@@ -190,4 +190,15 @@ describe('Contract offerings', () => {
       expect(c.mode()).toBeNull();
       http.expectNone(api + '/offerings/8/status');
     });
+
+  it('re-enables an offering under a suspended contract without implying bookability', () => {
+    fixture.componentRef.setInput('contract',{...contract,status:'SUSPENDED'});load([{...offering,status:'SUSPENDED'}]);
+    expect(fixture.nativeElement.textContent).toContain('Change offering status');
+    expect(fixture.nativeElement.textContent).not.toContain('Edit base rate');
+    expect(fixture.nativeElement.textContent).toContain('remain unavailable for new sales');
+    c.open({...offering,status:'SUSPENDED'},'status');c.statusForm.controls.status.setValue('ENABLED');c.save();
+    const req=http.expectOne(api+'/offerings/8/status');expect(req.request.body).toEqual({status:'ENABLED'});
+    req.flush({...offering,status:'ENABLED'});expect(c.rows()[0].status).toBe('ENABLED');
+    expect(c.contract().status).toBe('SUSPENDED');
+  });
 });

@@ -9,7 +9,8 @@ export interface ReservationRequest {
  rooms: { offeringId: number; adults: number }[]; acceptedTotal: number; acceptedCurrency: string;
 }
 export interface ReservationWarning {
- hotelId: number; hotelName: string; code: 'HOTEL_INACTIVE' | 'HOTEL_CLOSURE'; message: string;
+ hotelId: number; hotelName: string; code: 'HOTEL_INACTIVE' | 'HOTEL_CLOSURE' | 'CONTRACT_SUSPENDED' | 'OFFERING_SUSPENDED'; message: string;
+ contractId?: number | null; offeringId?: number | null; roomTypeName?: string | null;
 }
 export interface Reservation {
  warnings?: ReservationWarning[];
@@ -20,3 +21,5 @@ export interface Reservation {
  contractId: number; roomTypeName: string; adults: number; totalPrice: number | null; nightlyPrices: SellingNight[] }[];
 }
 export interface ReservationPage { reservations: Reservation[]; page: number; size: number; totalElements: number; }
+
+export type StayPeriod = '' | 'UPCOMING' | 'ONGOING' | 'PAST';

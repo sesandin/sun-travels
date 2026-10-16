@@ -68,7 +68,9 @@ public class OfferingService {
   o.setRatePerPersonPerNight(request.ratePerPersonPerNight()); return response(offerings.saveAndFlush(o));
  }
  @Transactional public OfferingResponse status(Integer id,OfferingStatusRequest request) {
-  ContractRoomOffering o=locked(id); maintainable(o.getContract()); validate(request);
+  ContractRoomOffering o=locked(id);
+  if(o.getContract().getStatus()==ContractStatus.TERMINATED) throw OfferingException.conflict("Offering status cannot change under a TERMINATED contract");
+  validate(request);
   o.setStatus(request.status()); return response(offerings.saveAndFlush(o));
  }
  @Transactional public SeasonalRateResponse createSeason(Integer id,SeasonalRateRequest request) { return saveSeason(id,null,request); }

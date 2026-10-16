@@ -30,6 +30,7 @@ import static org.mockito.ArgumentMatchers.*;
 @SpringBootTest(properties="suntravels.auth.bootstrap.enabled=false")
 @EnabledIfEnvironmentVariable(named="SUNTRAVELS_RESERVATION_MYSQL_TESTS",matches="true")
 class ReservationMySqlIntegrationTest {
+ @Autowired ContractService contractService; @Autowired OfferingService offeringService;
  @Autowired HotelService hotelService;
  @Autowired ReservationService service; @Autowired QuotationSearchService search;
  @Autowired HotelRepository hotels; @Autowired ContractRepository contracts;
@@ -281,5 +282,140 @@ class ReservationMySqlIntegrationTest {
   assertEquals(0,service.list(reference,"CANCELLED",0,20,in,out).totalElements());
   var next=service.list(reference,"CONFIRMED",1,1,in,out);assertEquals(1,next.totalElements());assertTrue(next.reservations().isEmpty());
   assertEquals(400,assertThrows(ReservationException.class,()->service.list(reference,"",0,20,out,in)).getStatus());
+ }
+
+ @Test void suspendedContractPreservesCommitmentsAndReportsDistinctTerminationBlockers() {
+  var first=service.confirm(request("1035",2,1));var second=service.confirm(request("345",1));
+  var itemsBefore=storedItems(first.reservationId());var nightsBefore=storedNights(first.reservationId());
+  contractService.suspendContract(contract);
+  assertEquals("CONFIRMED",service.detail(first.reservationId()).status());
+  assertEquals(List.of(ReservationResponse.WarningCode.CONTRACT_SUSPENDED),warningCodes(service.detail(first.reservationId())));
+  assertTrue(search.search(searchRequest(1)).quotations().isEmpty());
+  assertThrows(ReservationException.class,()->service.confirm(request("690",2)));
+  var ex=assertThrows(com.suntravels.exception.ContractException.class,()->contractService.terminateContract(contract));
+  assertTrue(ex.getMessage().contains("2 ongoing or upcoming confirmed reservations"));
+  assertEquals(ContractStatus.SUSPENDED,contractService.getContractById(contract).status());
+  assertEquals(itemsBefore,storedItems(first.reservationId()));assertEquals(nightsBefore,storedNights(first.reservationId()));
+  contractService.reapproveContract(contract);assertTrue(service.detail(first.reservationId()).warnings().isEmpty());
+  assertTrue(search.search(searchRequest(1)).quotations().isEmpty()); // All three rooms are still committed.
+  assertEquals("CONFIRMED",service.detail(second.reservationId()).status());
+ }
+ void additionalOffering() {
+  tx.executeWithoutResult(s->{
+   otherType=repository.insert("insert into room_type(name) values (?)","Alternative "+UUID.randomUUID());
+   otherOffering=repository.insert("insert into contract_room_offering(contract_id,room_type_id,rate_per_person_per_night,contracted_room_count,max_adults,status) values (?,?,?,2,3,'ENABLED')",contract,otherType,new BigDecimal("150.00"));
+  });
+ }
+ @Test void suspendedOfferingPreservesMixedBookingAndLeavesOtherOfferingsBookable() {
+  additionalOffering();
+  var selection=new QuotationSelectionRequest(hotel,contract,in,out,List.of(new ReservationRequest.Room(otherOffering,1),new ReservationRequest.Room(offering,2)));
+  var q=search.customize(selection);var booked=service.confirm(new ReservationRequest(customer,hotel,contract,in,out,selection.rooms(),q.totalPrice(),q.currencyCode()));
+  var itemsBefore=storedItems(booked.reservationId());var nightsBefore=storedNights(booked.reservationId());
+  offeringService.status(offering,new OfferingStatusRequest(OfferingStatus.SUSPENDED));
+  var detail=service.detail(booked.reservationId());assertEquals("CONFIRMED",detail.status());
+  assertEquals(List.of(ReservationResponse.WarningCode.OFFERING_SUSPENDED),warningCodes(detail));
+  assertEquals(offering,detail.warnings().get(0).offeringId());assertNotNull(detail.warnings().get(0).roomTypeName());
+  assertThrows(com.suntravels.exception.QuotationSearchException.class,()->search.customize(selection));
+  assertThrows(ReservationException.class,()->service.confirm(request("345",1)));
+  assertEquals(List.of(otherOffering),search.search(searchRequest(1)).quotations().stream().map(r->r.rooms().get(0).offeringId()).toList());
+  offeringService.status(offering,new OfferingStatusRequest(OfferingStatus.ENABLED));
+  assertTrue(service.detail(booked.reservationId()).warnings().isEmpty());assertEquals(2,search.search(searchRequest(1)).quotations().size());
+  contractService.suspendContract(contract);
+  offeringService.status(offering,new OfferingStatusRequest(OfferingStatus.SUSPENDED));
+  offeringService.status(offering,new OfferingStatusRequest(OfferingStatus.ENABLED));
+  assertTrue(search.search(searchRequest(1)).quotations().isEmpty());
+  assertThrows(ReservationException.class,()->service.confirm(request("345",1)));
+  assertEquals(itemsBefore,storedItems(booked.reservationId()));assertEquals(nightsBefore,storedNights(booked.reservationId()));
+  contractService.reapproveContract(contract);hotelStatus(HotelStatus.INACTIVE);
+  assertTrue(search.search(searchRequest(1)).quotations().isEmpty());
+  assertThrows(ReservationException.class,()->service.confirm(request("345",1)));
+  hotelStatus(HotelStatus.ACTIVE);assertEquals(2,search.search(searchRequest(1)).quotations().size());
+ }
+ @Test void allFourWarningsAreIndependentDeduplicatedAndDisappearWhenConditionsClear() {
+  var booked=service.confirm(request("1035",2,1));var nightsBefore=storedNights(booked.reservationId());
+  contractService.suspendContract(contract);offeringService.status(offering,new OfferingStatusRequest(OfferingStatus.SUSPENDED));
+  hotelStatus(HotelStatus.INACTIVE);
+  jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)",hotel,in,out,"Combined warning fixture");
+  var warnings=service.detail(booked.reservationId()).warnings();assertEquals(4,warnings.size());
+  assertEquals(Set.of(ReservationResponse.WarningCode.HOTEL_INACTIVE,ReservationResponse.WarningCode.HOTEL_CLOSURE,ReservationResponse.WarningCode.CONTRACT_SUSPENDED,ReservationResponse.WarningCode.OFFERING_SUSPENDED),new HashSet<>(warningCodes(service.detail(booked.reservationId()))));
+  offeringService.status(offering,new OfferingStatusRequest(OfferingStatus.ENABLED));assertEquals(3,service.detail(booked.reservationId()).warnings().size());
+  hotelStatus(HotelStatus.ACTIVE);assertEquals(2,service.detail(booked.reservationId()).warnings().size());
+  jdbc.update("delete from hotel_closure where hotel_id=?",hotel);
+  assertEquals(List.of(ReservationResponse.WarningCode.CONTRACT_SUSPENDED),warningCodes(service.detail(booked.reservationId())));
+  contractService.reapproveContract(contract);assertTrue(service.detail(booked.reservationId()).warnings().isEmpty());
+  assertEquals(nightsBefore,storedNights(booked.reservationId()));
+  contractService.suspendContract(contract);var cancelled=service.cancel(booked.reservationId());assertTrue(cancelled.warnings().isEmpty());assertEquals("CANCELLED",cancelled.status());
+ }
+ @Test void completedConfirmedStayHasNoOperationalWarningsEvenWhenEveryCurrentStatusIsSuspended() {
+  var booked=service.confirm(request("690",2));
+  // Move the isolated fixture's stay and snapshots together to a completed business date.
+  var today=LocalDate.now(clock);
+  long shift=java.time.temporal.ChronoUnit.DAYS.between(in,today.minusDays(3));
+  jdbc.update("update reservation_item_nightly_rate set occupied_date=date_add(occupied_date,interval ? day) where reservation_item_id=?",shift,booked.rooms().get(0).reservationItemId());
+  jdbc.update("update reservation set check_in_date=?,check_out_date=? where reservation_id=?",today.minusDays(3),today,booked.reservationId());
+  contractService.suspendContract(contract);offeringService.status(offering,new OfferingStatusRequest(OfferingStatus.SUSPENDED));hotelStatus(HotelStatus.INACTIVE);
+  jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)",hotel,today.minusDays(3),today,"Past fixture closure");
+  assertEquals("CONFIRMED",service.detail(booked.reservationId()).status());assertTrue(service.detail(booked.reservationId()).warnings().isEmpty());
+ }
+ @Test void actualConfirmationAndTerminationSerializeOnTheHotelMutex() throws Exception {
+  var written=new CountDownLatch(1);var release=new CountDownLatch(1);var attempting=new CountDownLatch(1);var pool=Executors.newFixedThreadPool(2);
+  try {
+   var booking=pool.submit(()->tx.execute(s->{
+    var booked=service.confirm(request("690",2));written.countDown();
+    try {assertTrue(release.await(10,TimeUnit.SECONDS));}catch(InterruptedException ex){Thread.currentThread().interrupt();throw new IllegalStateException(ex);}
+    return booked;
+   }));
+   assertTrue(written.await(10,TimeUnit.SECONDS));
+   var terminating=pool.submit(()->{attempting.countDown();return assertThrows(com.suntravels.exception.ContractException.class,()->contractService.terminateContract(contract));});
+   assertTrue(attempting.await(10,TimeUnit.SECONDS));assertThrows(TimeoutException.class,()->terminating.get(200,TimeUnit.MILLISECONDS));
+   release.countDown();assertEquals("CONFIRMED",booking.get(20,TimeUnit.SECONDS).status());
+   assertTrue(terminating.get(20,TimeUnit.SECONDS).getMessage().contains("1 ongoing or upcoming confirmed reservation"));
+   assertEquals(ContractStatus.APPROVED,contractService.getContractById(contract).status());assertEquals(1,bookingCount());
+  } finally {release.countDown();pool.shutdownNow();assertTrue(pool.awaitTermination(20,TimeUnit.SECONDS));}
+ }
+ @Test void terminationWinningTheMutexPreventsANewConfirmation() throws Exception {
+  var terminated=new CountDownLatch(1);var release=new CountDownLatch(1);var pool=Executors.newFixedThreadPool(2);
+  try {
+   var change=pool.submit(()->tx.executeWithoutResult(s->{contractService.terminateContract(contract);terminated.countDown();
+    try {assertTrue(release.await(10,TimeUnit.SECONDS));}catch(InterruptedException ex){Thread.currentThread().interrupt();throw new IllegalStateException(ex);}
+   }));
+   assertTrue(terminated.await(10,TimeUnit.SECONDS));
+   var booking=pool.submit(()->assertThrows(ReservationException.class,()->service.confirm(request("690",2))));
+   release.countDown();change.get(20,TimeUnit.SECONDS);assertEquals("UNAVAILABLE",booking.get(20,TimeUnit.SECONDS).getCode());
+   assertEquals(0,bookingCount());assertEquals(ContractStatus.TERMINATED,contractService.getContractById(contract).status());
+  } finally {release.countDown();pool.shutdownNow();assertTrue(pool.awaitTermination(20,TimeUnit.SECONDS));}
+ }
+
+ @Test void stayPeriodsComposeWithStatusSearchAndTenRecordPagingBeforePagination() {
+  var today=LocalDate.now(clock);List<Integer> ids=new ArrayList<>();
+  for(int i=0;i<25;i++) {
+   LocalDate start=i<8?today.minusDays(3):i<16?today:today.plusDays(1);
+   LocalDate end=i<8?today:today.plusDays(3);
+   ids.add(repository.insert("insert into reservation(customer_id,check_in_date,check_out_date,status,currency_code) values (?,?,?,?,?)",customer,start,end,i%2==0?"CONFIRMED":"CANCELLED","USD"));
+  }
+  String name=jdbc.queryForObject("select name from customer where customer_id=?",String.class,customer);
+  var first=service.list(name,"",0,10,null,null,"");var second=service.list(name,"",1,10,null,null,"");var last=service.list(name,"",2,10,null,null,"");
+  assertEquals(25,first.totalElements());assertEquals(10,first.size());assertEquals(10,first.reservations().size());assertEquals(10,second.reservations().size());assertEquals(5,last.reservations().size());
+  var expected=new ArrayList<>(ids);Collections.reverse(expected);
+  var actual=new ArrayList<Integer>();for(var page:List.of(first,second,last)) actual.addAll(page.reservations().stream().map(ReservationResponse::reservationId).toList());assertEquals(expected,actual);
+  assertEquals(9,service.list(name,"",0,10,null,null,"UPCOMING").totalElements());
+  assertEquals(8,service.list(name,"",0,10,null,null,"ONGOING").totalElements());
+  assertEquals(8,service.list(name,"",0,10,null,null,"PAST").totalElements());
+  var upcoming=service.list(name,"CONFIRMED",0,10,null,null,"UPCOMING");assertEquals(5,upcoming.totalElements());
+  assertTrue(upcoming.reservations().stream().allMatch(r->r.status().equals("CONFIRMED") && r.checkIn().isAfter(today)));
+  var ongoing=service.list(name,"CONFIRMED",0,10,null,null,"ONGOING");assertEquals(4,ongoing.totalElements());
+  assertTrue(ongoing.reservations().stream().allMatch(r->!r.checkIn().isAfter(today) && r.checkOut().isAfter(today)));
+  var past=service.list(name,"CANCELLED",0,10,null,null,"PAST");assertEquals(4,past.totalElements());
+  assertTrue(past.reservations().stream().allMatch(r->r.status().equals("CANCELLED") && r.checkOut().equals(today)));
+  assertEquals(0,service.list(name,"",0,10,today.plusDays(4),null,"ONGOING").totalElements());
+  assertEquals(0,service.list(name+" missing","",0,10,null,null,"UPCOMING").totalElements());
+  assertEquals(400,assertThrows(ReservationException.class,()->service.list(name,"",0,10,null,null,"COMPLETED")).getStatus());
+ }
+ @Test void stayPeriodFilteringDoesNotChangeOperationalWarnings() {
+  var booked=service.confirm(request("690",2));hotelStatus(HotelStatus.INACTIVE);
+  var before=service.detail(booked.reservationId());
+  var filtered=service.list(Integer.toString(booked.reservationId()),"CONFIRMED",0,10,null,null,"UPCOMING");
+  assertEquals(1,filtered.totalElements());assertEquals(before.warnings(),filtered.reservations().get(0).warnings());
+  assertEquals(before.rooms(),filtered.reservations().get(0).rooms());assertEquals("CONFIRMED",filtered.reservations().get(0).status());
  }
 }

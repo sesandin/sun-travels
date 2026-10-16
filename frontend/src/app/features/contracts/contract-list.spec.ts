@@ -276,11 +276,13 @@ describe('Contract management', () => {
     http
       .expectOne(url + '/7/terminate')
       .flush(
-        { message: 'Cannot terminate: outstanding CONFIRMED reservation 9' },
+        { message: 'Cannot terminate this contract because it has 2 ongoing or upcoming confirmed reservations. Wait until these stays are completed or resolve them through the existing cancellation process.' },
         { status: 409, statusText: 'Conflict' },
       );
     expect(component.contracts()[0].status).toBe('APPROVED');
-    expect(component.submissionError()).toContain('outstanding');
+    expect(component.submissionError()).toContain('2 ongoing or upcoming confirmed reservations');
+    expect(component.notice()).toBe('');
+    expect(component.mode()).toBe('terminate');
   });
   it('confirms suspension and termination and hides editing for historical statuses', () => {
     const approved: Contract = { ...row, status: 'APPROVED' };

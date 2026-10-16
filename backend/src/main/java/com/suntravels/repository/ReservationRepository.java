@@ -14,8 +14,10 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class ReservationRepository {
+ public static final int PAGE_SIZE=10;
  private final JdbcTemplate jdbc;
- public ReservationRepository(JdbcTemplate jdbc) { this.jdbc=jdbc; }
+ private final Clock clock;
+ public ReservationRepository(JdbcTemplate jdbc,Clock clock) { this.jdbc=jdbc;this.clock=clock; }
  private static final String HEADER="""
   select r.*,c.name,c.phone,c.email from reservation r join customer c on c.customer_id=r.customer_id
   """;
@@ -41,27 +43,33 @@ public class ReservationRepository {
   var rows=jdbc.query(HEADER+" where r.reservation_id=?",(r,n)->{
    var in=r.getObject("check_in_date",LocalDate.class);var out=r.getObject("check_out_date",LocalDate.class);var items=items(id,in,out);
    BigDecimal total=items.isEmpty() || items.stream().anyMatch(i->i.totalPrice()==null)?null:items.stream().map(Item::totalPrice).reduce(new BigDecimal("0.00"),BigDecimal::add);
-   return new ReservationResponse(id,r.getInt("customer_id"),r.getString("name"),r.getString("phone"),r.getString("email"),in,out,ChronoUnit.DAYS.between(in,out),r.getString("status"),r.getObject("created_at",LocalDateTime.class),r.getString("currency_code"),total,items,"CONFIRMED".equals(r.getString("status"))?warnings(id,in,out):List.of());
+   return new ReservationResponse(id,r.getInt("customer_id"),r.getString("name"),r.getString("phone"),r.getString("email"),in,out,ChronoUnit.DAYS.between(in,out),r.getString("status"),r.getObject("created_at",LocalDateTime.class),r.getString("currency_code"),total,items,"CONFIRMED".equals(r.getString("status")) && out.isAfter(LocalDate.now(clock))?warnings(id,in,out):List.of());
   },id);
   if(rows.isEmpty()) throw missing();return rows.get(0);
  }
  // Current operational state only; never alters booked status, items or rate snapshots.
  private List<OperationalWarning> warnings(int id,LocalDate in,LocalDate out) {
   return jdbc.query("""
-   select distinct h.hotel_id,h.name,h.status,
+   select distinct h.hotel_id,h.name,h.status,c.contract_id,c.status as contract_status,
+    o.offering_id,o.status as offering_status,t.name as room_type_name,
     exists(select 1 from hotel_closure hc where hc.hotel_id=h.hotel_id
      and hc.start_date<? and (hc.end_date is null or hc.end_date>=?)) as hotel_closed
    from reservation_item i join contract_room_offering o on o.offering_id=i.offering_id
    join contract c on c.contract_id=o.contract_id join hotel h on h.hotel_id=c.hotel_id
-   where i.reservation_id=? order by h.hotel_id
+   join room_type t on t.room_type_id=o.room_type_id
+   where i.reservation_id=? order by h.hotel_id,c.contract_id,o.offering_id
    """,(r,n)->{
     List<OperationalWarning> result=new ArrayList<>();
     if("INACTIVE".equals(r.getString("status"))) result.add(new OperationalWarning(r.getInt("hotel_id"),r.getString("name"),WarningCode.HOTEL_INACTIVE,
      "This hotel is currently inactive. Please verify whether this reservation can still be honored."));
     if(r.getBoolean("hotel_closed")) result.add(new OperationalWarning(r.getInt("hotel_id"),r.getString("name"),WarningCode.HOTEL_CLOSURE,
      "A hotel closure overlaps this reservation. Please contact the hotel to confirm arrangements."));
+    if("SUSPENDED".equals(r.getString("contract_status"))) result.add(new OperationalWarning(r.getInt("hotel_id"),r.getString("name"),WarningCode.CONTRACT_SUSPENDED,
+     "This reservation is confirmed, but its hotel contract is currently suspended. Please verify the booking arrangements with the hotel.",r.getInt("contract_id"),null,null));
+    if("SUSPENDED".equals(r.getString("offering_status"))) result.add(new OperationalWarning(r.getInt("hotel_id"),r.getString("name"),WarningCode.OFFERING_SUSPENDED,
+     "This reservation includes a room offering that has been suspended for new sales. Please verify existing booking arrangements.",r.getInt("contract_id"),r.getInt("offering_id"),r.getString("room_type_name")));
     return result;
-   },out,in,id).stream().flatMap(List::stream).toList();
+   },out,in,id).stream().flatMap(List::stream).distinct().toList();
  }
  private List<Item> items(int id,LocalDate in,LocalDate out) {
   return jdbc.query("""
@@ -79,15 +87,25 @@ public class ReservationRepository {
    },id);
  }
  public Page list(String query,String status,int page,int size) { return list(query,status,page,size,null,null); }
- public Page list(String query,String status,int page,int size,LocalDate stayFrom,LocalDate stayTo) {
+ public Page list(String query,String status,int page,int size,LocalDate stayFrom,LocalDate stayTo) { return list(query,status,page,size,stayFrom,stayTo,""); }
+ public Page list(String query,String status,int page,int size,LocalDate stayFrom,LocalDate stayTo,String stayPeriod) {
+  if(!Set.of("","UPCOMING","ONGOING","PAST").contains(stayPeriod)) throw new ReservationException(400,"INVALID_FILTER","Choose All Stays, Upcoming, Ongoing or Past");
   if(stayFrom!=null && stayTo!=null && stayFrom.isAfter(stayTo)) throw new ReservationException(400,"INVALID_FILTER","Stay From must be on or before Stay To");
   if(page<0 || size<1 || size>50 || query.length()>150 || !Set.of("","CONFIRMED","CANCELLED").contains(status))
    throw new ReservationException(400,"INVALID_FILTER","Use a valid status, page and page size (1–50)");
+  size=PAGE_SIZE; // Reservations always use ten records per page, including legacy callers.
   String where=" where (?='' or r.status=?) and (?='' or cast(r.reservation_id as char)=? or cast(c.customer_id as char)=? or locate(lower(?),lower(c.name))>0 or locate(lower(?),lower(coalesce(c.email,'')))>0 or locate(?,coalesce(c.phone,''))>0)";
   List<Object> values=new ArrayList<>(Arrays.asList(status,status,query,query,query,query,query,query));
   // Filter dates are inclusive occupied dates; checkout remains excluded.
   if(stayFrom!=null) { where+=" and r.check_out_date>?";values.add(stayFrom); }
   if(stayTo!=null) { where+=" and r.check_in_date<=?";values.add(stayTo); }
+  LocalDate today=LocalDate.now(clock);
+  switch(stayPeriod) {
+   case "UPCOMING" -> {where+=" and r.check_in_date>?";values.add(today);}
+   case "ONGOING" -> {where+=" and r.check_in_date<=? and r.check_out_date>?";values.add(today);values.add(today);}
+   case "PAST" -> {where+=" and r.check_out_date<=?";values.add(today);}
+   default -> {}
+  }
   Object[] args=values.toArray();
   long count=Objects.requireNonNull(jdbc.queryForObject("select count(*) from reservation r join customer c on c.customer_id=r.customer_id"+where,Long.class,args));
   var params=new ArrayList<Object>(Arrays.asList(args));params.add(size);params.add((long)page*size);

@@ -6,8 +6,8 @@
  @if (r.status === 'CONFIRMED' && r.warnings?.length) {
   <aside class="reservation-warning" role="status" aria-label="Hotel operational warnings">
    <strong>This reservation remains confirmed. Verify arrangements with the hotel.</strong>
-   <ul>@for (warning of r.warnings; track warning.hotelId + ':' + warning.code) {
-    <li><strong>{{ warning.hotelName }} &mdash; {{ warning.code === 'HOTEL_INACTIVE' ? 'Hotel inactive' : warning.code === 'HOTEL_CLOSURE' ? 'Hotel closure overlaps this stay' : 'Verify hotel arrangements' }}</strong><p>{{ warning.message }}</p></li>
+   <ul>@for (warning of r.warnings; track warning.hotelId + ':' + warning.code + ':' + (warning.contractId ?? 0) + ':' + (warning.offeringId ?? 0)) {
+    <li><strong>{{ warning.hotelName }}{{ warning.roomTypeName ? ' - ' + warning.roomTypeName : '' }} &mdash; {{ warning.code === 'HOTEL_INACTIVE' ? 'Hotel inactive' : warning.code === 'HOTEL_CLOSURE' ? 'Hotel closure overlaps this stay' : warning.code === 'CONTRACT_SUSPENDED' ? 'Contract suspended' : warning.code === 'OFFERING_SUSPENDED' ? 'Room offering suspended' : 'Verify hotel arrangements' }}</strong><p>{{ warning.message }}</p></li>
    }</ul>
   </aside>
  }
@@ -17,7 +17,10 @@
   </tbody></table></details></article> }
   @if (r.totalPrice !== null) { <p class="total">Booked total: {{ r.totalPrice | number:'1.2-2' }} {{ r.currencyCode }}</p> }
   @else { <p class="error-message">This historical reservation has incomplete nightly snapshots. Its total is unavailable; current contract rates have not been used to reconstruct it.</p> }
+  <div class="actions">
   @if (r.status === 'CONFIRMED') { <button class="primary danger" type="button" (click)="openCancel()" [disabled]="cancelling()">Cancel reservation</button> }
+   <button class="secondary" type="button" (click)="back()" [disabled]="cancelling()">Back</button>
+  </div>
  </section>
 }
 <dialog #cancelDialog (cancel)="cancelling() ? $event.preventDefault() : null"><div class="panel"><h2>Cancel reservation #{{ reservation()?.reservationId }}?</h2><p>All rooms will be released. The reservation and booked price history will be retained.</p><div class="actions"><button class="secondary" type="button" (click)="closeCancel()" [disabled]="cancelling()">Keep reservation</button><button class="primary danger" type="button" (click)="cancel()" [disabled]="cancelling()">{{ cancelling() ? 'Cancelling…' : 'Confirm cancellation' }}</button></div></div></dialog>

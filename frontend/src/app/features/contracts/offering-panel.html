@@ -48,7 +48,7 @@
               Edit base rate
             </button>
           }
-          @if (canMaintain()) {
+          @if (canChangeStatus()) {
             <button type="button" (click)="open(row, 'status')" [disabled]="saving()">
               Change offering status
             </button>
@@ -62,8 +62,9 @@
     }
   }
   @if (!canMaintain()) {
+    @if (contract().status === 'SUSPENDED') { <p>Offering status can still be changed. ENABLED offerings remain unavailable for new sales until the contract is APPROVED and the hotel is ACTIVE.</p> }
     <p>
-      Historical offerings are preserved. Maintenance is unavailable for
+      Historical offerings are preserved. Rate and seasonal maintenance is unavailable for
       {{ contract().status }} contracts.
     </p>
   }

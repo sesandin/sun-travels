@@ -80,4 +80,11 @@ class ContractServiceTest {
  @Test void hotelReassignmentLocksBothHotelsInIdOrder() { locked(); Hotel other=new Hotel(); ReflectionTestUtils.setField(other,"hotelId",4); other.setName("Other"); when(hotels.findForUpdate(4)).thenReturn(Optional.of(other)); saving(); service.updateContract(1,new ContractRequest(4,from,to,BigDecimal.TEN,"USD")); var order=inOrder(hotels,repository); order.verify(repository).findHotelId(1); order.verify(hotels).findForUpdate(4); order.verify(hotels).findForUpdate(7); order.verify(repository).findForUpdate(1); assertSame(other,c.getHotel()); assertEquals("LEGACY",c.getContractCode()); }
  @Test void historicalContractsRemainListable() { c.setStatus(ContractStatus.TERMINATED); when(repository.findById(1)).thenReturn(Optional.of(c)); when(repository.findAll(any(Sort.class))).thenReturn(List.of(c)); assertEquals(ContractStatus.TERMINATED,service.getContractById(1).status()); assertEquals(1,service.getAllContracts().size()); }
  @Test void corruptSeasonalOverlapPreventsApproval() { approvalReady(); var rate=new OfferingSeasonalRate(); rate.setOffering(offering); rate.setValidFrom(from); rate.setValidTo(to); rate.setRatePerPersonPerNight(BigDecimal.TEN); when(seasons.findContractRatesForUpdate(1)).thenReturn(List.of(rate,rate)); error(409,()->service.approveContract(1)); assertEquals(ContractStatus.DRAFT,c.getStatus()); }
+
+ @Test void terminationReportsDistinctReservationCountWithoutSaving() {
+  c.setStatus(ContractStatus.APPROVED);locked();when(commitments.outstanding(1,today)).thenReturn(List.of(50,50,51));
+  var ex=assertThrows(ContractException.class,()->service.terminateContract(1));
+  assertTrue(ex.getMessage().contains("2 ongoing or upcoming confirmed reservations"));
+  assertEquals(ContractStatus.APPROVED,c.getStatus());verify(repository,never()).saveAndFlush(any());
+ }
 }

@@ -1,6 +1,6 @@
 import { Component, DestroyRef, ElementRef, OnInit, inject, signal, viewChild } from '@angular/core';
 import { DecimalPipe, DatePipe } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Reservation } from '../../models/reservation.model';
 import { ReservationService } from '../../services/reservation.service';
@@ -9,6 +9,8 @@ import { apiError } from '../../services/api-error';
  templateUrl: './reservation-detail.html', styleUrl: './reservations.scss' })
 export class ReservationDetail implements OnInit {
  private readonly service = inject(ReservationService); private readonly route = inject(ActivatedRoute);
+ private readonly router = inject(Router);
+ back() { if (!this.cancelling()) void this.router.navigate(['/reservations']); }
  private readonly destroyRef = inject(DestroyRef);
  readonly reservation = signal<Reservation | null>(null); readonly loading = signal(false); readonly cancelling = signal(false);
  readonly error = signal(''); readonly notice = signal(history.state?.confirmed ? 'Reservation confirmed successfully.' : '');

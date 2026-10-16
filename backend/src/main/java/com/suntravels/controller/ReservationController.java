@@ -17,10 +17,11 @@ public class ReservationController {
   var result=service.confirm(request);return ResponseEntity.status(201).body(result);
  }
  @GetMapping public ReservationResponse.Page list(@RequestParam(defaultValue="") String query,
-  @RequestParam(defaultValue="") String status,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="20") int size,
+  @RequestParam(defaultValue="") String status,@RequestParam(defaultValue="0") int page,@RequestParam(defaultValue="10") int size,
   @RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate stayFrom,
-  @RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate stayTo) {
-  return service.list(query,status,page,size,stayFrom,stayTo);
+  @RequestParam(required=false) @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate stayTo,
+  @RequestParam(defaultValue="") String stayPeriod) {
+  return service.list(query,status,page,size,stayFrom,stayTo,stayPeriod);
  }
  @GetMapping("/{id}") public ReservationResponse detail(@PathVariable int id) { return service.detail(id); }
  @PostMapping("/{id}/cancel") public ReservationResponse cancel(@PathVariable int id) { return service.cancel(id); }

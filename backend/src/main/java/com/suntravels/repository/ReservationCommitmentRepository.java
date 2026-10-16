@@ -36,11 +36,12 @@ public class ReservationCommitmentRepository {
     }
 
     public List<Integer> outstanding(Integer contractId, LocalDate today) {
+        // Keep a current locking join read: scalar lookups before the hotel lock may have opened a snapshot.
         return jdbc.queryForList(SELECT + """
                 where c.contract_id = ? and r.status = 'CONFIRMED'
                   and r.check_out_date > ?
                 order by r.reservation_id for update
-                """, Integer.class, contractId, today);
+                """, Integer.class, contractId, today).stream().distinct().toList();
     }
 
     public List<Integer> invalidForContract(Integer contractId) {
