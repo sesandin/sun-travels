@@ -50,8 +50,11 @@ function validationMessages(errors: unknown): string[] {
 function validationMessage(item: unknown): string | null {
   if (typeof item === 'string') return item;
   const error = item as { field?: unknown; defaultMessage?: unknown; message?: unknown } | null;
-  const field = typeof error?.field === 'string' ? error.field : 'Field';
-  if (typeof error?.defaultMessage === 'string') return `${field}: ${error.defaultMessage}`;
-  if (typeof error?.message === 'string') return `${field}: ${error.message}`;
+  const rawField: unknown = error?.field;
+  const field: string = typeof rawField === 'string' ? rawField : 'Field';
+  const defaultMessage: unknown = error?.defaultMessage;
+  if (typeof defaultMessage === 'string') return `${field}: ${defaultMessage}`;
+  const message: unknown = error?.message;
+  if (typeof message === 'string') return `${field}: ${message}`;
   return null;
 }

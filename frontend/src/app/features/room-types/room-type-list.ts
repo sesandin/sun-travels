@@ -108,7 +108,10 @@ export class RoomTypeList implements OnInit {
         this.roomTypes.update((rows) => {
           let updated;
           if (row) {
-            updated = rows.map((r) => (r.roomTypeId === row.roomTypeId ? saved : r));
+            updated = rows.map((r) => {
+              if (r.roomTypeId === row.roomTypeId) return saved;
+              return r;
+            });
           } else {
             updated = [...rows, saved];
           }
