@@ -1,3 +1,4 @@
+import { directoryPage } from '../../testing/directory-page';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -45,7 +46,7 @@ describe('Contract offering directory links', () => {
     http = TestBed.inject(HttpTestingController);
     fixture = TestBed.createComponent(ContractList);
     fixture.detectChanges();
-    http.expectOne(api + '/contracts').flush([contract]);
+    http.expectOne((r) => r.url === api + '/contracts/page').flush(directoryPage([contract]));
     http.expectOne(api + '/hotels').flush([]);
   });
   afterEach(() => http.verify());

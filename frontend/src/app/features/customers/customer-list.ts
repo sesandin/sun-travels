@@ -1,3 +1,4 @@
+import { Pagination } from '../../shared/pagination';
 import {
   Component,
   DestroyRef,
@@ -28,7 +29,7 @@ const contactRequired = (group: AbstractControl): ValidationErrors | null =>
     : { contactRequired: true };
 @Component({
   selector: 'app-customer-list',
-  imports: [ReactiveFormsModule],
+  imports: [Pagination, ReactiveFormsModule],
   templateUrl: './customer-list.html',
   styleUrl: './customer-list.scss',
 })

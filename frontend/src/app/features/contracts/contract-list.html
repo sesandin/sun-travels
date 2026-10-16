@@ -25,7 +25,7 @@
   <div class="panel-heading">
     <div>
       <h2>Contract directory</h2>
-      <p>{{ contracts().length }} agreements</p>
+      <p>{{ $any(directory.summary()['totalRecords'] ?? 0) }} agreements</p>
     </div>
     <button type="button" (click)="loadContracts()" [disabled]="loading()">Refresh</button>
   </div>
@@ -37,7 +37,7 @@
         type="search"
         placeholder="Contract code, hotel or currency"
         [value]="query()"
-        (input)="query.set($any($event.target).value)"
+        (input)="query.set($any($event.target).value); loadContracts(0)"
       />
     </div>
     <div>
@@ -45,7 +45,7 @@
       <select
         id="contract-status"
         [value]="statusFilter()"
-        (change)="statusFilter.set($any($event.target).value)"
+        (change)="statusFilter.set($any($event.target).value); loadContracts(0)"
       >
         <option value="">All statuses</option>
         @for (status of statuses; track status) {
@@ -61,7 +61,7 @@
       <p class="error-message">{{ error() }}</p>
       <button type="button" (click)="loadContracts()">Try again</button>
     </div>
-  } @else if (!contracts().length) {
+  } @else if (!$any(directory.summary()['totalRecords'] ?? 0)) {
     <div class="state">
       <h2>No contracts yet</h2>
       <p>Create a DRAFT agreement to get started.</p>
@@ -160,6 +160,14 @@
   no conflicting confirmed commitments. Contract validity applies to occupied nights; an expired
   APPROVED contract is not automatically terminated.
 </p>
+
+<app-pagination
+  [page]="directory.page()"
+  [totalPages]="directory.totalPages()"
+  [totalElements]="directory.totalElements()"
+  [loading]="loading()"
+  (pageChange)="loadContracts($event)"
+/>
 @if (mode()) {
   <section #editor tabindex="-1" class="list-panel editor" aria-labelledby="editor-title">
     <h2 id="editor-title">

@@ -1,8 +1,15 @@
+import { DirectoryPage } from '../shared/directory-state';
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Contract, ContractRequest } from '../models/contract.model';
 @Injectable({ providedIn: 'root' })
 export class ContractService {
+  page(query = '', status = '', page = 0) {
+    return this.http.get<DirectoryPage<Contract>>(this.url + '/page', {
+      params: { query, status, page },
+    });
+  }
+
   private readonly http = inject(HttpClient);
   private readonly url = '/api/contracts';
   getAllContracts() {

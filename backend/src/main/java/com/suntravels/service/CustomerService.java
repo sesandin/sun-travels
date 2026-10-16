@@ -46,6 +46,11 @@ public class CustomerService {
                 Sort.by(Sort.Direction.ASC, "name").and(Sort.by("customerId")));
         Page<Customer> result = query == null ? repository.findAll(pageable) :
                 repository.findAll(searchSpecification(query, exactId), pageable);
+        if (page > 0 && result.isEmpty()) {
+            pageable = PageRequest.of(Math.max(0, result.getTotalPages() - 1), size, pageable.getSort());
+            result = query == null ? repository.findAll(pageable) :
+                    repository.findAll(searchSpecification(query, exactId), pageable);
+        }
         return new CustomerPageResponse(result.getContent().stream().map(this::toResponse).toList(),
                 result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }

@@ -1,3 +1,4 @@
+import { DirectoryPage } from '../shared/directory-state';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
@@ -8,6 +9,12 @@ import { Hotel, HotelCreateRequest, HotelUpdateRequest, HotelStatus } from '../m
   providedIn: 'root',
 })
 export class HotelService {
+  page(query = '', status = '', page = 0) {
+    return this.http.get<DirectoryPage<Hotel>>(this.apiUrl + '/page', {
+      params: { query, status, page },
+    });
+  }
+
   private readonly http = inject(HttpClient);
 
   private readonly apiUrl = '/api/hotels';

@@ -1,3 +1,5 @@
+import { DirectoryState } from '../../../shared/directory-state';
+import { Pagination } from '../../../shared/pagination';
 import {
   Component,
   computed,
@@ -16,16 +18,21 @@ import { HotelForm } from '../hotel-form/hotel-form';
 @Component({
   selector: 'app-hotel-list',
   standalone: true,
-  imports: [HotelForm],
+  imports: [Pagination, HotelForm],
   templateUrl: './hotel-list.html',
   styleUrl: './hotel-list.scss',
 })
 export class HotelList implements OnInit {
   private readonly service = inject(HotelService);
   private readonly destroyRef = inject(DestroyRef);
-  readonly hotels = signal<Hotel[]>([]);
-  readonly loading = signal(false);
-  readonly error = signal('');
+  readonly directory = new DirectoryState<Hotel>(
+    (page) => this.service.page(this.query(), this.filter(), page),
+    this.destroyRef,
+    () => [this.query(), this.filter()],
+  );
+  readonly hotels = this.directory.items;
+  readonly loading = this.directory.loading;
+  readonly error = this.directory.error;
   readonly notice = signal('');
   readonly query = signal('');
   readonly filter = signal('');
@@ -38,35 +45,14 @@ export class HotelList implements OnInit {
   readonly editor = viewChild.required<ElementRef<HTMLDialogElement>>('editor');
   readonly confirmation = viewChild.required<ElementRef<HTMLDialogElement>>('confirmation');
   readonly form = viewChild.required(HotelForm);
-  readonly activeCount = computed(() => this.hotels().filter((h) => h.status === 'ACTIVE').length);
-  readonly filtered = computed(() => {
-    const q = this.query().trim().toLowerCase();
-    return this.hotels().filter(
-      (h) =>
-        (!this.filter() || h.status === this.filter()) &&
-        [h.name, h.city, h.country].some((v) => v.toLowerCase().includes(q)),
-    );
-  });
+  readonly activeCount = computed(() => Number(this.directory.summary()['activeRecords'] ?? 0));
+  readonly filtered = this.hotels;
+
   ngOnInit(): void {
     this.loadHotels();
   }
-  loadHotels(): void {
-    if (this.loading()) return;
-    this.loading.set(true);
-    this.error.set('');
-    this.service
-      .getAllHotels()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (hotels) => {
-          this.hotels.set(hotels);
-          this.loading.set(false);
-        },
-        error: (error) => {
-          this.error.set(apiError(error));
-          this.loading.set(false);
-        },
-      });
+  loadHotels(page = this.directory.page()) {
+    this.directory.load(page);
   }
   openEditor(hotel: Hotel | null = null): void {
     this.selected.set(hotel);
@@ -93,7 +79,7 @@ export class HotelList implements OnInit {
         this.closeEditor();
         if (hotel)
           this.hotels.update((list) => list.map((h) => (h.hotelId === hotel.hotelId ? saved : h)));
-        else this.loadHotels();
+        this.directory.load(this.directory.page(), true);
         this.notice.set(`Hotel ${hotel ? 'updated' : 'registered'} successfully.`);
       },
       error: (error) => {
@@ -123,6 +109,7 @@ export class HotelList implements OnInit {
       .subscribe({
         next: (saved) => {
           this.hotels.update((list) => list.map((h) => (h.hotelId === hotel.hotelId ? saved : h)));
+          this.directory.load(this.directory.page(), true);
           this.statusBusy.set(false);
           this.closeStatus();
           this.notice.set(`${saved.name} is now ${saved.status.toLowerCase()}.`);

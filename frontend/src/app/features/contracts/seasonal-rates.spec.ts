@@ -66,9 +66,10 @@ describe('Seasonal rate management', () => {
   it('shows loading, dated periods, currency and override explanation', () => {
     expect(fixture.nativeElement.textContent).toContain('Loading seasonal rates');
     load();
-    expect(fixture.nativeElement.textContent).toContain('2026-06-01 to 2026-06-30');
+    expect(fixture.nativeElement.textContent).toContain('01 Jun 2026');
+    expect(fixture.nativeElement.textContent).toContain('30 Jun 2026');
     expect(fixture.nativeElement.textContent).toContain('150 USD');
-    expect(fixture.nativeElement.textContent).toContain('override the base rate');
+    expect(fixture.nativeElement.textContent).toContain('Override the base rate');
   });
   it('handles list failure, retry and no periods', () => {
     http.expectOne(url).error(new ProgressEvent('error'));
@@ -189,82 +190,17 @@ describe('Seasonal rate management', () => {
     expect(c.editing()).toBe(true);
   });
 
-  function dialog() {
-    const element: HTMLDialogElement = fixture.nativeElement.querySelector('dialog');
-    element.showModal = vi.fn();
-    element.close = vi.fn();
-    return element;
-  }
-  it('asks before removal, shows the selected period, and allows keeping the rate', () => {
+  it('offers add and edit without seasonal-rate deletion controls', () => {
     load();
-    const confirmation = dialog();
-    const remove: HTMLButtonElement = Array.from(
+    const buttons = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((button) => button.textContent?.trim() === 'Remove')!;
-    remove.click();
-    fixture.detectChanges();
-    expect(confirmation.showModal).toHaveBeenCalledOnce();
-    expect(confirmation.textContent).toContain('2026-06-01 to 2026-06-30');
-    expect(confirmation.textContent).toContain('150 USD');
-    http.expectNone(url + '/12');
-    c.closeRemoval();
-    expect(c.removal()).toBeNull();
+    );
+    expect(buttons.some((button) => button.textContent?.trim() === 'Edit seasonal rate')).toBe(
+      true,
+    );
+    expect(buttons.some((button) => button.textContent?.trim() === 'Add Seasonal Rate')).toBe(true);
+    expect(buttons.some((button) => /remove|delete/i.test(button.textContent ?? ''))).toBe(false);
+    expect(fixture.nativeElement.querySelector('dialog')).toBeNull();
     expect(c.rows()).toEqual([seasonal]);
-    http.expectNone(url + '/12');
-  });
-  it('deletes only the selected rate once and refreshes without changing the offering', () => {
-    const other = {
-      ...seasonal,
-      seasonalRateId: 13,
-      validFrom: '2026-07-01',
-      validTo: '2026-07-31',
-    };
-    load([seasonal, other]);
-    dialog();
-    c.openRemoval(seasonal);
-    c.remove();
-    c.remove();
-    c.closeRemoval();
-    expect(c.removal()?.seasonalRateId).toBe(12);
-    const request = http.expectOne(url + '/12');
-    expect(request.request.method).toBe('DELETE');
-    request.flush(null, { status: 204, statusText: 'No Content' });
-    http.expectOne(url).flush([other]);
-    fixture.detectChanges();
-    expect(c.rows()).toEqual([other]);
-    expect(c.offering()).toEqual(offering);
-    expect(c.notice()).toContain('Confirmed reservation prices remain unchanged');
-    expect(c.removal()).toBeNull();
-  });
-  it('keeps data and the confirmation open when removal fails', () => {
-    load();
-    dialog();
-    c.openRemoval(seasonal);
-    c.remove();
-    http
-      .expectOne(url + '/12')
-      .flush({ message: 'Contract is suspended' }, { status: 409, statusText: 'Conflict' });
-    fixture.detectChanges();
-    expect(c.removalError()).toContain('Contract is suspended');
-    expect(c.rows()).toEqual([seasonal]);
-    expect(c.offering()).toEqual(offering);
-    expect(c.removal()).toEqual(seasonal);
-    expect(c.removing()).toBe(false);
-    expect(c.notice()).toBe('');
-  });
-  it('does not offer or send removal under suspended or terminated contracts', () => {
-    load();
-    for (const status of ['SUSPENDED', 'TERMINATED'] as const) {
-      fixture.componentRef.setInput('contract', { ...contract, status });
-      fixture.detectChanges();
-      expect(
-        Array.from(fixture.nativeElement.querySelectorAll('.season button')).some(
-          (button) => (button as HTMLElement).textContent?.trim() === 'Remove',
-        ),
-      ).toBe(false);
-      c.openRemoval(seasonal);
-      c.remove();
-      http.expectNone(url + '/12');
-    }
   });
 });

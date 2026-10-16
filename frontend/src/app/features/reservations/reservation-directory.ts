@@ -1,3 +1,4 @@
+import { Pagination } from '../../shared/pagination';
 import {
   Component,
   DestroyRef,
@@ -17,7 +18,7 @@ import { ReservationService } from '../../services/reservation.service';
 import { apiError } from '../../services/api-error';
 @Component({
   selector: 'app-reservation-directory',
-  imports: [ReactiveFormsModule, RouterLink, DecimalPipe, DatePipe],
+  imports: [Pagination, ReactiveFormsModule, RouterLink, DecimalPipe, DatePipe],
   templateUrl: './reservation-directory.html',
   styleUrl: './reservations.scss',
 })

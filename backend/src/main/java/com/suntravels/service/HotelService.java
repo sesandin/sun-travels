@@ -72,7 +72,7 @@ public class HotelService {
         return toResponse(updatedHotel);
     }
 
-    private HotelResponse toResponse(Hotel hotel) {
+    HotelResponse toResponse(Hotel hotel) {
 
         HotelResponse response = new HotelResponse();
 

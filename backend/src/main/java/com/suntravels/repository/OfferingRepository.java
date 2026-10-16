@@ -8,7 +8,14 @@ import java.util.*;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
-public interface OfferingRepository extends JpaRepository<ContractRoomOffering, Integer> {
+public interface OfferingRepository extends JpaRepository<ContractRoomOffering, Integer>,
+        JpaSpecificationExecutor<ContractRoomOffering> {
+    @Override
+    @EntityGraph(attributePaths = {"contract", "contract.hotel", "roomType"})
+    org.springframework.data.domain.Page<ContractRoomOffering> findAll(
+            org.springframework.data.jpa.domain.Specification<ContractRoomOffering> specification,
+            org.springframework.data.domain.Pageable pageable);
+
     // Fetch only to-one relationships: no collection join inflation or per-row lazy reads.
     @Query("select o from ContractRoomOffering o join fetch o.contract c join fetch c.hotel join fetch o.roomType order by o.offeringId desc")
     List<ContractRoomOffering> findDirectoryOfferings();

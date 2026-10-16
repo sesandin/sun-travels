@@ -1,8 +1,12 @@
-<section aria-label="Seasonal rates">
-  <h4>Seasonal rates</h4>
-  <p>
-    Seasonal rates override the base rate for applicable occupied nights. All rates share the
-    offering's allocated rooms.
+<section class="seasonal-section" aria-label="Seasonal rates">
+  <div class="seasonal-header">
+    <h4>Seasonal rates</h4>
+    @if (canMaintain()) {
+      <button type="button" (click)="open()" [disabled]="saving()">Add Seasonal Rate</button>
+    }
+  </div>
+  <p class="section-description">
+    Override the base rate for nights within these dates. Room allocation stays the same.
   </p>
   @if (loading()) {
     <p><output>Loading seasonal rates...</output></p>
@@ -11,33 +15,27 @@
     <button type="button" (click)="load()">Retry seasonal rates</button>
   } @else {
     @if (!rows().length) {
-      <p>No seasonal periods. The base rate applies.</p>
+      <p class="seasonal-empty">No seasonal periods. The base rate applies.</p>
     }
     @for (row of rows(); track row.seasonalRateId) {
       <div class="season">
-        <span
-          >{{ row.validFrom }} to {{ row.validTo }} (inclusive): {{ row.ratePerPersonPerNight }}
-          {{ contract().currencyCode }} per adult per night</span
-        >
-        @if (canMaintain()) {
-          <button type="button" (click)="open(row)" [disabled]="saving() || removing()">
-            Edit seasonal rate
-          </button>
-          <button
-            type="button"
-            class="primary danger"
-            (click)="openRemoval(row)"
-            [disabled]="saving() || removing()"
+        <div class="season-dates">
+          <strong
+            >{{ row.validFrom | date: 'dd MMM yyyy' }} &ndash;
+            {{ row.validTo | date: 'dd MMM yyyy' }}</strong
           >
-            Remove
+          <span>Both dates included</span>
+        </div>
+        <div class="season-price">
+          <strong>{{ row.ratePerPersonPerNight }} {{ contract().currencyCode }}</strong>
+          <span>per adult per night</span>
+        </div>
+        @if (canMaintain()) {
+          <button type="button" (click)="open(row)" [disabled]="saving()">
+            Edit seasonal rate
           </button>
         }
       </div>
-    }
-    @if (canMaintain()) {
-      <button class="primary" type="button" (click)="open()" [disabled]="saving() || removing()">
-        Add Seasonal Rate
-      </button>
     }
   }
   @if (notice()) {
@@ -53,7 +51,7 @@
       (ngSubmit)="save()"
       aria-label="Seasonal rate editor"
     >
-      <fieldset [disabled]="saving() || removing()">
+      <fieldset [disabled]="saving()">
         <legend>{{ selected() ? 'Edit seasonal period' : 'Add seasonal period' }}</legend>
         <div class="form-grid">
           <div>
@@ -113,41 +111,3 @@
     </form>
   }
 </section>
-
-<dialog
-  #removalDialog
-  [attr.aria-labelledby]="'remove-season-title-' + offering().offeringId"
-  [attr.aria-describedby]="'remove-season-description-' + offering().offeringId"
-  (cancel)="removing() ? $event.preventDefault() : closeRemoval()"
->
-  <div class="editor">
-    <h2 [id]="'remove-season-title-' + offering().offeringId">Remove seasonal rate?</h2>
-    @if (removal(); as row) {
-      <p>
-        <strong>{{ offering().roomTypeName }}</strong>
-      </p>
-      <p>{{ row.validFrom }} to {{ row.validTo }} (inclusive)</p>
-      <p>{{ row.ratePerPersonPerNight }} {{ contract().currencyCode }} per adult per night</p>
-    }
-    <p [id]="'remove-season-description-' + offering().offeringId">
-      Only this seasonal rate will be removed. Future quotations for these dates will use the base
-      rate. Existing confirmed reservations and their booked prices remain unchanged.
-    </p>
-    @if (removalError()) {
-      <p class="error-message" role="alert">{{ removalError() }}</p>
-    }
-    <div class="actions">
-      <button type="button" (click)="closeRemoval()" [disabled]="removing()" autofocus>
-        Keep seasonal rate
-      </button>
-      <button
-        type="button"
-        class="primary danger"
-        (click)="remove()"
-        [disabled]="removing() || !canMaintain()"
-      >
-        {{ removing() ? 'Removing...' : 'Remove seasonal rate' }}
-      </button>
-    </div>
-  </div>
-</dialog>

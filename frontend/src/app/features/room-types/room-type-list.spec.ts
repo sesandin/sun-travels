@@ -1,3 +1,4 @@
+import { directoryPage } from '../../testing/directory-page';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -22,7 +23,7 @@ describe('Room type management', () => {
   });
   afterEach(() => http.verify());
   function load() {
-    http.expectOne(url).flush([row]);
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage([row]));
     fixture.detectChanges();
   }
   it('shows loading, real API data, search and no matches', () => {
@@ -30,17 +31,25 @@ describe('Room type management', () => {
     load();
     expect(fixture.nativeElement.textContent).toContain('Deluxe');
     component.query.set('sea');
+    component.loadRoomTypes(0);
+    http
+      .expectOne((r) => r.url === url + '/page' && r.params.get('query') === 'sea')
+      .flush(directoryPage([row]));
     expect(component.filtered()).toHaveLength(1);
     component.query.set('unknown');
+    component.loadRoomTypes(0);
+    http
+      .expectOne((r) => r.url === url + '/page')
+      .flush(directoryPage([], 0, 0, { totalRecords: 1 }));
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No matching room types');
   });
   it('shows errors and retries to an empty state', () => {
-    http.expectOne(url).error(new ProgressEvent('error'));
+    http.expectOne((r) => r.url === url + '/page').error(new ProgressEvent('error'));
     fixture.detectChanges();
     expect(component.error()).toContain('Cannot reach');
     component.loadRoomTypes();
-    http.expectOne(url).flush([]);
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage([]));
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No room types yet');
   });
@@ -68,6 +77,7 @@ describe('Room type management', () => {
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ name: 'Standard', description: null });
     request.flush({ roomTypeId: 8, name: 'Standard', description: null });
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(component.roomTypes()));
     expect(component.roomTypes()).toHaveLength(2);
     expect(component.notice()).toContain('created successfully');
   });
@@ -85,6 +95,7 @@ describe('Room type management', () => {
     expect(component.roomTypes()[0].name).toBe('Deluxe');
     component.save();
     http.expectOne(url + '/7').flush({ ...row, name: 'Updated' });
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(component.roomTypes()));
     expect(component.roomTypes()[0].name).toBe('Updated');
     expect(component.notice()).toContain('updated successfully');
   });
@@ -99,5 +110,30 @@ describe('Room type management', () => {
     component.closeEditor();
     expect(component.editor().nativeElement.close).not.toHaveBeenCalled();
     http.expectOne(url).flush({ ...row, name: 'New' });
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(component.roomTypes()));
+  });
+  it('requests ten records, renders the final partial page and resets on a search event', () => {
+    load();
+    component.loadRoomTypes(2);
+    const final = http.expectOne((r) => r.url === url + '/page' && r.params.get('page') === '2');
+    final.flush(directoryPage([row], 2, 21));
+    fixture.detectChanges();
+    expect(component.directory.totalPages()).toBe(3);
+    expect(component.directory.totalElements()).toBe(21);
+    expect(component.filtered()).toHaveLength(1);
+    const search: HTMLInputElement = fixture.nativeElement.querySelector('input[type="search"]');
+    search.value = 'updated';
+    search.dispatchEvent(new Event('input'));
+    const filtered = http.expectOne(
+      (r) =>
+        r.url === url + '/page' &&
+        r.params.get('page') === '0' &&
+        r.params.get('query') === 'updated',
+    );
+    filtered.flush(directoryPage([], 0, 0, { totalRecords: 21 }));
+    fixture.detectChanges();
+    expect(component.directory.page()).toBe(0);
+    expect(component.directory.totalElements()).toBe(0);
+    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(0);
   });
 });

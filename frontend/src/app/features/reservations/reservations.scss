@@ -74,7 +74,7 @@ legend {
   gap: 12px;
   margin-top: 20px;
 }
-a {
+a:not(.primary) {
   color: var(--primary);
 }
 summary {

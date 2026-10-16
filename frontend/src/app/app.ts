@@ -49,7 +49,6 @@ export class App {
       '/hotels': 'Hotels',
       '/room-types': 'Room Types',
       '/contracts': 'Contracts',
-      '/room-offerings': 'Room Offerings',
       '/search': 'Search & Quotations',
       '/customers': 'Customers',
       '/reservations': 'Reservations',

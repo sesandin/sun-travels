@@ -7,13 +7,6 @@
     </p>
   </div>
 </header>
-<aside class="notice">
-  <strong>Plan with confidence. Confirm separately.</strong>
-  <p>
-    Availability and prices are informational snapshots. They must be rechecked at reservation
-    confirmation. This screen does not book or hold rooms.
-  </p>
-</aside>
 <section class="panel" aria-labelledby="search-title">
   <h2 id="search-title">Stay and requested rooms</h2>
   @if (setupLoading()) {
@@ -196,7 +189,7 @@
       <div class="actions">
         <button
           type="button"
-          class="secondary"
+          class="primary"
           (click)="addRoom()"
           [disabled]="!limits() || rooms.length >= (limits()?.maxRooms ?? 0)"
         >

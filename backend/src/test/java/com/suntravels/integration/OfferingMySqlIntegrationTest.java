@@ -31,6 +31,8 @@ class OfferingMySqlIntegrationTest {
     @Autowired
     OfferingService service;
     @Autowired
+    com.suntravels.service.DirectoryService directories;
+    @Autowired
     ContractRepository contracts;
     @Autowired
     OfferingRepository offerings;
@@ -191,9 +193,6 @@ class OfferingMySqlIntegrationTest {
                 new SeasonalRateRequest(from, to, new BigDecimal("40")));
         service.updateSeason(offeringId, seasonal.seasonalRateId(),
                 new SeasonalRateRequest(from, to, new BigDecimal("50")));
-        service.removeSeason(offeringId, seasonal.seasonalRateId());
-        assertTrue(service.seasonalRates(offeringId).isEmpty());
-        assertEquals(0, new BigDecimal("30").compareTo(service.effectiveRate(offeringId, from)));
         service.status(offeringId, new OfferingStatusRequest(OfferingStatus.SUSPENDED));
         assertEquals(reservation,
                 jdbc.queryForMap("select * from reservation where reservation_id = ?", reservationId));
@@ -241,17 +240,51 @@ class OfferingMySqlIntegrationTest {
     }
 
     @Test
-    void removalDeletesOnlySelectedOverrideAndPreservesOffering() {
-        var first = service.createSeason(offeringId,
-                new SeasonalRateRequest(from, from.plusDays(5), new BigDecimal("30")));
-        var second = service.createSeason(offeringId,
-                new SeasonalRateRequest(from.plusDays(6), to, new BigDecimal("40")));
-        var before = service.get(offeringId);
-        service.removeSeason(offeringId, first.seasonalRateId());
-        assertEquals(before, service.get(offeringId));
-        assertEquals(java.util.List.of(second), service.seasonalRates(offeringId));
-        assertEquals(0, BigDecimal.TEN.compareTo(service.effectiveRate(offeringId, from)));
-        assertEquals(0, new BigDecimal("40").compareTo(service.effectiveRate(offeringId, to)));
+    void directoryFiltersAndCountsAreAppliedBeforeTenRowPagesInMySql() {
+        String prefix = "Page_%" + UUID.randomUUID();
+        java.util.List<Integer> extraRooms = new java.util.ArrayList<>();
+        java.util.List<Integer> extraOfferings = new java.util.ArrayList<>();
+        try {
+            for (int index = 1; index <= 24; index++) {
+                final int number = index;
+                Integer id = tx().execute(t -> {
+                    RoomType room = new RoomType();
+                    room.setName(prefix + String.format("%02d", number));
+                    return rooms.saveAndFlush(room).getRoomTypeId();
+                });
+                extraRooms.add(id);
+                extraOfferings.add(service.create(contractId,
+                        new OfferingRequest(id, BigDecimal.TEN, index, 2, OfferingStatus.ENABLED)).offeringId());
+            }
+            var filters = java.util.Map.of("hotelId", hotelId.toString(), "contractStatus", "DRAFT",
+                    "offeringStatus", "ENABLED", "sortBy", "rooms", "direction", "desc");
+            var first = directories.offerings(filters, 0);
+            var second = directories.offerings(filters, 1);
+            var last = directories.offerings(filters, 2);
+            assertEquals(10, first.items().size());
+            assertEquals(10, second.items().size());
+            assertEquals(5, last.items().size());
+            assertEquals(25, first.totalElements());
+            assertEquals(3, first.totalPages());
+            assertEquals(24, first.items().get(0).contractedRoomCount());
+            assertTrue(first.items().stream().noneMatch(second.items()::contains));
+            assertEquals(2, directories.offerings(filters, 99).page());
+            var roomPage = directories.rooms(prefix, 2);
+            assertEquals(24, roomPage.totalElements());
+            assertEquals(4, roomPage.items().size());
+            assertEquals(3, roomPage.totalPages());
+            assertTrue(roomPage.items().stream().allMatch(room -> room.name().startsWith(prefix)));
+            String code = tx().execute(t -> contracts.findById(contractId).orElseThrow().getContractCode());
+            assertEquals(1, directories.contracts(code, "DRAFT", 0).totalElements());
+            assertEquals(0, directories.contracts(code, "APPROVED", 0).totalElements());
+            String hotelName = tx().execute(t -> hotels.findById(hotelId).orElseThrow().getName());
+            assertEquals(1, directories.hotels(hotelName, "ACTIVE", 0).totalElements());
+            assertEquals(0, directories.hotels(hotelName, "INACTIVE", 0).totalElements());
+        } finally {
+            tx().executeWithoutResult(t -> {
+                for (Integer id : extraOfferings) jdbc.update("delete from contract_room_offering where offering_id = ?", id);
+                for (Integer id : extraRooms) jdbc.update("delete from room_type where room_type_id = ?", id);
+            });
+        }
     }
-
 }

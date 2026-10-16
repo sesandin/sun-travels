@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import {
   Component,
   DestroyRef,
@@ -19,17 +20,13 @@ import { apiError } from '../../services/api-error';
 import { money, period } from './offering-validators';
 @Component({
   selector: 'app-seasonal-rates',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, DatePipe],
   templateUrl: './seasonal-rates.html',
   styleUrl: './offering-panel.scss',
 })
 export class SeasonalRates implements OnInit {
   private readonly injector = inject(Injector);
   private readonly editor = viewChild<ElementRef<HTMLElement>>('editor');
-  readonly removalDialog = viewChild.required<ElementRef<HTMLDialogElement>>('removalDialog');
-  readonly removing = signal(false);
-  readonly removal = signal<SeasonalRate | null>(null);
-  readonly removalError = signal('');
   readonly contract = input.required<Contract>();
   readonly offering = input.required<Offering>();
   private readonly service = inject(OfferingService);
@@ -75,7 +72,7 @@ export class SeasonalRates implements OnInit {
       });
   }
   open(row: SeasonalRate | null = null) {
-    if (!this.canMaintain() || this.saving() || this.removing() || this.removal()) return;
+    if (!this.canMaintain() || this.saving()) return;
     this.selected.set(row);
     this.editing.set(true);
     this.failure.set('');
@@ -90,54 +87,8 @@ export class SeasonalRates implements OnInit {
   cancel() {
     if (!this.saving()) this.editing.set(false);
   }
-  openRemoval(row: SeasonalRate) {
-    if (!this.canMaintain() || this.saving() || this.removing() || this.loading()) return;
-    this.removal.set(row);
-    this.removalError.set('');
-    this.notice.set('');
-    this.removalDialog().nativeElement.showModal();
-  }
-  closeRemoval() {
-    if (this.removing()) return;
-    this.removalDialog().nativeElement.close();
-    this.removal.set(null);
-  }
-  remove() {
-    const row = this.removal();
-    if (!row || !this.canMaintain() || this.saving() || this.removing()) return;
-    this.removing.set(true);
-    this.removalError.set('');
-    this.service
-      .removeSeason(this.offering().offeringId, row.seasonalRateId)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.removing.set(false);
-          this.closeRemoval();
-          this.editing.set(false);
-          this.rows.update((rows) =>
-            rows.filter((rate) => rate.seasonalRateId !== row.seasonalRateId),
-          );
-          this.notice.set(
-            'Seasonal rate removed. The base rate now applies to these dates. Confirmed reservation prices remain unchanged.',
-          );
-          this.load();
-        },
-        error: (e) => {
-          this.removing.set(false);
-          this.removalError.set(apiError(e));
-        },
-      });
-  }
   save() {
-    if (
-      !this.canMaintain() ||
-      this.saving() ||
-      this.removing() ||
-      this.removal() ||
-      !this.editing()
-    )
-      return;
+    if (!this.canMaintain() || this.saving() || !this.editing()) return;
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
     const raw = this.form.getRawValue(),

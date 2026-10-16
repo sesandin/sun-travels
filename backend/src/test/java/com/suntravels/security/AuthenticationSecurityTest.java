@@ -30,7 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest({AuthController.class, ContractController.class, QuotationSearchController.class,
-        CustomerController.class, OfferingController.class})
+        CustomerController.class, OfferingController.class, DirectoryController.class})
 @Import({SecurityConfig.class, DatabaseUserDetailsService.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
 class AuthenticationSecurityTest {
@@ -42,6 +42,8 @@ class AuthenticationSecurityTest {
     UserRepository users;
     @MockitoBean
     OfferingService offerings;
+    @MockitoBean
+    DirectoryService directories;
     @MockitoBean
     ContractService contracts;
     @MockitoBean
@@ -147,8 +149,8 @@ class AuthenticationSecurityTest {
 
     @Test
     void bothRolesCanManageCustomersButAnonymousIsRejectedAndWritesNeedCsrf() throws Exception {
-        when(customers.searchCustomers(null, 0, 20)).thenReturn(
-                new CustomerPageResponse(List.of(), 0, 20, 0, 0));
+        when(customers.searchCustomers(null, 0, 10)).thenReturn(
+                new CustomerPageResponse(List.of(), 0, 10, 0, 0));
         when(customers.createCustomer(any())).thenReturn(
                 new CustomerResponse(1, "Alice", "+94771234567", null));
         mvc.perform(get("/api/customers")).andExpect(status().isUnauthorized());
@@ -211,16 +213,12 @@ class AuthenticationSecurityTest {
     }
 
     @Test
-    void seasonalRemovalRequiresAdminSessionAndCsrf() throws Exception {
-        mvc.perform(delete("/api/offerings/3/seasonal-rates/4").with(csrf()))
-                .andExpect(status().isUnauthorized());
-        mvc.perform(delete("/api/offerings/3/seasonal-rates/4").session(login("agent01")).with(csrf()))
-                .andExpect(status().isForbidden());
-        mvc.perform(delete("/api/offerings/3/seasonal-rates/4").session(login("admin01")))
-                .andExpect(status().isForbidden());
-        mvc.perform(delete("/api/offerings/3/seasonal-rates/4").session(login("admin01")).with(csrf()))
-                .andExpect(status().isNoContent());
-        verify(offerings).removeSeason(3, 4);
+    void directoryPagesRemainAdminOnly() throws Exception {
+        for (String resource : List.of("hotels", "room-types", "contracts", "offerings")) {
+            mvc.perform(get("/api/" + resource + "/page").session(login("agent01")))
+                    .andExpect(status().isForbidden());
+            mvc.perform(get("/api/" + resource + "/page").session(login("admin01")))
+                    .andExpect(status().isOk());
+        }
     }
-
 }

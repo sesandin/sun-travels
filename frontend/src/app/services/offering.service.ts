@@ -1,3 +1,4 @@
+import { DirectoryPage } from '../shared/directory-state';
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {
@@ -10,6 +11,12 @@ import {
 } from '../models/offering.model';
 @Injectable({ providedIn: 'root' })
 export class OfferingService {
+  page(filters: Record<string, string>, page = 0) {
+    return this.http.get<DirectoryPage<OfferingDirectoryEntry>>(this.url + '/offerings' + '/page', {
+      params: { ...filters, page },
+    });
+  }
+
   private readonly http = inject(HttpClient);
   private readonly url = '/api';
   directory() {
@@ -40,9 +47,6 @@ export class OfferingService {
   }
   createSeason(id: number, request: SeasonalRateRequest) {
     return this.http.post<SeasonalRate>(this.url + '/offerings/' + id + '/seasonal-rates', request);
-  }
-  removeSeason(id: number, rateId: number) {
-    return this.http.delete<void>(this.url + '/offerings/' + id + '/seasonal-rates/' + rateId);
   }
   updateSeason(id: number, rateId: number, request: SeasonalRateRequest) {
     return this.http.put<SeasonalRate>(

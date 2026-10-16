@@ -5,7 +5,7 @@
       <h1 id="page-title">Room type management</h1>
       <p>Manage reusable room categories for your accommodation partners.</p>
     </div>
-    <button type="button" class="primary" (click)="openEditor()">+ Create room type</button>
+    <button type="button" class="primary" (click)="openEditor()">Create room type</button>
   </header>
   @if (notice()) {
     <p class="success-message">
@@ -30,7 +30,7 @@
           type="search"
           placeholder="Search by name or description"
           [value]="query()"
-          (input)="query.set($any($event.target).value)"
+          (input)="query.set($any($event.target).value); loadRoomTypes(0)"
         />
       </div>
     </div>
@@ -46,14 +46,24 @@
       </div>
     } @else if (!filtered().length) {
       <div class="state">
-        <h3>{{ roomTypes().length ? 'No matching room types' : 'No room types yet' }}</h3>
+        <h3>
+          {{
+            $any(directory.summary()['totalRecords'] ?? 0)
+              ? 'No matching room types'
+              : 'No room types yet'
+          }}
+        </h3>
         <p>
           {{
-            roomTypes().length ? 'Try another search.' : 'Create your first reusable room category.'
+            $any(directory.summary()['totalRecords'] ?? 0)
+              ? 'Try another search.'
+              : 'Create your first reusable room category.'
           }}
         </p>
-        @if (roomTypes().length) {
-          <button type="button" class="secondary" (click)="query.set('')">Clear search</button>
+        @if ($any(directory.summary()['totalRecords'] ?? 0)) {
+          <button type="button" class="secondary" (click)="query.set(''); loadRoomTypes(0)">
+            Clear search
+          </button>
         } @else {
           <button type="button" class="primary" (click)="openEditor()">Create room type</button>
         }
@@ -94,12 +104,17 @@
           </tbody>
         </table>
       </div>
-      <div class="list-footer">
-        <output>Showing {{ filtered().length }} of {{ roomTypes().length }} room types</output>
-      </div>
     }
   </div>
 </section>
+
+<app-pagination
+  [page]="directory.page()"
+  [totalPages]="directory.totalPages()"
+  [totalElements]="directory.totalElements()"
+  [loading]="loading()"
+  (pageChange)="loadRoomTypes($event)"
+/>
 <dialog
   #editor
   aria-labelledby="editor-title"

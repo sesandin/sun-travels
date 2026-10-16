@@ -61,15 +61,90 @@ dd {
   background: var(--surface);
   border-color: var(--border);
 }
-.offering h4 {
+.offering-header h4 {
   font-size: 18px;
-  margin: 0 0 16px;
+  margin: 0;
 }
-.offering dl {
+.offering .offering-metrics {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 0;
   background: var(--surface-soft);
   padding: 16px;
   border-radius: 8px;
   margin: 16px 0;
+}
+.offering-metrics > div {
+  min-width: 0;
+  padding: 0 20px;
+  border-left: 1px solid var(--border);
+}
+.offering-metrics > div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+.offering .offering-metrics dd {
+  font-size: 24px;
+  line-height: 1.4;
+  margin: 4px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+.offering-metrics dd span {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.metric-note,
+.section-description,
+.season-dates > span,
+.season-price > span {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.offering-header,
+.seasonal-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.seasonal-section {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.seasonal-header h4 {
+  margin: 0;
+  font-size: 14px;
+}
+.seasonal-section .section-description {
+  margin: 8px 0 12px;
+}
+.season {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(140px, auto) auto;
+  gap: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.season-dates,
+.season-price {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.season strong {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.seasonal-empty {
+  padding: 14px 16px;
+  background: var(--surface-soft);
+  border-radius: 8px;
+  color: var(--muted);
+  margin: 0;
+  font-size: var(--text-sm);
 }
 .offering dt {
   color: var(--muted);
@@ -86,11 +161,25 @@ dd {
 .form-grid {
   grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
 }
-@media (max-width: 480px) {
-  dl {
-    grid-template-columns: minmax(0, 1fr);
+@media (max-width: 640px) {
+  .offering .offering-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
-  dd {
-    margin-bottom: 8px;
+  .offering-metrics > div {
+    padding: 0;
+    border: 0;
+  }
+  .offering-metrics .rate-metric {
+    grid-column: 1 / -1;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .season {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .season button {
+    justify-self: start;
   }
 }

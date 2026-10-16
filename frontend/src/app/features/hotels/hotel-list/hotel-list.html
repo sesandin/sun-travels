@@ -5,9 +5,7 @@
       <h1 id="page-title">Hotel management</h1>
       <p>Manage your hotel partners, details and availability for new sales.</p>
     </div>
-    <button type="button" class="primary" (click)="openEditor()">
-      <span aria-hidden="true">+</span> Register hotel
-    </button>
+    <button type="button" class="primary" (click)="openEditor()">Register hotel</button>
   </header>
   @if (notice()) {
     <p class="success-message">
@@ -17,7 +15,9 @@
   <div class="stats" aria-label="Hotel overview">
     <div>
       <span>Registered hotels</span>
-      <strong>{{ loading() || error() ? '�' : hotels().length }}</strong>
+      <strong>{{
+        loading() || error() ? '�' : $any(directory.summary()['totalRecords'] ?? 0)
+      }}</strong>
     </div>
     <div>
       <span>Active partners</span>
@@ -25,7 +25,9 @@
     </div>
     <div>
       <span>Inactive partners</span>
-      <strong>{{ loading() || error() ? '�' : hotels().length - activeCount() }}</strong>
+      <strong>{{
+        loading() || error() ? '�' : $any(directory.summary()['totalRecords'] ?? 0) - activeCount()
+      }}</strong>
     </div>
   </div>
   <div class="list-panel" [attr.aria-busy]="loading()">
@@ -46,7 +48,7 @@
           type="search"
           placeholder="Search by name, city or country"
           [value]="query()"
-          (input)="query.set($any($event.target).value)"
+          (input)="query.set($any($event.target).value); loadHotels(0)"
         />
       </div>
       <div>
@@ -54,7 +56,7 @@
         <select
           id="status-filter"
           [value]="filter()"
-          (change)="filter.set($any($event.target).value)"
+          (change)="filter.set($any($event.target).value); loadHotels(0)"
         >
           <option value="">All statuses</option>
           <option value="ACTIVE">Active</option>
@@ -76,16 +78,27 @@
     } @else if (!filtered().length) {
       <div class="state">
         <span class="empty-icon" aria-hidden="true">�</span>
-        <h3>{{ hotels().length ? 'No matching hotels' : 'Your hotel network starts here' }}</h3>
+        <h3>
+          {{
+            $any(directory.summary()['totalRecords'] ?? 0)
+              ? 'No matching hotels'
+              : 'Your hotel network starts here'
+          }}
+        </h3>
         <p>
           {{
-            hotels().length
+            $any(directory.summary()['totalRecords'] ?? 0)
               ? 'Try another search or clear your filters.'
               : 'Register your first hotel partner to get started.'
           }}
         </p>
-        @if (hotels().length) {
-          <button class="secondary" (click)="query.set(''); filter.set('')">Clear filters</button>
+        @if ($any(directory.summary()['totalRecords'] ?? 0)) {
+          <button
+            class="secondary"
+            (click)="query.set(''); filter.set(''); loadHotels(0); loadHotels(0)"
+          >
+            Clear filters
+          </button>
         } @else {
           <button class="primary" (click)="openEditor()">Register hotel</button>
         }
@@ -157,12 +170,17 @@
           </tbody>
         </table>
       </div>
-      <div class="list-footer">
-        <output>Showing {{ filtered().length }} of {{ hotels().length }} hotels</output>
-      </div>
     }
   </div>
 </section>
+
+<app-pagination
+  [page]="directory.page()"
+  [totalPages]="directory.totalPages()"
+  [totalElements]="directory.totalElements()"
+  [loading]="loading()"
+  (pageChange)="loadHotels($event)"
+/>
 <dialog
   #editor
   aria-labelledby="editor-title"

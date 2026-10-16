@@ -5,7 +5,7 @@
       <h1 id="page-title">Customer management</h1>
       <p>Find, register and maintain customer contact details for future reservations.</p>
     </div>
-    <button type="button" class="primary" (click)="openEditor()">+ Add customer</button>
+    <button type="button" class="primary" (click)="openEditor()">Add customer</button>
   </header>
   @if (notice()) {
     <p class="success-message">
@@ -109,19 +109,15 @@
           </tbody>
         </table>
       </div>
-      <div class="list-footer">
-        <span>Showing {{ customers().length }} of {{ totalElements() }} customers</span>
-        <div class="pagination">
-          @if (page() > 0) {
-            <button type="button" class="secondary" (click)="load(page() - 1)">Previous</button>
-          }
-          <span>Page {{ page() + 1 }} of {{ totalPages() }}</span>
-          @if (page() + 1 < totalPages()) {
-            <button type="button" class="secondary" (click)="load(page() + 1)">Next</button>
-          }
-        </div>
-      </div>
     }
+
+    <app-pagination
+      [page]="page()"
+      [totalPages]="totalPages()"
+      [totalElements]="totalElements()"
+      [loading]="loading()"
+      (pageChange)="load($event)"
+    />
   </div>
 </section>
 <dialog

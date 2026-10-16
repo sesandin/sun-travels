@@ -1,3 +1,4 @@
+import { directoryPage } from '../../../testing/directory-page';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -35,7 +36,7 @@ describe('Hotel management API workflows', () => {
   });
   afterEach(() => http.verify());
   function load() {
-    http.expectOne(url).flush([hotel]);
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage([hotel]));
     fixture.detectChanges();
   }
   it('shows loading, renders API hotels and filters by location and status', () => {
@@ -44,17 +45,25 @@ describe('Hotel management API workflows', () => {
     load();
     expect(fixture.nativeElement.textContent).toContain(hotel.name);
     component.query.set('galle');
+    component.loadHotels(0);
+    http
+      .expectOne((r) => r.url === url + '/page' && r.params.get('query') === 'galle')
+      .flush(directoryPage([hotel]));
     expect(component.filtered().length).toBe(1);
     component.filter.set('INACTIVE');
+    component.loadHotels(0);
+    http
+      .expectOne((r) => r.url === url + '/page' && r.params.get('status') === 'INACTIVE')
+      .flush(directoryPage([], 0, 0, { totalRecords: 1 }));
     expect(component.filtered().length).toBe(0);
   });
   it('shows connection failures and retries successfully', () => {
-    http.expectOne(url).error(new ProgressEvent('error'));
+    http.expectOne((r) => r.url === url + '/page').error(new ProgressEvent('error'));
     fixture.detectChanges();
     expect(component.error()).toContain('Cannot reach');
     expect(component.loading()).toBe(false);
     component.loadHotels();
-    http.expectOne(url).flush([]);
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage([]));
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Your hotel network starts here');
   });
@@ -68,7 +77,7 @@ describe('Hotel management API workflows', () => {
     expect(request.request.method).toBe('POST');
     expect(request.request.body.hotelId).toBeUndefined();
     request.flush(hotel);
-    http.expectOne(url).flush([hotel]);
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage([hotel]));
     expect(component.notice()).toContain('registered successfully');
   });
   it('updates only editable fields and keeps failed submissions visible', () => {
@@ -86,6 +95,7 @@ describe('Hotel management API workflows', () => {
     expect(component.saving()).toBe(false);
     component.save({ ...details, name: 'Updated' });
     http.expectOne(`${url}/7`).flush({ ...hotel, name: 'Updated' });
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(component.hotels()));
     expect(component.hotels()[0].name).toBe('Updated');
     expect(component.hotels()[0].status).toBe('ACTIVE');
   });
@@ -101,6 +111,7 @@ describe('Hotel management API workflows', () => {
     expect(request.request.method).toBe('PATCH');
     expect(request.request.body).toEqual({ status: 'INACTIVE' });
     request.flush({ ...hotel, status: 'INACTIVE' });
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(component.hotels()));
     expect(component.hotels()[0].status).toBe('INACTIVE');
     component.requestStatus(component.hotels()[0]);
     component.changeStatus();
@@ -108,5 +119,29 @@ describe('Hotel management API workflows', () => {
     expect(component.hotels()[0].status).toBe('INACTIVE');
     expect(component.statusError()).toContain('server');
     expect(component.notice()).toBe('');
+  });
+  it('requests ten records, renders the final partial page and resets on a search event', () => {
+    load();
+    component.loadHotels(2);
+    const final = http.expectOne((r) => r.url === url + '/page' && r.params.get('page') === '2');
+    final.flush(directoryPage([hotel], 2, 21));
+    fixture.detectChanges();
+    expect(component.directory.totalPages()).toBe(3);
+    expect(component.directory.totalElements()).toBe(21);
+    expect(component.filtered()).toHaveLength(1);
+    const search: HTMLInputElement = fixture.nativeElement.querySelector('input[type="search"]');
+    search.value = 'updated';
+    search.dispatchEvent(new Event('input'));
+    const filtered = http.expectOne(
+      (r) =>
+        r.url === url + '/page' &&
+        r.params.get('page') === '0' &&
+        r.params.get('query') === 'updated',
+    );
+    filtered.flush(directoryPage([], 0, 0, { totalRecords: 21 }));
+    fixture.detectChanges();
+    expect(component.directory.page()).toBe(0);
+    expect(component.directory.totalElements()).toBe(0);
+    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(0);
   });
 });

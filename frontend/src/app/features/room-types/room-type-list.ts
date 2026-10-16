@@ -1,8 +1,9 @@
+import { DirectoryState } from '../../shared/directory-state';
+import { Pagination } from '../../shared/pagination';
 import {
   Component,
   DestroyRef,
   ElementRef,
-  computed,
   inject,
   signal,
   viewChild,
@@ -22,28 +23,29 @@ import { apiError } from '../../services/api-error';
 const notBlank: ValidatorFn = (control) => (!control.value?.trim() ? { required: true } : null);
 @Component({
   selector: 'app-room-type-list',
-  imports: [ReactiveFormsModule],
+  imports: [Pagination, ReactiveFormsModule],
   templateUrl: './room-type-list.html',
   styleUrl: './room-type-list.scss',
 })
 export class RoomTypeList implements OnInit {
   private readonly service = inject(RoomTypeService);
   private readonly destroyRef = inject(DestroyRef);
-  readonly roomTypes = signal<RoomType[]>([]);
-  readonly loading = signal(false);
+  readonly directory = new DirectoryState<RoomType>(
+    (page) => this.service.page(this.query(), page),
+    this.destroyRef,
+    () => this.query(),
+  );
+  readonly roomTypes = this.directory.items;
+  readonly loading = this.directory.loading;
   readonly saving = signal(false);
-  readonly error = signal('');
+  readonly error = this.directory.error;
   readonly submissionError = signal('');
   readonly notice = signal('');
   readonly query = signal('');
   readonly selected = signal<RoomType | null>(null);
   readonly editor = viewChild.required<ElementRef<HTMLDialogElement>>('editor');
-  readonly filtered = computed(() => {
-    const q = this.query().trim().toLowerCase();
-    return this.roomTypes().filter((r) =>
-      [r.name, r.description ?? ''].some((v) => v.toLowerCase().includes(q)),
-    );
-  });
+  readonly filtered = this.roomTypes;
+
   readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
@@ -57,23 +59,8 @@ export class RoomTypeList implements OnInit {
   ngOnInit() {
     this.loadRoomTypes();
   }
-  loadRoomTypes() {
-    if (this.loading()) return;
-    this.loading.set(true);
-    this.error.set('');
-    this.service
-      .getAllRoomTypes()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (rows) => {
-          this.roomTypes.set(rows);
-          this.loading.set(false);
-        },
-        error: (error) => {
-          this.error.set(this.message(error));
-          this.loading.set(false);
-        },
-      });
+  loadRoomTypes(page = this.directory.page()) {
+    this.directory.load(page);
   }
   openEditor(row: RoomType | null = null) {
     this.selected.set(row);
@@ -117,6 +104,7 @@ export class RoomTypeList implements OnInit {
           }
           return updated.sort((a, b) => a.name.localeCompare(b.name));
         });
+        this.directory.load(this.directory.page(), true);
         this.saving.set(false);
         this.closeEditor();
         this.notice.set('Room type ' + (row ? 'updated' : 'created') + ' successfully.');

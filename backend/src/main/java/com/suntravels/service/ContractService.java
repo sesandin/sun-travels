@@ -303,7 +303,7 @@ public class ContractService {
         }
     }
 
-    private ContractResponse response(Contract contract) {
+    ContractResponse response(Contract contract) {
         return new ContractResponse(contract.getContractId(), contract.getContractCode(),
                 contract.getHotel().getHotelId(), contract.getHotel().getName(), contract.getValidFrom(),
                 contract.getValidTo(), contract.getMarkupPercentage(), contract.getCurrencyCode(),

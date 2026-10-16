@@ -168,4 +168,18 @@ class CustomerServiceTest {
         c.setEmail(email);
         return c;
     }
+
+    @Test
+    void returnsLastValidTenRecordPageAfterAnEditRemovesTheLastMatch() {
+        Customer row = customer(42, "Alice", "+94771234567", "alice@example.com");
+        when(repository.findAll(any(Pageable.class))).thenReturn(
+                new PageImpl<>(List.of(), org.springframework.data.domain.PageRequest.of(2, 10), 20),
+                new PageImpl<>(List.of(row), org.springframework.data.domain.PageRequest.of(1, 10), 20));
+        var result = new CustomerService(repository).searchCustomers("", 2, 10);
+        assertEquals(1, result.page());
+        assertEquals(10, result.size());
+        assertEquals(20, result.totalElements());
+        assertEquals(2, result.totalPages());
+        assertEquals(42, result.customers().get(0).customerId());
+    }
 }

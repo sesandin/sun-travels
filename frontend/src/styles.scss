@@ -80,7 +80,17 @@ button:disabled {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
 }
-button.primary {
+button.primary,
+a.primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-height);
+  max-width: 100%;
+  font-size: inherit;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
   background: var(--primary);
   color: white;
   border: 1px solid var(--primary);
@@ -95,7 +105,8 @@ button.secondary {
   border-radius: 7px;
   padding: 10px 16px;
 }
-button.primary:not(:disabled):hover {
+button.primary:not(:disabled):hover,
+a.primary:hover {
   background: var(--primary-hover);
   border-color: var(--primary-hover);
 }
@@ -492,5 +503,30 @@ dialog {
   select,
   textarea {
     font-size: 16px;
+  }
+}
+
+app-pagination {
+  display: block;
+}
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 24px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+@media (max-width: 600px) {
+  .pagination {
+    justify-content: center;
+    padding: 16px;
+  }
+  .pagination span {
+    order: -1;
+    width: 100%;
+    text-align: center;
   }
 }

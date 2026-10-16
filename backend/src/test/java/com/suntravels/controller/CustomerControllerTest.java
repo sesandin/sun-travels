@@ -28,8 +28,8 @@ class CustomerControllerTest {
     @Test
     void listsGetsCreatesAndUpdatesCustomers() throws Exception {
         CustomerResponse customer = new CustomerResponse(3, "Alice", "+94771234567", "alice@example.com");
-        when(service.searchCustomers("Alice", 0, 20)).thenReturn(
-                new CustomerPageResponse(List.of(customer), 0, 20, 1, 1));
+        when(service.searchCustomers("Alice", 0, 10)).thenReturn(
+                new CustomerPageResponse(List.of(customer), 0, 10, 1, 1));
         when(service.getCustomer(3)).thenReturn(customer);
         when(service.createCustomer(any())).thenReturn(customer);
         when(service.updateCustomer(eq(3), any())).thenReturn(customer);

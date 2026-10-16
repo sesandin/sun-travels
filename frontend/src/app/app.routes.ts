@@ -1,5 +1,4 @@
 import { QuotationSearch } from './features/search/quotation-search';
-import { OfferingDirectory } from './features/room-offerings/offering-directory';
 import { ContractList } from './features/contracts/contract-list';
 import { Routes } from '@angular/router';
 import { HotelList } from './features/hotels/hotel-list/hotel-list';
@@ -18,7 +17,6 @@ export const routes: Routes = [
   { path: 'hotels', component: HotelList, canActivate: [adminGuard] },
   { path: 'room-types', component: RoomTypeList, canActivate: [adminGuard] },
   { path: 'contracts', component: ContractList, canActivate: [adminGuard] },
-  { path: 'room-offerings', component: OfferingDirectory, canActivate: [adminGuard] },
   { path: 'search', component: QuotationSearch, canActivate: [authenticatedGuard] },
   { path: 'customers', component: CustomerList, canActivate: [authenticatedGuard] },
   { path: 'reservations/new', component: ReservationBooking, canActivate: [authenticatedGuard] },

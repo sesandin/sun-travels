@@ -1,3 +1,4 @@
+import { directoryPage } from '../../testing/directory-page';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
@@ -32,7 +33,7 @@ describe('Contract management', () => {
   });
   afterEach(() => http.verify());
   function load(rows: Contract[] = [row]) {
-    http.expectOne(url).flush(rows);
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(rows));
     http.expectOne(hotelsUrl).flush([{ hotelId: 3, name: 'Ocean Hotel' }]);
     fixture.detectChanges();
   }
@@ -49,25 +50,37 @@ describe('Contract management', () => {
     expect(fixture.nativeElement.textContent).toContain('Loading contracts');
     load([row, { ...row, contractId: 8, status: 'SUSPENDED' }]);
     component.query.set('ocean');
+    component.loadContracts(0);
+    http
+      .expectOne((r) => r.url === url + '/page' && r.params.get('query') === 'ocean')
+      .flush(directoryPage([row, { ...row, contractId: 8, status: 'SUSPENDED' }]));
     expect(component.filtered()).toHaveLength(2);
     component.statusFilter.set('SUSPENDED');
+    component.loadContracts(0);
+    http
+      .expectOne((r) => r.url === url + '/page' && r.params.get('status') === 'SUSPENDED')
+      .flush(directoryPage([{ ...row, status: 'SUSPENDED' }], 0, 1, { totalRecords: 2 }));
     expect(component.filtered()).toHaveLength(1);
     component.query.set('unknown');
+    component.loadContracts(0);
+    http
+      .expectOne((r) => r.url === url + '/page')
+      .flush(directoryPage([], 0, 0, { totalRecords: 2 }));
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No matching contracts');
   });
   it('handles list errors, retries and the empty state', () => {
-    http.expectOne(url).error(new ProgressEvent('error'));
+    http.expectOne((r) => r.url === url + '/page').error(new ProgressEvent('error'));
     http.expectOne(hotelsUrl).flush([]);
     fixture.detectChanges();
     expect(component.error()).toContain('Cannot reach');
     component.loadContracts();
-    http.expectOne(url).flush([]);
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage([]));
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No contracts yet');
   });
   it('blocks creation when hotels cannot be loaded and supports retry', () => {
-    http.expectOne(url).flush([]);
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage([]));
     http.expectOne(hotelsUrl).error(new ProgressEvent('error'));
     component.openEditor();
     fill();
@@ -116,6 +129,7 @@ describe('Contract management', () => {
     component.closeEditor();
     expect(component.mode()).toBe('create');
     req.flush({ ...row, contractId: 8, contractCode: 'NEW' });
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(component.contracts()));
     expect(component.contracts()).toHaveLength(2);
     expect(component.notice()).toContain('saved successfully');
     expect(component.mode()).toBeNull();
@@ -133,6 +147,7 @@ describe('Contract management', () => {
     expect(component.form.controls.currencyCode.value).toBe('LKR');
     component.save();
     http.expectOne(url + '/7').flush({ ...row, currencyCode: 'LKR' });
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(component.contracts()));
     expect(component.contracts()[0].currencyCode).toBe('LKR');
   });
   it('sends only markup for approved contracts and blocks invalid markup', () => {
@@ -149,6 +164,7 @@ describe('Contract management', () => {
     expect(req.request.method).toBe('PATCH');
     expect(req.request.body).toEqual({ markupPercentage: 25.5 });
     req.flush({ ...approved, markupPercentage: 25.5 });
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(component.contracts()));
     expect(component.contracts()[0].markupPercentage).toBe(25.5);
   });
   it('shows backend validation errors without fake success', () => {
@@ -200,6 +216,7 @@ describe('Contract management', () => {
     const req = http.expectOne(url);
     expect(req.request.body.contractCode).toBeUndefined();
     req.flush({ ...row, contractId: 8, contractCode: 'C008' });
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(component.contracts()));
     expect(component.notice()).toContain('C008');
   });
   it('shows lifecycle actions for eligible statuses', () => {
@@ -232,6 +249,7 @@ describe('Contract management', () => {
     component.closeEditor();
     expect(component.mode()).toBe('approve');
     req.flush({ ...row, status: 'APPROVED' });
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(component.contracts()));
     expect(component.contracts()[0].status).toBe('APPROVED');
     expect(component.selected()?.status).toBe('APPROVED');
     expect(component.mode()).toBeNull();
@@ -266,6 +284,7 @@ describe('Contract management', () => {
     expect(component.submissionError()).toContain('C099');
     component.save();
     http.expectOne(url + '/7/reapprove').flush({ ...row, status: 'APPROVED' });
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(component.contracts()));
     expect(component.contracts()[0].status).toBe('APPROVED');
   });
   it('keeps outstanding-commitment termination failure visible', () => {
@@ -273,15 +292,13 @@ describe('Contract management', () => {
     load([approved]);
     component.confirmAction(approved, 'terminate');
     component.save();
-    http
-      .expectOne(url + '/7/terminate')
-      .flush(
-        {
-          message:
-            'Cannot terminate this contract because it has 2 ongoing or upcoming confirmed reservations. Wait until these stays are completed or resolve them through the existing cancellation process.',
-        },
-        { status: 409, statusText: 'Conflict' },
-      );
+    http.expectOne(url + '/7/terminate').flush(
+      {
+        message:
+          'Cannot terminate this contract because it has 2 ongoing or upcoming confirmed reservations. Wait until these stays are completed or resolve them through the existing cancellation process.',
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
     expect(component.contracts()[0].status).toBe('APPROVED');
     expect(component.submissionError()).toContain('2 ongoing or upcoming confirmed reservations');
     expect(component.notice()).toBe('');
@@ -295,13 +312,39 @@ describe('Contract management', () => {
     const suspend = http.expectOne(url + '/7/suspend');
     expect(suspend.request.method).toBe('PATCH');
     suspend.flush({ ...row, status: 'SUSPENDED' });
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(component.contracts()));
     const suspended = component.contracts()[0];
     component.openEditor(suspended);
     expect(component.mode()).toBeNull();
     component.confirmAction(suspended, 'terminate');
     component.save();
     http.expectOne(url + '/7/terminate').flush({ ...row, status: 'TERMINATED' });
+    http.expectOne((r) => r.url === url + '/page').flush(directoryPage(component.contracts()));
     component.confirmAction(component.contracts()[0], 'terminate');
     expect(component.mode()).toBeNull();
+  });
+  it('requests ten records, renders the final partial page and resets on a search event', () => {
+    load();
+    component.loadContracts(2);
+    const final = http.expectOne((r) => r.url === url + '/page' && r.params.get('page') === '2');
+    final.flush(directoryPage([row], 2, 21));
+    fixture.detectChanges();
+    expect(component.directory.totalPages()).toBe(3);
+    expect(component.directory.totalElements()).toBe(21);
+    expect(component.filtered()).toHaveLength(1);
+    const search: HTMLInputElement = fixture.nativeElement.querySelector('input[type="search"]');
+    search.value = 'updated';
+    search.dispatchEvent(new Event('input'));
+    const filtered = http.expectOne(
+      (r) =>
+        r.url === url + '/page' &&
+        r.params.get('page') === '0' &&
+        r.params.get('query') === 'updated',
+    );
+    filtered.flush(directoryPage([], 0, 0, { totalRecords: 21 }));
+    fixture.detectChanges();
+    expect(component.directory.page()).toBe(0);
+    expect(component.directory.totalElements()).toBe(0);
+    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(0);
   });
 });

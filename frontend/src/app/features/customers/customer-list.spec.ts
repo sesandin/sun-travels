@@ -8,7 +8,7 @@ const page = {
     { customerId: 7, name: 'Alice Perera', phone: '+94 77 123 4567', email: 'alice@example.com' },
   ],
   page: 0,
-  size: 20,
+  size: 10,
   totalElements: 1,
   totalPages: 1,
 };
@@ -25,7 +25,12 @@ describe('CustomerList', () => {
     fixture.componentInstance.editor().nativeElement.close = vi.fn();
     const http = TestBed.inject(HttpTestingController);
     http
-      .expectOne((r) => r.url === '/api/customers' && r.params.get('page') === '0')
+      .expectOne(
+        (r) =>
+          r.url === '/api/customers' &&
+          r.params.get('page') === '0' &&
+          r.params.get('size') === '10',
+      )
       .flush(response);
     fixture.detectChanges();
     return { fixture, http };

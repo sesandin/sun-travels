@@ -4,7 +4,7 @@
     <h1>Reservations</h1>
     <p>Find confirmed and cancelled accommodation bookings.</p>
   </div>
-  <a routerLink="/search">New reservation</a>
+  <a class="primary" routerLink="/search">New reservation</a>
 </header>
 <section class="panel">
   <form class="filters reservation-filters" [formGroup]="filters" (ngSubmit)="search()">
@@ -114,19 +114,13 @@
         >
       </p>
     }
-    <div class="actions">
-      <button class="secondary" (click)="load(r.page - 1)" [disabled]="loading() || r.page === 0">
-        Previous
-      </button>
-      <span>Page {{ r.page + 1 }} of {{ totalPages() }} · {{ r.totalElements }} reservations</span>
-      <button
-        class="secondary"
-        (click)="load(r.page + 1)"
-        [disabled]="loading() || (r.page + 1) * r.size >= r.totalElements"
-      >
-        Next
-      </button>
-    </div>
+    <app-pagination
+      [page]="r.page"
+      [totalPages]="totalPages()"
+      [totalElements]="r.totalElements"
+      [loading]="loading()"
+      (pageChange)="load($event)"
+    />
   }
 </section>
 <dialog #detailsDialog class="reservation-modal" aria-labelledby="reservation-modal-title">

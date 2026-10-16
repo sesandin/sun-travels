@@ -1,8 +1,8 @@
 <section aria-label="Contract room offerings">
   <h3>Room offerings</h3>
-  <p>
-    Base rates are per adult per night in {{ contract().currencyCode }}. Inventory belongs to the
-    offering and is shared by all its rates.
+  <p class="section-description">
+    Compare room allocations and pricing. All rates are in {{ contract().currencyCode }}, per adult
+    per night.
   </p>
   @if (targetMissing()) {
     <p role="alert" class="error-message">
@@ -28,18 +28,30 @@
         [class.linked-offering]="focusOfferingId() === row.offeringId"
         [attr.aria-label]="row.roomTypeName + ' offering'"
       >
-        <h4>{{ row.roomTypeName }}</h4>
-        <dl>
-          <dt>Base rate per adult per night</dt>
-          <dd>{{ row.ratePerPersonPerNight }} {{ contract().currencyCode }}</dd>
-          <dt>Allocated rooms</dt>
-          <dd>{{ row.contractedRoomCount }}</dd>
-          <dt>Maximum adults per room</dt>
-          <dd>{{ row.maxAdults }}</dd>
-          <dt>Offering status</dt>
-          <dd>
+        <header class="offering-header">
+          <h4>{{ row.roomTypeName }}</h4>
+          <div class="offering-status" aria-label="Offering status">
             <span class="status-badge" [attr.data-status]="row.status">{{ row.status }}</span>
-          </dd>
+          </div>
+        </header>
+        <dl class="offering-metrics">
+          <div class="rate-metric">
+            <dt>Base rate</dt>
+            <dd>
+              {{ row.ratePerPersonPerNight }} <span>{{ contract().currencyCode }}</span>
+            </dd>
+            <span class="metric-note">per adult per night</span>
+          </div>
+          <div>
+            <dt>Allocated rooms</dt>
+            <dd>{{ row.contractedRoomCount }}</dd>
+            <span class="metric-note">shared across all rates</span>
+          </div>
+          <div>
+            <dt>Maximum adults per room</dt>
+            <dd>{{ row.maxAdults }}</dd>
+            <span class="metric-note">adults per room</span>
+          </div>
         </dl>
         <div class="actions">
           @if (contract().status === 'DRAFT') {

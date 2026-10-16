@@ -17,7 +17,7 @@ public class CustomerController {
 
     @GetMapping
     public ResponseEntity<CustomerPageResponse> search(@RequestParam(required = false) String query,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(service.searchCustomers(query, page, size));
     }
 

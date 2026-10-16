@@ -5,7 +5,7 @@ import { Customer, CustomerPage, CustomerRequest } from '../models/customer.mode
 export class CustomerService {
   private readonly http = inject(HttpClient);
   private readonly url = '/api/customers';
-  search(query = '', page = 0, size = 20) {
+  search(query = '', page = 0, size = 10) {
     let params = new HttpParams().set('page', page).set('size', size);
     if (query.trim()) params = params.set('query', query.trim());
     return this.http.get<CustomerPage>(this.url, { params });

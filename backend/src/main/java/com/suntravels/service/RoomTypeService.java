@@ -58,7 +58,7 @@ public class RoomTypeService {
         roomType.setDescription(description == null || description.isBlank() ? null : description.trim());
     }
 
-    private RoomTypeResponse toResponse(RoomType roomType) {
+    RoomTypeResponse toResponse(RoomType roomType) {
         return new RoomTypeResponse(roomType.getRoomTypeId(), roomType.getName(), roomType.getDescription());
     }
 }

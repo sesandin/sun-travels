@@ -8,7 +8,14 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
-public interface ContractRepository extends JpaRepository<Contract, Integer> {
+public interface ContractRepository extends JpaRepository<Contract, Integer>,
+        JpaSpecificationExecutor<Contract> {
+    @Override
+    @EntityGraph(attributePaths = {"hotel"})
+    org.springframework.data.domain.Page<Contract> findAll(
+            org.springframework.data.jpa.domain.Specification<Contract> specification,
+            org.springframework.data.domain.Pageable pageable);
+
     boolean existsByContractCode(String code);
 
     boolean existsByContractCodeAndContractIdNot(String code, Integer id);

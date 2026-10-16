@@ -1,3 +1,5 @@
+import { DirectoryState } from '../../shared/directory-state';
+import { Pagination } from '../../shared/pagination';
 import {
   Component,
   DestroyRef,
@@ -5,7 +7,6 @@ import {
   Injector,
   OnInit,
   afterNextRender,
-  computed,
   inject,
   signal,
   viewChild,
@@ -35,7 +36,7 @@ const dateRange: ValidatorFn = (group) => {
 };
 @Component({
   selector: 'app-contract-list',
-  imports: [ReactiveFormsModule, OfferingPanel],
+  imports: [Pagination, ReactiveFormsModule, OfferingPanel],
   templateUrl: './contract-list.html',
   styleUrl: './contract-list.scss',
 })
@@ -49,12 +50,17 @@ export class ContractList implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly injector = inject(Injector);
   private readonly editor = viewChild<ElementRef<HTMLElement>>('editor');
-  readonly contracts = signal<Contract[]>([]);
+  readonly directory = new DirectoryState<Contract>(
+    (page) => this.service.page(this.query(), this.statusFilter(), page),
+    this.destroyRef,
+    () => [this.query(), this.statusFilter()],
+  );
+  readonly contracts = this.directory.items;
   readonly hotels = signal<Hotel[]>([]);
-  readonly loading = signal(false);
+  readonly loading = this.directory.loading;
   readonly hotelsLoading = signal(false);
   readonly saving = signal(false);
-  readonly error = signal('');
+  readonly error = this.directory.error;
   readonly hotelError = signal('');
   readonly submissionError = signal('');
   readonly notice = signal('');
@@ -74,14 +80,8 @@ export class ContractList implements OnInit {
     | null
   >(null);
   readonly detailsLoading = signal(false);
-  readonly filtered = computed(() => {
-    const q = this.query().trim().toLowerCase();
-    return this.contracts().filter(
-      (c) =>
-        (!this.statusFilter() || c.status === this.statusFilter()) &&
-        [c.contractCode, c.hotelName, c.currencyCode].some((v) => v.toLowerCase().includes(q)),
-    );
-  });
+  readonly filtered = this.contracts;
+
   readonly form = new FormGroup(
     {
       hotelId: new FormControl<number | null>(null, [Validators.required, Validators.min(1)]),
@@ -105,23 +105,8 @@ export class ContractList implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => this.openLink(params));
   }
-  loadContracts() {
-    if (this.loading()) return;
-    this.loading.set(true);
-    this.error.set('');
-    this.service
-      .getAllContracts()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (rows) => {
-          this.contracts.set(rows);
-          this.loading.set(false);
-        },
-        error: (e) => {
-          this.error.set(apiError(e));
-          this.loading.set(false);
-        },
-      });
+  loadContracts(page = this.directory.page()) {
+    this.directory.load(page);
   }
   loadHotels() {
     if (this.hotelsLoading()) return;
@@ -173,7 +158,7 @@ export class ContractList implements OnInit {
       offeringId = parseId(params.get('offeringId'));
     if (!contractId || (params.has('offeringId') && !offeringId)) {
       this.linkError.set(
-        'Invalid contract or offering link. Use the Room Offerings directory to open the record.',
+        'Invalid contract or offering link. Select a contract from Contracts to view its room offerings.',
       );
       return;
     }
@@ -258,6 +243,7 @@ export class ContractList implements OnInit {
         this.contracts.update((rows) =>
           row ? rows.map((c) => (c.contractId === saved.contractId ? saved : c)) : [saved, ...rows],
         );
+        this.directory.load(this.directory.page(), true);
         this.saving.set(false);
         this.mode.set(null);
         this.selected.set(saved);

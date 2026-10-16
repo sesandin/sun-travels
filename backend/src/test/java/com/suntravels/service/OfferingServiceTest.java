@@ -424,43 +424,4 @@ class OfferingServiceTest {
         assertEquals(1, service.seasonalRates(3).size());
     }
 
-    @ParameterizedTest
-    @EnumSource(value = ContractStatus.class, names = {"DRAFT", "APPROVED"})
-    void removesOnlyScopedSeasonWithoutChangingOffering(ContractStatus status) {
-        c.setStatus(status);
-        locked();
-        var season = existing();
-        when(seasons.findBySeasonalRateIdAndOfferingOfferingId(4, 3)).thenReturn(Optional.of(season));
-        service.removeSeason(3, 4);
-        var order = inOrder(offerings, contracts, seasons);
-        order.verify(offerings).findContractId(3);
-        order.verify(contracts).findForUpdate(1);
-        order.verify(offerings).findForUpdate(3);
-        order.verify(seasons).findBySeasonalRateIdAndOfferingOfferingId(4, 3);
-        order.verify(seasons).delete(season);
-        order.verify(seasons).flush();
-        assertEquals(new BigDecimal("100"), o.getRatePerPersonPerNight());
-        assertEquals(10, o.getContractedRoomCount());
-        assertEquals(2, o.getMaxAdults());
-        assertEquals(OfferingStatus.ENABLED, o.getStatus());
-        verify(offerings, never()).saveAndFlush(any());
-    }
-
-    @ParameterizedTest
-    @EnumSource(value = ContractStatus.class, names = {"SUSPENDED", "TERMINATED"})
-    void removalPreservesLifecycleRestrictions(ContractStatus status) {
-        c.setStatus(status);
-        locked();
-        error(409, () -> service.removeSeason(3, 4));
-        verifyNoInteractions(seasons);
-    }
-
-    @Test
-    void removalRejectsMissingOrOtherOfferingSeason() {
-        locked();
-        error(404, () -> service.removeSeason(3, 99));
-        verify(seasons, never()).delete(any());
-        verify(seasons, never()).flush();
-    }
-
 }

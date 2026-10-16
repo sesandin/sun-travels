@@ -148,20 +148,6 @@ public class OfferingService {
         return saveSeason(id, rateId, request);
     }
 
-    /**
-     * Removes only the override; future quotes fall back to base rates, while booked
-     * snapshots remain intact. Uses the same locks and lifecycle rules as seasonal edits.
-     */
-    @Transactional
-    public void removeSeason(Integer id, Integer rateId) {
-        ContractRoomOffering offering = locked(id);
-        maintainable(offering.getContract());
-        OfferingSeasonalRate season = seasons.findBySeasonalRateIdAndOfferingOfferingId(rateId, id)
-                .orElseThrow(() -> OfferingException.missing("Seasonal rate for this offering", rateId));
-        seasons.delete(season);
-        seasons.flush();
-    }
-
     private SeasonalRateResponse saveSeason(Integer id, Integer rateId, SeasonalRateRequest request) {
         ContractRoomOffering offering = locked(id);
         maintainable(offering.getContract());
