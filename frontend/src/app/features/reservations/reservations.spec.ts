@@ -335,6 +335,31 @@ describe('Reservation directory and details', () => {
    vi.advanceTimersByTime(250);http.expectNone('/api/reservations');
   } finally {f.destroy();vi.useRealTimers();}
  });
+
+ it('Search submits Past and replaces November stays with only the server-filtered October rows', () => {
+  vi.useFakeTimers();const f=TestBed.createComponent(ReservationDirectory);
+  try {
+   f.detectChanges();
+   const november={...saved,reservationId:118,checkIn:'2026-11-15',checkOut:'2026-11-18'};
+   const ongoing={...saved,reservationId:117,checkIn:'2026-10-16',checkOut:'2026-10-17'};
+   const past={...saved,reservationId:116,checkIn:'2026-10-15',checkOut:'2026-10-16'};
+   http.expectOne(r=>r.url==='/api/reservations').flush({reservations:[november,ongoing,past],page:0,size:10,totalElements:3});f.detectChanges();
+   const select=Array.from(f.nativeElement.querySelectorAll('select') as NodeListOf<HTMLSelectElement>)
+    .find(element=>Array.from(element.options).some(option=>option.value==='PAST'))!;
+   select.value='PAST';select.dispatchEvent(new Event('change',{bubbles:true}));
+   const dropdownRequest=http.expectOne(r=>r.url==='/api/reservations');
+   f.nativeElement.querySelector('form.filters').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+   expect(dropdownRequest.cancelled).toBe(true);
+   const search=http.expectOne(r=>r.url==='/api/reservations');
+   expect(search.request.params.get('stayPeriod')).toBe('PAST');expect(search.request.params.get('page')).toBe('0');expect(search.request.params.get('size')).toBe('10');
+   search.flush({reservations:[past],page:0,size:10,totalElements:1});f.detectChanges();
+   expect(f.nativeElement.querySelectorAll('tbody tr')).toHaveLength(1);
+   expect(f.nativeElement.querySelector('tbody').textContent).toContain('2026-10-16');
+   expect(f.nativeElement.querySelector('tbody').textContent).not.toContain('2026-11-18');
+   expect(f.nativeElement.querySelector('tbody').textContent).not.toContain('2026-10-17');
+   vi.advanceTimersByTime(250);http.expectNone('/api/reservations');
+  } finally {f.destroy();vi.useRealTimers();}
+ });
 });
 
 describe('Reservation route permissions', () => {

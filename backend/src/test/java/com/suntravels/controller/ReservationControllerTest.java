@@ -89,4 +89,16 @@ class ReservationControllerTest {
   mvc.perform(get("/api/reservations").with(user("agent").roles("AGENT")).param("status","CONFIRMED").param("stayPeriod","ONGOING")).andExpect(status().isOk());
   verify(reservations).list("","CONFIRMED",0,10,null,null,"ONGOING");
  }
+
+ @Test void pastAndOtherPeriodsReachTheServiceAlongsideEveryOtherFilter() throws Exception {
+  for(String period:List.of("PAST","UPCOMING","ONGOING","ALL")) {
+   when(reservations.list("Traveller","CONFIRMED",0,10,java.time.LocalDate.of(2026,10,1),java.time.LocalDate.of(2026,11,18),period))
+    .thenReturn(new ReservationResponse.Page(List.of(),0,10,0));
+   mvc.perform(get("/api/reservations").with(user("agent").roles("AGENT"))
+    .param("query","Traveller").param("status","CONFIRMED").param("stayPeriod",period)
+    .param("stayFrom","2026-10-01").param("stayTo","2026-11-18"))
+    .andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0)).andExpect(jsonPath("$.size").value(10));
+   verify(reservations).list("Traveller","CONFIRMED",0,10,java.time.LocalDate.of(2026,10,1),java.time.LocalDate.of(2026,11,18),period);
+  }
+ }
 }

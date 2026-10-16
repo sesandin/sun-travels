@@ -89,7 +89,7 @@ public class ReservationRepository {
  public Page list(String query,String status,int page,int size) { return list(query,status,page,size,null,null); }
  public Page list(String query,String status,int page,int size,LocalDate stayFrom,LocalDate stayTo) { return list(query,status,page,size,stayFrom,stayTo,""); }
  public Page list(String query,String status,int page,int size,LocalDate stayFrom,LocalDate stayTo,String stayPeriod) {
-  if(!Set.of("","UPCOMING","ONGOING","PAST").contains(stayPeriod)) throw new ReservationException(400,"INVALID_FILTER","Choose All Stays, Upcoming, Ongoing or Past");
+  if(!Set.of("","ALL","UPCOMING","ONGOING","PAST").contains(stayPeriod)) throw new ReservationException(400,"INVALID_FILTER","Choose All Stays, Upcoming, Ongoing or Past");
   if(stayFrom!=null && stayTo!=null && stayFrom.isAfter(stayTo)) throw new ReservationException(400,"INVALID_FILTER","Stay From must be on or before Stay To");
   if(page<0 || size<1 || size>50 || query.length()>150 || !Set.of("","CONFIRMED","CANCELLED").contains(status))
    throw new ReservationException(400,"INVALID_FILTER","Use a valid status, page and page size (1–50)");
