@@ -121,4 +121,30 @@ describe('App', () => {
     expect(fixture.nativeElement.querySelector('a[href="/hotels"]')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('AGENT');
   });
+  it('keeps closed mobile navigation inert and returns focus after Escape', async () => {
+    await TestBed.configureTestingModule({
+      imports: [App],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
+    const fixture = TestBed.createComponent(App);
+    TestBed.inject(AuthState).setUser(admin);
+    fixture.detectChanges();
+    fixture.componentInstance.mobileNavigation.set(true);
+    fixture.detectChanges();
+    const sidebar: HTMLElement = fixture.nativeElement.querySelector('.sidebar');
+    const workspace: HTMLElement = fixture.nativeElement.querySelector('.workspace');
+    const toggle: HTMLButtonElement = fixture.nativeElement.querySelector('.menu-button');
+    expect(sidebar.inert).toBe(true);
+    toggle.click();
+    fixture.detectChanges();
+    expect(sidebar.inert).toBe(false);
+    expect(workspace.inert).toBe(true);
+    expect(toggle.getAttribute('aria-expanded')).toBe('true');
+    sidebar.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    await Promise.resolve();
+    expect(sidebar.inert).toBe(true);
+    expect(workspace.inert).toBe(false);
+    expect(document.activeElement).toBe(toggle);
+  });
 });

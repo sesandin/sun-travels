@@ -8,7 +8,9 @@
     <button type="button" class="primary" (click)="openEditor()">+ Add customer</button>
   </header>
   @if (notice()) {
-    <p class="success-message"><output>{{notice()}}</output></p>
+    <p class="success-message">
+      <output>{{ notice() }}</output>
+    </p>
   }
   <div class="list-panel" [attr.aria-busy]="loading()">
     <div class="panel-heading">
@@ -16,7 +18,9 @@
         <h2>Customer directory</h2>
         <p>Search by name, phone, email or exact customer ID.</p>
       </div>
-      <button type="button" class="secondary" [disabled]="loading()" (click)="load()">Refresh</button>
+      <button type="button" class="secondary" [disabled]="loading()" (click)="load()">
+        Refresh
+      </button>
     </div>
     <form class="filters" (ngSubmit)="search()">
       <div>
@@ -30,7 +34,9 @@
           autocomplete="off"
           aria-describedby="customer-search-help"
         />
-        <small id="customer-search-help">Results update as you type. You can also press Enter.</small>
+        <small id="customer-search-help"
+          >Results update as you type. You can also press Enter.</small
+        >
       </div>
       <div class="search-actions">
         <button type="submit" class="primary" [disabled]="loading()">Search</button>
@@ -46,13 +52,19 @@
       </div>
     } @else if (error()) {
       <div class="state">
-        <p class="error-message" role="alert">{{error()}}</p>
+        <p class="error-message" role="alert">{{ error() }}</p>
         <button type="button" class="primary" (click)="load()">Retry loading</button>
       </div>
     } @else if (!customers().length) {
       <div class="state">
-        <h3>{{appliedQuery()?'No matching customers':'No customers yet'}}</h3>
-        <p>{{appliedQuery()?'Try another name, contact detail or customer ID.':'Register the first customer when their details are available.'}}</p>
+        <h3>{{ appliedQuery() ? 'No matching customers' : 'No customers yet' }}</h3>
+        <p>
+          {{
+            appliedQuery()
+              ? 'Try another name, contact detail or customer ID.'
+              : 'Register the first customer when their details are available.'
+          }}
+        </p>
         @if (appliedQuery()) {
           <button type="button" class="secondary" (click)="clearSearch()">Clear search</button>
         } @else {
@@ -60,9 +72,11 @@
         }
       </div>
     } @else {
-      <div class="table-scroll">
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Customers">
         <table>
-          <caption class="sr-only">Customers and management actions</caption>
+          <caption class="sr-only">
+            Customers and management actions
+          </caption>
           <thead>
             <tr>
               <th scope="col">Customer</th>
@@ -75,18 +89,20 @@
             @for (customer of customers(); track customer.customerId) {
               <tr>
                 <td>
-                  <strong>{{customer.name}}</strong>
-                  <small>Customer #{{customer.customerId}}</small>
+                  <strong>{{ customer.name }}</strong>
+                  <small>Customer #{{ customer.customerId }}</small>
                 </td>
-                <td>{{customer.phone||'Not provided'}}</td>
-                <td class="email">{{customer.email||'Not provided'}}</td>
+                <td>{{ customer.phone || 'Not provided' }}</td>
+                <td class="email">{{ customer.email || 'Not provided' }}</td>
                 <td>
                   <button
                     type="button"
                     class="text-button"
-                    [attr.aria-label]="'View or edit '+customer.name"
+                    [attr.aria-label]="'View or edit ' + customer.name"
                     (click)="openEditor(customer)"
-                  >View / Edit</button>
+                  >
+                    View / Edit
+                  </button>
                 </td>
               </tr>
             }
@@ -94,14 +110,14 @@
         </table>
       </div>
       <div class="list-footer">
-        <span>Showing {{customers().length}} of {{totalElements()}} customers</span>
+        <span>Showing {{ customers().length }} of {{ totalElements() }} customers</span>
         <div class="pagination">
-          @if (page()>0) {
-            <button type="button" class="secondary" (click)="load(page()-1)">Previous</button>
+          @if (page() > 0) {
+            <button type="button" class="secondary" (click)="load(page() - 1)">Previous</button>
           }
-          <span>Page {{page()+1}} of {{totalPages()}}</span>
-          @if (page()+1<totalPages()) {
-            <button type="button" class="secondary" (click)="load(page()+1)">Next</button>
+          <span>Page {{ page() + 1 }} of {{ totalPages() }}</span>
+          @if (page() + 1 < totalPages()) {
+            <button type="button" class="secondary" (click)="load(page() + 1)">Next</button>
           }
         </div>
       </div>
@@ -111,16 +127,22 @@
 <dialog
   #editor
   aria-labelledby="customer-editor-title"
-  (cancel)="saving()?$event.preventDefault():closeEditor()"
+  (cancel)="saving() ? $event.preventDefault() : closeEditor()"
 >
   <form [formGroup]="form" (ngSubmit)="save()" class="customer-form">
-    <h2 id="customer-editor-title">{{selected()?'Customer details':'Register customer'}}</h2>
-    <p>{{selected()?'Review or update this customer without changing their reference.':'Add the contact details needed for future reservation workflows.'}}</p>
+    <h2 id="customer-editor-title">{{ selected() ? 'Customer details' : 'Register customer' }}</h2>
+    <p>
+      {{
+        selected()
+          ? 'Review or update this customer without changing their reference.'
+          : 'Add the contact details needed for future reservation workflows.'
+      }}
+    </p>
     @if (selected()) {
-      <p class="reference">Customer #{{selected()!.customerId}}</p>
+      <p class="reference">Customer #{{ selected()!.customerId }}</p>
     }
     @if (submissionError()) {
-      <p class="error-message" role="alert">{{submissionError()}}</p>
+      <p class="error-message" role="alert">{{ submissionError() }}</p>
     }
     <fieldset [disabled]="saving()">
       <label for="customer-name">Name *</label>
@@ -133,7 +155,7 @@
         [attr.aria-invalid]="!!validationMessage('name')"
         aria-describedby="customer-name-error"
       />
-      <p id="customer-name-error" class="field-error">{{validationMessage('name')}}</p>
+      <p id="customer-name-error" class="field-error">{{ validationMessage('name') }}</p>
       <label for="customer-phone">Phone</label>
       <input
         id="customer-phone"
@@ -144,7 +166,7 @@
         [attr.aria-invalid]="!!validationMessage('phone')"
         aria-describedby="customer-phone-error contact-error"
       />
-      <p id="customer-phone-error" class="field-error">{{validationMessage('phone')}}</p>
+      <p id="customer-phone-error" class="field-error">{{ validationMessage('phone') }}</p>
       <label for="customer-email">Email</label>
       <input
         id="customer-email"
@@ -155,11 +177,13 @@
         [attr.aria-invalid]="!!validationMessage('email')"
         aria-describedby="customer-email-error contact-error"
       />
-      <p id="customer-email-error" class="field-error">{{validationMessage('email')}}</p>
-      <p id="contact-error" class="field-error contact-error">{{contactMessage()}}</p>
+      <p id="customer-email-error" class="field-error">{{ validationMessage('email') }}</p>
+      <p id="contact-error" class="field-error contact-error">{{ contactMessage() }}</p>
       <div class="actions">
         <button type="button" class="secondary" (click)="closeEditor()">Cancel</button>
-        <button type="submit" class="primary" [disabled]="saving()">{{saving()?'Saving...':selected()?'Save changes':'Register customer'}}</button>
+        <button type="submit" class="primary" [disabled]="saving()">
+          {{ saving() ? 'Saving...' : selected() ? 'Save changes' : 'Register customer' }}
+        </button>
       </div>
     </fieldset>
   </form>

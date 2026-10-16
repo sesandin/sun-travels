@@ -15,21 +15,35 @@
     }
     @for (row of rows(); track row.seasonalRateId) {
       <div class="season">
-        <span>{{ row.validFrom }} to {{ row.validTo }} (inclusive): {{ row.ratePerPersonPerNight }}
-          {{ contract().currencyCode }} per adult per night</span>
+        <span
+          >{{ row.validFrom }} to {{ row.validTo }} (inclusive): {{ row.ratePerPersonPerNight }}
+          {{ contract().currencyCode }} per adult per night</span
+        >
         @if (canMaintain()) {
-          <button type="button" (click)="open(row)" [disabled]="saving()">
+          <button type="button" (click)="open(row)" [disabled]="saving() || removing()">
             Edit seasonal rate
+          </button>
+          <button
+            type="button"
+            class="primary danger"
+            (click)="openRemoval(row)"
+            [disabled]="saving() || removing()"
+          >
+            Remove
           </button>
         }
       </div>
     }
     @if (canMaintain()) {
-      <button type="button" (click)="open()" [disabled]="saving()">Add Seasonal Rate</button>
+      <button class="primary" type="button" (click)="open()" [disabled]="saving() || removing()">
+        Add Seasonal Rate
+      </button>
     }
   }
   @if (notice()) {
-    <p class="success-message"><output>{{ notice() }}</output></p>
+    <p class="success-message">
+      <output>{{ notice() }}</output>
+    </p>
   }
   @if (editing()) {
     <form
@@ -39,7 +53,7 @@
       (ngSubmit)="save()"
       aria-label="Seasonal rate editor"
     >
-      <fieldset [disabled]="saving()">
+      <fieldset [disabled]="saving() || removing()">
         <legend>{{ selected() ? 'Edit seasonal period' : 'Add seasonal period' }}</legend>
         <div class="form-grid">
           <div>
@@ -63,7 +77,9 @@
             />
           </div>
           <div>
-            <label [for]="'season-rate-' + offering().offeringId">Rate per adult per night ({{ contract().currencyCode }})</label>
+            <label [for]="'season-rate-' + offering().offeringId"
+              >Rate per adult per night ({{ contract().currencyCode }})</label
+            >
             <input
               [id]="'season-rate-' + offering().offeringId"
               type="number"
@@ -89,9 +105,49 @@
         </p>
         <div class="actions">
           <button type="button" (click)="cancel()">Cancel</button>
-          <button type="submit">{{ saving() ? 'Saving...' : 'Save seasonal rate' }}</button>
+          <button class="primary" type="submit">
+            {{ saving() ? 'Saving...' : 'Save seasonal rate' }}
+          </button>
         </div>
       </fieldset>
     </form>
   }
 </section>
+
+<dialog
+  #removalDialog
+  [attr.aria-labelledby]="'remove-season-title-' + offering().offeringId"
+  [attr.aria-describedby]="'remove-season-description-' + offering().offeringId"
+  (cancel)="removing() ? $event.preventDefault() : closeRemoval()"
+>
+  <div class="editor">
+    <h2 [id]="'remove-season-title-' + offering().offeringId">Remove seasonal rate?</h2>
+    @if (removal(); as row) {
+      <p>
+        <strong>{{ offering().roomTypeName }}</strong>
+      </p>
+      <p>{{ row.validFrom }} to {{ row.validTo }} (inclusive)</p>
+      <p>{{ row.ratePerPersonPerNight }} {{ contract().currencyCode }} per adult per night</p>
+    }
+    <p [id]="'remove-season-description-' + offering().offeringId">
+      Only this seasonal rate will be removed. Future quotations for these dates will use the base
+      rate. Existing confirmed reservations and their booked prices remain unchanged.
+    </p>
+    @if (removalError()) {
+      <p class="error-message" role="alert">{{ removalError() }}</p>
+    }
+    <div class="actions">
+      <button type="button" (click)="closeRemoval()" [disabled]="removing()" autofocus>
+        Keep seasonal rate
+      </button>
+      <button
+        type="button"
+        class="primary danger"
+        (click)="remove()"
+        [disabled]="removing() || !canMaintain()"
+      >
+        {{ removing() ? 'Removing...' : 'Remove seasonal rate' }}
+      </button>
+    </div>
+  </div>
+</dialog>

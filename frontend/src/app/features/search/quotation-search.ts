@@ -158,6 +158,14 @@ export class QuotationSearch implements OnInit {
   roomOptions(room: number) {
     return this.customOptions().filter((o) => !this.optionReason(o, room));
   }
+
+  selectionRoomPrice(room: number, offeringId: number): number | null {
+    // Display the backend's selling quotation; this does not calculate or select a rate.
+    return (
+      this.customOptions().find((offering) => offering.offeringId === offeringId)?.rooms[room]
+        ?.totalPrice ?? null
+    );
+  }
   private lastRequest: QuotationRequest | null = null;
   readonly selectionError = signal('');
   readonly customOptions = signal<SelectionOffering[]>([]);

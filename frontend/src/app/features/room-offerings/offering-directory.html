@@ -118,10 +118,12 @@
       <button type="button" class="secondary" (click)="reset()">Reset filters</button>
     </div>
   } @else {
-    <p class="results"><output aria-live="polite">
-      Showing {{ first() }}&ndash;{{ last() }} of {{ filtered().length }} matching offerings
-    </output></p>
-    <div class="table-scroll">
+    <p class="results">
+      <output aria-live="polite">
+        Showing {{ first() }}&ndash;{{ last() }} of {{ filtered().length }} matching offerings
+      </output>
+    </p>
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable results">
       <table>
         <caption class="sr-only">
           Contracted room offerings and base commercial terms. Room counts are not current
@@ -145,13 +147,16 @@
             <tr>
               <td data-label="Hotel / Contract">
                 <strong>{{ row.hotelName }}</strong>
-                <small>{{ row.contractCode }} &middot;
+                <small
+                  >{{ row.contractCode }} &middot;
                   <span
-                    class="badge"
+                    class="badge status-badge"
+                    [attr.data-status]="row.contractStatus"
                     [class.historical]="
                       row.contractStatus === 'TERMINATED' || row.contractStatus === 'SUSPENDED'
                     "
-                  >{{ row.contractStatus }}</span>
+                    >{{ row.contractStatus }}</span
+                  >
                 </small>
                 @if (row.hotelStatus === 'INACTIVE') {
                   <small class="inactive">Hotel INACTIVE</small>
@@ -164,16 +169,20 @@
                 {{ row.validFrom }} to {{ row.validTo }}<small>Inclusive occupied nights</small>
               </td>
               <td data-label="Base hotelier rate">
-                <strong>{{ row.ratePerPersonPerNight | number: '1.2-2' }} {{ row.currencyCode }}</strong>
+                <strong
+                  >{{ row.ratePerPersonPerNight | number: '1.2-2' }} {{ row.currencyCode }}</strong
+                >
                 <small>Per adult per night</small>
               </td>
               <td data-label="Contracted rooms">{{ row.contractedRoomCount }}</td>
-              <td data-label="Max adults">{{ row.maxAdults }}<small>Per room</small>
-              </td>
+              <td data-label="Max adults">{{ row.maxAdults }}<small>Per room</small></td>
               <td data-label="Offering status">
-                <span class="badge" [class.historical]="row.status === 'SUSPENDED'">{{
-                  row.status
-                }}</span>
+                <span
+                  class="badge status-badge"
+                  [attr.data-status]="row.status"
+                  [class.historical]="row.status === 'SUSPENDED'"
+                  >{{ row.status }}</span
+                >
               </td>
               <td data-label="Seasonal periods">{{ row.seasonalRateCount }}</td>
               <td data-label="Action">
@@ -189,7 +198,8 @@
                     ', contract ' +
                     row.contractCode
                   "
-                >View / Manage</a>
+                  >View / Manage</a
+                >
               </td>
             </tr>
           }
@@ -198,7 +208,8 @@
     </div>
     <nav class="pagination" aria-label="Offering directory pages">
       <button type="button" class="secondary" (click)="changePage(-1)" [disabled]="page() === 1">
-        Previous</button>
+        Previous
+      </button>
       <span>Page {{ page() }} of {{ pageCount() }}</span>
       <button
         type="button"

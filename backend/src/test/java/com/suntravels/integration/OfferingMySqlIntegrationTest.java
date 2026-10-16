@@ -191,6 +191,9 @@ class OfferingMySqlIntegrationTest {
                 new SeasonalRateRequest(from, to, new BigDecimal("40")));
         service.updateSeason(offeringId, seasonal.seasonalRateId(),
                 new SeasonalRateRequest(from, to, new BigDecimal("50")));
+        service.removeSeason(offeringId, seasonal.seasonalRateId());
+        assertTrue(service.seasonalRates(offeringId).isEmpty());
+        assertEquals(0, new BigDecimal("30").compareTo(service.effectiveRate(offeringId, from)));
         service.status(offeringId, new OfferingStatusRequest(OfferingStatus.SUSPENDED));
         assertEquals(reservation,
                 jdbc.queryForMap("select * from reservation where reservation_id = ?", reservationId));
@@ -236,4 +239,19 @@ class OfferingMySqlIntegrationTest {
             });
         }
     }
+
+    @Test
+    void removalDeletesOnlySelectedOverrideAndPreservesOffering() {
+        var first = service.createSeason(offeringId,
+                new SeasonalRateRequest(from, from.plusDays(5), new BigDecimal("30")));
+        var second = service.createSeason(offeringId,
+                new SeasonalRateRequest(from.plusDays(6), to, new BigDecimal("40")));
+        var before = service.get(offeringId);
+        service.removeSeason(offeringId, first.seasonalRateId());
+        assertEquals(before, service.get(offeringId));
+        assertEquals(java.util.List.of(second), service.seasonalRates(offeringId));
+        assertEquals(0, BigDecimal.TEN.compareTo(service.effectiveRate(offeringId, from)));
+        assertEquals(0, new BigDecimal("40").compareTo(service.effectiveRate(offeringId, to)));
+    }
+
 }

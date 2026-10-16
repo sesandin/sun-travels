@@ -82,3 +82,34 @@ button {
   font-size: 11px;
   margin: 26px 0 0;
 }
+
+.login-card {
+  border-top: 3px solid var(--gold);
+  border-radius: var(--radius-dialog);
+  box-shadow: 0 16px 48px #102e3214;
+}
+.brand {
+  margin-bottom: 32px;
+}
+label {
+  font-size: var(--text-sm);
+}
+.help {
+  font-size: var(--text-xs);
+  line-height: 1.7;
+}
+.field-error {
+  font-size: var(--text-xs);
+  margin: 3px 0;
+}
+button {
+  min-height: 46px;
+}
+@media (max-width: 480px) {
+  .login-page {
+    padding: 20px 16px;
+  }
+  .login-card {
+    padding: 28px 22px;
+  }
+}

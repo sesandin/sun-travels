@@ -1,37 +1,10 @@
-.page-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 28px;
-}
 .page-heading p,
 .panel-heading p {
   color: var(--muted);
   line-height: 1.6;
   margin-bottom: 0;
 }
-.page-heading h1 {
-  margin: 8px 0;
-}
-.eyebrow {
-  font-size: 10px;
-  letter-spacing: 1.8px;
-  font-weight: 700;
-}
-.list-panel {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-.panel-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 24px;
-  gap: 12px;
-}
+
 h2 {
   font-size: 18px;
   margin-bottom: 7px;
@@ -42,36 +15,7 @@ h2 {
   gap: 16px;
   padding: 0 24px 24px;
 }
-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 7px;
-}
-.table-scroll {
-  overflow-x: auto;
-}
-table {
-  border-collapse: collapse;
-  width: 100%;
-  white-space: nowrap;
-}
-th {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--muted);
-  background: #f7f9f9;
-}
-th,
-td {
-  text-align: left;
-  padding: 18px 24px;
-  border-bottom: 1px solid var(--border);
-}
-td {
-  font-size: 13px;
-}
+
 td strong {
   white-space: normal;
   overflow-wrap: anywhere;
@@ -82,29 +26,12 @@ td small {
   font-size: 11px;
   margin-top: 5px;
 }
-.badge {
-  color: var(--ink);
-  background: #edf3f1;
-  border-radius: 20px;
-  padding: 5px 10px;
-  font-size: 11px;
-}
 .actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
 }
-.text-button {
-  border: 0;
-  background: transparent;
-  color: var(--primary);
-  font-size: 12px;
-  padding: 7px 0;
-  font-weight: 600;
-}
-.text-button:hover {
-  text-decoration: underline;
-}
+
 .state {
   padding: 48px 24px;
   text-align: center;
@@ -161,5 +88,39 @@ dd {
   }
   .editor {
     padding: 18px;
+  }
+}
+
+.editor {
+  border-top: 3px solid var(--gold);
+}
+.form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.editor dl {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) minmax(0, 2fr);
+  gap: 12px 20px;
+}
+.editor dt,
+.editor dd {
+  margin: 0;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.editor dd {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .form-grid,
+  .editor dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .editor dt {
+    border: 0;
+    padding-bottom: 0;
+  }
+  .editor dd {
+    padding-top: 0;
   }
 }

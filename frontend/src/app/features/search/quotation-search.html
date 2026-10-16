@@ -1,9 +1,11 @@
 <header class="page-heading">
-  <span class="eyebrow">ACCOMMODATION PLANNING</span>
-  <h1>Search &amp; Quotations</h1>
-  <p>
-    Compare individual room types for your guests, with a clear price for every occupied night.
-  </p>
+  <div>
+    <span class="eyebrow">ACCOMMODATION PLANNING</span>
+    <h1>Search &amp; Quotations</h1>
+    <p>
+      Compare individual room types for your guests, with a clear price for every occupied night.
+    </p>
+  </div>
 </header>
 <aside class="notice">
   <strong>Plan with confidence. Confirm separately.</strong>
@@ -29,64 +31,58 @@
   }
   <form [formGroup]="form" (ngSubmit)="search()">
     <fieldset [disabled]="searching() || setupLoading() || !!setupError()">
+      <div class="form-section-heading">
+        <h3>Stay dates</h3>
+        <span class="field-kind">Required</span>
+      </div>
       <div class="form-grid">
         <div>
           <label for="search-in">Check-in</label>
           <input
             id="search-in"
+            [attr.aria-invalid]="form.controls.checkIn.touched && form.controls.checkIn.invalid"
+            [attr.aria-describedby]="
+              form.controls.checkIn.touched && form.controls.checkIn.invalid
+                ? 'search-in-error'
+                : null
+            "
             type="date"
             formControlName="checkIn"
+            aria-required="true"
             [min]="limits()?.businessDate ?? ''"
             [max]="latestCheckIn()"
           />
           @if (form.controls.checkIn.touched && form.controls.checkIn.invalid) {
-            <p class="field-error">Choose a check-in date.</p>
+            <p class="field-error" id="search-in-error">Choose a check-in date.</p>
           }
         </div>
         <div>
           <label for="search-nights">Number of nights</label>
           <input
             id="search-nights"
+            [attr.aria-invalid]="form.controls.nights.touched && form.controls.nights.invalid"
+            [attr.aria-describedby]="
+              form.controls.nights.touched && form.controls.nights.invalid
+                ? 'search-nights-error'
+                : null
+            "
             type="number"
             formControlName="nights"
+            aria-required="true"
             min="1"
             [max]="limits()?.maxNights ?? 31"
             step="1"
           />
-          <small>Checkout: {{ form.controls.checkOut.value || 'Choose a valid check-in and nights' }}</small>
           @if (form.controls.nights.touched && form.controls.nights.invalid) {
-            <p class="field-error">Enter whole nights from 1 to {{ limits()?.maxNights ?? 31 }}.</p>
+            <p class="field-error" id="search-nights-error">
+              Enter whole nights from 1 to {{ limits()?.maxNights ?? 31 }}.
+            </p>
           }
         </div>
-        <div>
-          <label for="search-city">City (optional)</label>
-          <input
-            id="search-city"
-            formControlName="city"
-            maxlength="100"
-            placeholder="Exact city name"
-          />
-          <small>Matches the city name, ignoring case.</small>
-        </div>
-        <div>
-          <label for="search-hotel">Hotel (optional)</label>
-          <select id="search-hotel" formControlName="hotelId">
-            <option [ngValue]="null">All hotels</option>
-            @for (hotel of hotels(); track hotel.hotelId) {
-              <option [ngValue]="hotel.hotelId">
-                {{ hotel.name }}{{ hotel.city ? ' · ' + hotel.city : '' }}
-              </option>
-            }
-          </select>
-        </div>
-        <div>
-          <label for="search-room-type">Room type (optional)</label>
-          <select id="search-room-type" formControlName="roomTypeId">
-            <option [ngValue]="null">Any room type</option>
-            @for (room of roomTypes(); track room.roomTypeId) {
-              <option [ngValue]="room.roomTypeId">{{ room.name }}</option>
-            }
-          </select>
+        <div class="checkout-preview" aria-live="polite">
+          <span class="field-kind">Calculated checkout</span>
+          <output>{{ form.controls.checkOut.value || 'Choose your stay dates' }}</output>
+          <small>Checkout day is not an occupied night.</small>
         </div>
       </div>
       @if (form.touched && (form.hasError('dates') || form.hasError('stay'))) {
@@ -97,15 +93,20 @@
         </p>
       }
       <div formArrayName="rooms" class="room-requests">
-        <h3>Number of rooms: {{ rooms.length }}</h3>
+        <div class="form-section-heading">
+          <h3>Number of rooms: {{ rooms.length }}</h3>
+          <span class="field-kind">Adults are required for each room</span>
+        </div>
         @for (room of rooms.controls; track room; let i = $index) {
           <div class="requested-room" [formGroupName]="i">
+            <span class="room-number" aria-hidden="true">{{ i + 1 }}</span>
             <div>
               <label [for]="'requested-adults-' + i">Adults in room {{ i + 1 }}</label>
               <input
                 [id]="'requested-adults-' + i"
                 type="number"
                 formControlName="adults"
+                aria-required="true"
                 min="1"
                 [max]="showUnavailable.value ? null : occupancyMax()"
                 [class.invalid-input]="room.controls.adults.hasError('occupancyMax')"
@@ -117,7 +118,10 @@
                 @if (occupancyLoading()) {
                   <small>Checking maximum adult occupancy...</small>
                 } @else if (room.controls.adults.hasError('occupancyMax')) {
-                  <p class="field-error">{{ occupancyGuidance() }} Correct the count or enable Show unavailable options to see why this request cannot be accommodated.</p>
+                  <p class="field-error">
+                    {{ occupancyGuidance() }} Correct the count or enable Show unavailable options
+                    to see why this request cannot be accommodated.
+                  </p>
                 } @else if (occupancyGuidance()) {
                   <small>{{ occupancyGuidance() }}</small>
                 }
@@ -126,7 +130,9 @@
                 }
               </div>
               @if (
-                room.controls.adults.touched && room.invalid && !room.controls.adults.hasError('occupancyMax')
+                room.controls.adults.touched &&
+                room.invalid &&
+                !room.controls.adults.hasError('occupancyMax')
               ) {
                 <p class="field-error">
                   Enter a positive whole number within the supported integer range.
@@ -145,6 +151,44 @@
           </div>
         }
       </div>
+      <section class="optional-filters" aria-labelledby="optional-filters-title">
+        <div class="form-section-heading">
+          <h3 id="optional-filters-title">Narrow your search</h3>
+          <span class="field-kind">Optional filters</span>
+        </div>
+        <div class="form-grid">
+          <div>
+            <label for="search-city">City (optional)</label>
+            <input
+              id="search-city"
+              formControlName="city"
+              maxlength="100"
+              placeholder="Exact city name"
+            />
+            <small>Matches the city name, ignoring case.</small>
+          </div>
+          <div>
+            <label for="search-hotel">Hotel (optional)</label>
+            <select id="search-hotel" formControlName="hotelId">
+              <option [ngValue]="null">All hotels</option>
+              @for (hotel of hotels(); track hotel.hotelId) {
+                <option [ngValue]="hotel.hotelId">
+                  {{ hotel.name }}{{ hotel.city ? ' · ' + hotel.city : '' }}
+                </option>
+              }
+            </select>
+          </div>
+          <div>
+            <label for="search-room-type">Room type (optional)</label>
+            <select id="search-room-type" formControlName="roomTypeId">
+              <option [ngValue]="null">Any room type</option>
+              @for (room of roomTypes(); track room.roomTypeId) {
+                <option [ngValue]="room.roomTypeId">{{ room.name }}</option>
+              }
+            </select>
+          </div>
+        </div>
+      </section>
       <label class="unavailable-toggle">
         <input type="checkbox" [formControl]="showUnavailable" />
         Show unavailable options
@@ -156,7 +200,8 @@
           (click)="addRoom()"
           [disabled]="!limits() || rooms.length >= (limits()?.maxRooms ?? 0)"
         >
-          Add room</button>
+          Add room
+        </button>
         <button
           class="primary"
           type="submit"
@@ -169,9 +214,9 @@
   </form>
 </section>
 @if (searching()) {
-  <section class="panel state"><output>
-    Checking eligible rooms, nightly inventory and prices...
-  </output></section>
+  <section class="panel state">
+    <output> Checking eligible rooms, nightly inventory and prices... </output>
+  </section>
 }
 @if (error()) {
   <section class="panel">
@@ -188,27 +233,39 @@
       </p>
     </div>
     @if (edited()) {
-      <p class="notice"><output>
-        The form has changed. Results still describe the dates and rooms shown below; search again
-        to update them.
-      </output></p>
+      <p class="notice">
+        <output>
+          The form has changed. Results still describe the dates and rooms shown below; search again
+          to update them.
+        </output>
+      </p>
     }
     <p class="muted">
       {{ result.notice }} Each room type accommodates the entire request independently; different
       currencies are grouped, not converted.
     </p>
     @if (result.truncated) {
-      <p><output>
-        Showing the first {{ result.quotations.length }} of {{ result.matchingOptions }} options.
-        Use a hotel or city filter to narrow your search.
-      </output></p>
+      <p>
+        <output>
+          Showing the first {{ result.quotations.length }} of {{ result.matchingOptions }} options.
+          Use a hotel or city filter to narrow your search.
+        </output>
+      </p>
     }
     @if (!groupedQuotations().length) {
       <div class="panel state" role="status">
         <h3>No single room type can accommodate this request</h3>
-        <p>{{ canCustomize() && customizationGroups().length ? 'Try Customize Room Selection, or change the search filters.' : 'Try another room type, hotel or stay dates.' }}</p>
+        <p>
+          {{
+            canCustomize() && customizationGroups().length
+              ? 'Try Customize Room Selection, or change the search filters.'
+              : 'Try another room type, hotel or stay dates.'
+          }}
+        </p>
         @if (!showUnavailable.value && result.unavailableOptions.length) {
-          <button type="button" class="secondary" (click)="showUnavailable.setValue(true)">Show unavailable options and reasons</button>
+          <button type="button" class="secondary" (click)="showUnavailable.setValue(true)">
+            Show unavailable options and reasons
+          </button>
         }
       </div>
     }
@@ -216,15 +273,20 @@
       <article class="panel quotation">
         <header class="quote-heading">
           <div>
-            <p class="hotel-context">{{ quote.hotelName }}{{ quote.city ? ' - ' + quote.city : '' }}</p>
+            <p class="hotel-context">
+              {{ quote.hotelName }}{{ quote.city ? ' - ' + quote.city : '' }}
+            </p>
             <h3 class="room-type-title">{{ quote.rooms[0].roomTypeName }}</h3>
             <span class="availability-status available">Available</span>
-            <p>{{ quote.rooms.length }} {{ quote.rooms.length === 1 ? 'room' : 'rooms' }} requested &middot; {{ quote.nights }} {{ quote.nights === 1 ? 'night' : 'nights' }}</p>
+            <p>
+              {{ quote.rooms.length }} {{ quote.rooms.length === 1 ? 'room' : 'rooms' }} requested
+              &middot; {{ quote.nights }} {{ quote.nights === 1 ? 'night' : 'nights' }}
+            </p>
           </div>
           <div class="quote-total">
             <span>Complete stay total</span>
             <strong>{{ quote.totalPrice | number: '1.2-2' }} {{ quote.currencyCode }}</strong>
-            <small>Informational quotation</small>
+            <small>Customer selling price - all requested rooms and nights</small>
           </div>
         </header>
         @for (group of quote.offeringGroups; track group.offeringId) {
@@ -246,28 +308,37 @@
               <section class="quoted-room">
                 <div class="room-summary">
                   <div class="room-info">
-                    <h5>Room {{ room.roomNumber }}</h5>
-                    <p class="room-adults">{{ room.adults }} {{ room.adults === 1 ? 'adult' : 'adults' }}</p>
+                    <h4>Room {{ room.roomNumber }}</h4>
+                    <p class="room-adults">
+                      {{ room.adults }} {{ room.adults === 1 ? 'adult' : 'adults' }}
+                    </p>
                   </div>
                   <div class="room-pricing">
                     <p class="room-total">
                       <span class="sr-only">Room total: </span>
-                      <strong>{{ room.totalPrice | number: '1.2-2' }} {{ quote.currencyCode }}</strong>
+                      <strong
+                        >{{ room.totalPrice | number: '1.2-2' }} {{ quote.currencyCode }}</strong
+                      >
                     </p>
                   </div>
                 </div>
                 <details>
                   <summary>Nightly price breakdown for room {{ room.roomNumber }}</summary>
-                  <div class="table-scroll">
+                  <div
+                    class="table-scroll"
+                    tabindex="0"
+                    role="region"
+                    aria-label="Scrollable results"
+                  >
                     <table>
                       <caption class="sr-only">
                         Room
                         {{
-                      room.roomNumber
+                          room.roomNumber
                         }}
                         nightly selling prices in
                         {{
-                      quote.currencyCode
+                          quote.currencyCode
                         }}
                       </caption>
                       <thead>
@@ -284,11 +355,13 @@
                             <td>{{ night.occupiedDate }}</td>
                             <td>
                               <span class="badge" [class.seasonal]="night.source === 'SEASONAL'">{{
-                            night.source
-                          }}</span>
+                                night.source
+                              }}</span>
                             </td>
                             <td>{{ room.adults }}</td>
-                            <td>{{ night.sellingPrice | number: '1.2-2' }} {{ quote.currencyCode }}</td>
+                            <td>
+                              {{ night.sellingPrice | number: '1.2-2' }} {{ quote.currencyCode }}
+                            </td>
                           </tr>
                         }
                       </tbody>
@@ -313,15 +386,26 @@
     }
     @if (showUnavailable.value) {
       @if (result.unavailableTruncated) {
-        <p><output>Showing {{ result.unavailableOptions.length }} of {{ result.matchingUnavailableOptions }} unavailable options. Narrow your filters to see more.</output></p>
+        <p>
+          <output
+            >Showing {{ result.unavailableOptions.length }} of
+            {{ result.matchingUnavailableOptions }} unavailable options. Narrow your filters to see
+            more.</output
+          >
+        </p>
       }
       @for (option of result.unavailableOptions; track option.offerings[0].offeringId) {
         <article class="panel unavailable-option">
           <header class="unavailable-heading">
             <div>
-              <p class="hotel-context">{{ option.hotelName }}{{ option.city ? ' - ' + option.city : '' }}</p>
+              <p class="hotel-context">
+                {{ option.hotelName }}{{ option.city ? ' - ' + option.city : '' }}
+              </p>
               <h3 class="room-type-title">{{ option.offerings[0].roomTypeName }}</h3>
-              <p class="muted">{{ requestedRooms() }} {{ requestedRooms() === 1 ? 'room' : 'rooms' }} requested &middot; {{ result.nights }} {{ result.nights === 1 ? 'night' : 'nights' }}</p>
+              <p class="muted">
+                {{ requestedRooms() }} {{ requestedRooms() === 1 ? 'room' : 'rooms' }} requested
+                &middot; {{ result.nights }} {{ result.nights === 1 ? 'night' : 'nights' }}
+              </p>
             </div>
             <span class="availability-status">Not Available</span>
           </header>
@@ -341,8 +425,15 @@
             }
           </ul>
           @if (option.indicativeTotalPrice !== null) {
-            <p class="indicative-price">Indicative stay total: <strong>{{ option.indicativeTotalPrice | number:'1.2-2' }} {{ option.currencyCode }}</strong>
-              <small>Non-bookable price estimate. This option cannot satisfy the requested stay.</small>
+            <p class="indicative-price">
+              Indicative stay total:
+              <strong
+                >{{ option.indicativeTotalPrice | number: '1.2-2' }}
+                {{ option.currencyCode }}</strong
+              >
+              <small
+                >Non-bookable price estimate. This option cannot satisfy the requested stay.</small
+              >
             </p>
           }
           <footer class="quote-actions">
@@ -363,7 +454,9 @@
           aria-controls="custom-selection"
           [attr.aria-expanded]="customizationOpen()"
           (click)="openCustomization()"
-        >Customize Room Selection</button>
+        >
+          Customize Room Selection
+        </button>
         <small>Choose room types separately within one hotel.</small>
       </div>
     }
@@ -376,23 +469,36 @@
       >
         <header class="selection-heading">
           <h2 #customTitle id="custom-title" tabindex="-1">Customize Room Selection</h2>
-          <button type="button" class="text-button" (click)="closeCustomization()">Close customization</button>
+          <button type="button" class="text-button" (click)="closeCustomization()">
+            Close customization
+          </button>
         </header>
-        <p>Choose room types within one hotel and approved contract. Adult counts remain as entered.</p>
+        <p>
+          Choose room types within one hotel and approved contract. Adult counts remain as entered.
+        </p>
         @for (group of customizationGroups(); track group.contractId) {
           <button
             type="button"
-            class="secondary"
+            class="secondary hotel-choice"
+            [attr.aria-pressed]="customOptions()[0]?.contractId === group.contractId"
             [disabled]="edited() || searching()"
             (click)="customize(group)"
-          >Choose {{ group.hotelName }} &middot; {{ group.currencyCode }}</button>
+          >
+            Choose {{ group.hotelName }} &middot; {{ group.currencyCode }}
+          </button>
         }
         @if (customOptions().length) {
           <h3>{{ customOptions()[0].hotelName }}</h3>
-          <p class="muted">All rooms below use the same approved contract. Inventory counts are for the entire stay before these selections. Only room types that fit each room's adult count and remaining shared inventory are listed.</p>
+          <p class="muted">
+            All rooms below use the same approved contract. Inventory counts are for the entire stay
+            before these selections. Only room types that fit each room's adult count and remaining
+            shared inventory are listed.
+          </p>
           @for (id of selectedIds(); track $index; let i = $index) {
             <div class="requested-room">
-              <label [for]="'custom-room-' + i">Room {{ i + 1 }} &middot; {{ customOptions()[0].rooms[i].adults }} adults</label>
+              <label [for]="'custom-room-' + i"
+                >Room {{ i + 1 }} &middot; {{ customOptions()[0].rooms[i].adults }} adults</label
+              >
               <select
                 [id]="'custom-room-' + i"
                 [value]="id"
@@ -404,12 +510,22 @@
                   <option [value]="option.offeringId">
                     {{ option.roomTypeName }} &middot; max {{ option.maxAdults }} adults &middot;
                     {{ option.availableRoomsForStay }} available &middot;
-                    {{ option.rooms[i].totalPrice | number:'1.2-2' }} {{ option.currencyCode }}
+                    {{ option.rooms[i].totalPrice | number: '1.2-2' }} {{ option.currencyCode }}
                   </option>
                 }
               </select>
+              @let roomPrice = selectionRoomPrice(i, id);
+              @if (roomPrice !== null) {
+                <p class="selection-room-price money">
+                  {{ roomPrice | number: '1.2-2' }} {{ customOptions()[0].currencyCode }}
+                  <small>Room total for the stay</small>
+                </p>
+              }
               @if (!roomOptions(i).length) {
-                <p class="field-error">No room type can accommodate this room with the current selections. Change another room type or search again.</p>
+                <p class="field-error">
+                  No room type can accommodate this room with the current selections. Change another
+                  room type or search again.
+                </p>
               }
             </div>
           }
@@ -419,16 +535,33 @@
         }
         @if (customQuote(); as q) {
           @for (room of q.rooms; track room.roomNumber) {
-            <p>Room {{ room.roomNumber }}: {{ room.roomTypeName }} &middot; {{ room.adults }} adults &middot; {{ room.totalPrice | number:'1.2-2' }} {{ q.currencyCode }}</p>
+            <div class="custom-room-summary">
+              <span
+                ><strong>Room {{ room.roomNumber }} &middot; {{ room.roomTypeName }}</strong
+                ><small>{{ room.adults }} adults</small></span
+              ><strong class="money"
+                >{{ room.totalPrice | number: '1.2-2' }} {{ q.currencyCode }}</strong
+              >
+            </div>
           }
-          <strong>Total {{ q.totalPrice | number:'1.2-2' }} {{ q.currencyCode }}</strong>
+          <div class="selection-total">
+            <span>Combined stay total</span
+            ><strong class="money"
+              >Total {{ q.totalPrice | number: '1.2-2' }} {{ q.currencyCode }}</strong
+            >
+          </div>
           <button
             type="button"
             class="primary"
             [disabled]="edited() || searching() || selectionLoading()"
             (click)="reserve(q)"
-          >Reserve Accommodation</button>
+          >
+            Reserve Accommodation
+          </button>
         }
+        <button type="button" class="secondary" (click)="closeCustomization()">
+          Cancel customization
+        </button>
         @if (selectionError()) {
           <p role="alert" class="error-message">{{ selectionError() }}</p>
         }

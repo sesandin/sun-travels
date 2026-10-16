@@ -41,6 +41,9 @@ export class OfferingService {
   createSeason(id: number, request: SeasonalRateRequest) {
     return this.http.post<SeasonalRate>(this.url + '/offerings/' + id + '/seasonal-rates', request);
   }
+  removeSeason(id: number, rateId: number) {
+    return this.http.delete<void>(this.url + '/offerings/' + id + '/seasonal-rates/' + rateId);
+  }
   updateSeason(id: number, rateId: number, request: SeasonalRateRequest) {
     return this.http.put<SeasonalRate>(
       this.url + '/offerings/' + id + '/seasonal-rates/' + rateId,

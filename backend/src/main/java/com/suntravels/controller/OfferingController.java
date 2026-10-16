@@ -68,6 +68,13 @@ public class OfferingController {
         return ResponseEntity.status(201).body(service.createSeason(id, request));
     }
 
+    @DeleteMapping("/offerings/{id}/seasonal-rates/{rateId}")
+    public ResponseEntity<Void> removeSeason(@PathVariable("id") Integer id,
+            @PathVariable("rateId") Integer rateId) {
+        service.removeSeason(id, rateId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PutMapping("/offerings/{id}/seasonal-rates/{rateId}")
     public SeasonalRateResponse updateSeason(@PathVariable("id") Integer id,
             @PathVariable("rateId") Integer rateId, @Valid @RequestBody SeasonalRateRequest request) {

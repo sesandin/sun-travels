@@ -1,5 +1,9 @@
 <header class="page-heading">
-  <h1>Reservation details</h1>
+  <div>
+    <span class="eyebrow">RESERVATIONS</span>
+    <h1>Reservation details</h1>
+    <p>Review the booked stay, saved prices and hotel arrangements.</p>
+  </div>
   <a routerLink="/reservations">All reservations</a>
 </header>
 @if (loading()) {
@@ -10,7 +14,9 @@
   <button class="secondary" (click)="load()" [disabled]="loading()">Reload</button>
 }
 @if (notice()) {
-  <p class="success-message"><output>{{ notice() }}</output></p>
+  <p class="success-message">
+    <output>{{ notice() }}</output>
+  </p>
 }
 @if (reservation(); as r) {
   @if (r.status === 'CONFIRMED' && r.warnings?.length) {
@@ -19,10 +25,30 @@
       <ul>
         @for (
           warning of r.warnings;
-          track warning.hotelId + ':' + warning.code + ':' + (warning.contractId ?? 0) + ':' + (warning.offeringId ?? 0)
+          track warning.hotelId +
+            ':' +
+            warning.code +
+            ':' +
+            (warning.contractId ?? 0) +
+            ':' +
+            (warning.offeringId ?? 0)
         ) {
           <li>
-            <strong>{{ warning.hotelName }}{{ warning.roomTypeName ? ' - ' + warning.roomTypeName : '' }} &mdash; {{ warning.code === 'HOTEL_INACTIVE' ? 'Hotel inactive' : warning.code === 'HOTEL_CLOSURE' ? 'Hotel closure overlaps this stay' : warning.code === 'CONTRACT_SUSPENDED' ? 'Contract suspended' : warning.code === 'OFFERING_SUSPENDED' ? 'Room offering suspended' : 'Verify hotel arrangements' }}</strong>
+            <strong
+              >{{ warning.hotelName
+              }}{{ warning.roomTypeName ? ' - ' + warning.roomTypeName : '' }} &mdash;
+              {{
+                warning.code === 'HOTEL_INACTIVE'
+                  ? 'Hotel inactive'
+                  : warning.code === 'HOTEL_CLOSURE'
+                    ? 'Hotel closure overlaps this stay'
+                    : warning.code === 'CONTRACT_SUSPENDED'
+                      ? 'Contract suspended'
+                      : warning.code === 'OFFERING_SUSPENDED'
+                        ? 'Room offering suspended'
+                        : 'Verify hotel arrangements'
+              }}</strong
+            >
             <p>{{ warning.message }}</p>
           </li>
         }
@@ -30,39 +56,81 @@
     </aside>
   }
   <section class="panel">
-    <h2>Reservation #{{ r.reservationId }} · {{ r.status }}</h2>
-    <p>Created {{ r.createdAt | date:'medium' }}</p>
-    <p>Customer #{{ r.customerId }} · {{ r.customerName }} · {{ r.phone }} {{ r.email }}</p>
-    <p>{{ r.checkIn }} → {{ r.checkOut }} · {{ r.nights }} nights · {{ r.rooms.length }} rooms</p>
+    <div class="reservation-identity">
+      <h2>Reservation #{{ r.reservationId }}</h2>
+      <span class="status-badge" [attr.data-status]="r.status">{{ r.status }}</span>
+    </div>
+    <dl class="reservation-facts detail-facts">
+      <div>
+        <dt>Customer</dt>
+        <dd>
+          #{{ r.customerId }} &middot; {{ r.customerName }}<span>{{ r.phone }} {{ r.email }}</span>
+        </dd>
+      </div>
+      <div>
+        <dt>Created</dt>
+        <dd>{{ r.createdAt | date: 'medium' }}</dd>
+      </div>
+      <div>
+        <dt>Check-in</dt>
+        <dd>
+          <time [attr.datetime]="r.checkIn">{{ r.checkIn }}</time>
+        </dd>
+      </div>
+      <div>
+        <dt>Checkout (exclusive)</dt>
+        <dd>
+          <time [attr.datetime]="r.checkOut">{{ r.checkOut }}</time>
+        </dd>
+      </div>
+      <div>
+        <dt>Nights</dt>
+        <dd>{{ r.nights }}</dd>
+      </div>
+      <div>
+        <dt>Rooms</dt>
+        <dd>{{ r.rooms.length }}</dd>
+      </div>
+    </dl>
+    <h2 class="section-title">Rooms and booked pricing</h2>
     @for (room of r.rooms; track room.reservationItemId) {
       <article class="room">
         <h3>{{ room.hotelName }} · {{ room.roomTypeName }} · {{ room.adults }} adults</h3>
-        <p>Room total: {{ room.totalPrice | number:'1.2-2' }} {{ r.currencyCode }}</p>
+        <p class="money room-selling-total">
+          Room total: {{ room.totalPrice | number: '1.2-2' }} {{ r.currencyCode }}
+        </p>
         <details open>
           <summary>Booked nightly selling prices</summary>
-          <table>
-            <thead>
-              <tr>
-                <th>Occupied date</th>
-                <th>Selling price</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (night of room.nightlyPrices; track night.occupiedDate) {
+          <div class="table-scroll" tabindex="0" role="region" aria-label="Nightly selling prices">
+            <table>
+              <thead>
                 <tr>
-                  <td>{{ night.occupiedDate }}</td>
-                  <td>{{ night.sellingPrice | number:'1.2-2' }} {{ r.currencyCode }}</td>
+                  <th scope="col">Occupied date</th>
+                  <th scope="col">Selling price</th>
                 </tr>
-              }
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                @for (night of room.nightlyPrices; track night.occupiedDate) {
+                  <tr>
+                    <td>{{ night.occupiedDate }}</td>
+                    <td>{{ night.sellingPrice | number: '1.2-2' }} {{ r.currencyCode }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         </details>
       </article>
     }
     @if (r.totalPrice !== null) {
-      <p class="total">Booked total: {{ r.totalPrice | number:'1.2-2' }} {{ r.currencyCode }}</p>
+      <p class="total quoted-total">
+        Booked total: <strong>{{ r.totalPrice | number: '1.2-2' }} {{ r.currencyCode }}</strong>
+      </p>
     } @else {
-      <p class="error-message">This historical reservation has incomplete nightly snapshots. Its total is unavailable; current contract rates have not been used to reconstruct it.</p>
+      <p class="error-message">
+        This historical reservation has incomplete nightly snapshots. Its total is unavailable;
+        current contract rates have not been used to reconstruct it.
+      </p>
     }
     <div class="actions">
       @if (r.status === 'CONFIRMED') {
@@ -71,19 +139,40 @@
           type="button"
           (click)="openCancel()"
           [disabled]="cancelling()"
-        >Cancel reservation</button>
+        >
+          Cancel reservation
+        </button>
       }
-      <button class="secondary" type="button" (click)="back()" [disabled]="cancelling()">Back</button>
+      <button class="secondary" type="button" (click)="back()" [disabled]="cancelling()">
+        Back
+      </button>
     </div>
   </section>
 }
-<dialog #cancelDialog (cancel)="cancelling() ? $event.preventDefault() : null">
+<dialog
+  #cancelDialog
+  aria-labelledby="cancel-reservation-title"
+  aria-describedby="cancel-reservation-description"
+  (cancel)="cancelling() ? $event.preventDefault() : null"
+>
   <div class="panel">
-    <h2>Cancel reservation #{{ reservation()?.reservationId }}?</h2>
-    <p>All rooms will be released. The reservation and booked price history will be retained.</p>
+    <h2 id="cancel-reservation-title">Cancel reservation #{{ reservation()?.reservationId }}?</h2>
+    <p id="cancel-reservation-description">
+      All rooms will be released. The reservation and booked price history will be retained.
+    </p>
     <div class="actions">
-      <button class="secondary" type="button" (click)="closeCancel()" [disabled]="cancelling()">Keep reservation</button>
-      <button class="primary danger" type="button" (click)="cancel()" [disabled]="cancelling()">{{ cancelling() ? 'Cancelling…' : 'Confirm cancellation' }}</button>
+      <button
+        class="secondary"
+        type="button"
+        (click)="closeCancel()"
+        [disabled]="cancelling()"
+        autofocus
+      >
+        Keep reservation
+      </button>
+      <button class="primary danger" type="button" (click)="cancel()" [disabled]="cancelling()">
+        {{ cancelling() ? 'Cancelling…' : 'Confirm cancellation' }}
+      </button>
     </div>
   </div>
 </dialog>

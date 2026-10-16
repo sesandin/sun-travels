@@ -193,4 +193,19 @@ class OfferingControllerTest {
     void noDeletionEndpoint() throws Exception {
         mvc.perform(delete("/api/offerings/3")).andExpect(status().isMethodNotAllowed());
     }
+
+    @Test
+    void removesSpecificSeasonAndReturnsNoContent() throws Exception {
+        mvc.perform(delete("/api/offerings/3/seasonal-rates/4")).andExpect(status().isNoContent());
+        verify(service).removeSeason(3, 4);
+    }
+
+    @Test
+    void returnsRemovalBusinessFailure() throws Exception {
+        doThrow(OfferingException.conflict("Offering and seasonal maintenance requires a DRAFT or APPROVED contract"))
+                .when(service).removeSeason(3, 4);
+        mvc.perform(delete("/api/offerings/3/seasonal-rates/4")).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Offering and seasonal maintenance requires a DRAFT or APPROVED contract"));
+    }
+
 }

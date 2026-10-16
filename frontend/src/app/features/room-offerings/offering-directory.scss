@@ -8,23 +8,14 @@
   justify-content: space-between;
   gap: 20px;
 }
-.page-heading {
-  margin-bottom: 24px;
-}
-.page-heading h1 {
-  margin: 8px 0;
-}
+
 .page-heading p,
 .panel-heading p {
   color: var(--muted);
   line-height: 1.6;
   margin: 0;
 }
-.eyebrow {
-  font-size: 10px;
-  letter-spacing: 1.8px;
-  font-weight: 700;
-}
+
 .inventory-note {
   border: 1px solid #cbded9;
   border-left: 4px solid var(--primary);
@@ -38,15 +29,7 @@
   line-height: 1.6;
   margin: 6px 0 0;
 }
-.list-panel {
-  background: white;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-}
-.panel-heading {
-  padding: 24px;
-}
+
 h2 {
   font-size: 18px;
   margin-bottom: 7px;
@@ -65,40 +48,12 @@ h2 {
 .search {
   grid-column: span 2;
 }
-label {
-  display: block;
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 7px;
-}
+
 .reset {
   display: flex;
   align-items: flex-end;
 }
-.table-scroll {
-  overflow-x: auto;
-}
-table {
-  border-collapse: collapse;
-  width: 100%;
-}
-th,
-td {
-  padding: 18px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-}
-th {
-  font-size: 10px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: var(--muted);
-  background: #f7f9f9;
-}
-td {
-  font-size: 13px;
-  vertical-align: top;
-}
+
 td strong {
   overflow-wrap: anywhere;
 }
@@ -107,19 +62,6 @@ td small {
   color: var(--muted);
   margin-top: 7px;
   font-size: 11px;
-}
-.badge {
-  display: inline-block;
-  border-radius: 20px;
-  background: #e8f4ef;
-  color: #1a6047;
-  padding: 4px 8px;
-  font-size: 10px;
-  font-weight: 600;
-}
-.badge.historical {
-  background: #edf0f2;
-  color: #536367;
 }
 td .inactive {
   color: var(--danger);

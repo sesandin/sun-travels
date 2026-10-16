@@ -1,16 +1,31 @@
 @if (auth.user(); as user) {
-  <a class="skip-link" href="#main-content">Skip to content</a>
-  <div class="app-shell">
-    <aside class="sidebar" [class.open]="menuOpen()" id="main-navigation">
+  <a class="skip-link" href="#main-content" [inert]="mobileNavigation() && menuOpen()"
+    >Skip to content</a
+  >
+  <div class="app-shell" (keydown.escape)="closeNavigation(true)">
+    <aside
+      #navigation
+      class="sidebar"
+      [class.open]="menuOpen()"
+      id="main-navigation"
+      [inert]="mobileNavigation() && !menuOpen()"
+    >
+      <button
+        type="button"
+        class="close-navigation"
+        aria-label="Close navigation"
+        (click)="closeNavigation(true)"
+      >
+        Close menu <span aria-hidden="true">&times;</span>
+      </button>
       <a
         class="brand"
         [routerLink]="user.role === 'ADMIN' ? '/hotels' : '/search'"
-        (click)="menuOpen.set(false)"
+        (click)="closeNavigation()"
         aria-label="Sun Travels home"
       >
         <span class="brand-mark" aria-hidden="true">&#9728;</span>
-        <span>Sun Travels<small>STAFF WORKSPACE</small>
-        </span>
+        <span>Sun Travels<small>STAFF WORKSPACE</small> </span>
       </a>
       <p class="nav-label">WORKSPACE</p>
       <nav aria-label="Main navigation">
@@ -19,96 +34,114 @@
             routerLink="/hotels"
             routerLinkActive="selected"
             ariaCurrentWhenActive="page"
-            (click)="menuOpen.set(false)"
+            (click)="closeNavigation()"
           >
-            <span aria-hidden="true">&#9637;</span> Hotels</a>
+            <span aria-hidden="true">&#9637;</span> Hotels</a
+          >
           <a
             routerLink="/room-types"
             routerLinkActive="selected"
             ariaCurrentWhenActive="page"
-            (click)="menuOpen.set(false)"
+            (click)="closeNavigation()"
           >
-            <span aria-hidden="true">&#9638;</span> Room Types</a>
+            <span aria-hidden="true">&#9638;</span> Room Types</a
+          >
           <a
             routerLink="/contracts"
             routerLinkActive="selected"
             ariaCurrentWhenActive="page"
-            (click)="menuOpen.set(false)"
+            (click)="closeNavigation()"
           >
-            <span aria-hidden="true">&#9636;</span> Contracts</a>
+            <span aria-hidden="true">&#9636;</span> Contracts</a
+          >
           <a
             routerLink="/room-offerings"
             routerLinkActive="selected"
             ariaCurrentWhenActive="page"
-            (click)="menuOpen.set(false)"
+            (click)="closeNavigation()"
           >
-            <span aria-hidden="true">&#9671;</span> Room Offerings</a>
+            <span aria-hidden="true">&#9671;</span> Room Offerings</a
+          >
         }
         <a
           routerLink="/search"
           routerLinkActive="selected"
           ariaCurrentWhenActive="page"
-          (click)="menuOpen.set(false)"
+          (click)="closeNavigation()"
         >
-          <span aria-hidden="true">&#8981;</span> Search &amp; Quotations</a>
+          <span aria-hidden="true">&#8981;</span> Search &amp; Quotations</a
+        >
         <a
           routerLink="/customers"
           routerLinkActive="selected"
           ariaCurrentWhenActive="page"
-          (click)="menuOpen.set(false)"
+          (click)="closeNavigation()"
         >
-          <span aria-hidden="true">&#9823;</span> Customers</a>
+          <span aria-hidden="true">&#9823;</span> Customers</a
+        >
         <a
           routerLink="/reservations"
           routerLinkActive="selected"
           ariaCurrentWhenActive="page"
-          (click)="menuOpen.set(false)"
+          (click)="closeNavigation()"
         >
-          <span aria-hidden="true">&#9635;</span> Reservations</a>
+          <span aria-hidden="true">&#9635;</span> Reservations</a
+        >
       </nav>
       <div class="sidebar-note">
         <span aria-hidden="true">&#10023;</span>
         <strong>Great journeys start here.</strong>
         <p>Serve hotel partners and travellers with confidence.</p>
       </div>
-      <div class="sidebar-footer">Sun Travels · {{ user.role === 'ADMIN' ? 'Administration' : 'Reservations' }}</div>
+      <div class="sidebar-footer">
+        Sun Travels · {{ user.role === 'ADMIN' ? 'Administration' : 'Reservations' }}
+      </div>
     </aside>
     @if (menuOpen()) {
       <button
         class="scrim"
         type="button"
         aria-label="Close navigation"
-        (click)="menuOpen.set(false)"
+        (click)="closeNavigation(true)"
       ></button>
     }
-    <div class="workspace">
+    <div class="workspace" [inert]="mobileNavigation() && menuOpen()">
       <header class="topbar">
         <button
           type="button"
           class="menu-button"
+          #navigationToggle
           aria-label="Toggle navigation"
           aria-controls="main-navigation"
           [attr.aria-expanded]="menuOpen()"
-          (click)="menuOpen.set(!menuOpen())"
-        >&#9776;</button>
-        <div class="breadcrumb">Workspace <span aria-hidden="true">/</span>
-          <strong>{{ user.role === 'ADMIN' ? 'Partner management' : 'Reservations desk' }}</strong>
+          (click)="toggleNavigation()"
+        >
+          &#9776;
+        </button>
+        <div class="breadcrumb">
+          Workspace <span aria-hidden="true">/</span>
+          <strong>{{ pageTitle() }}</strong>
         </div>
         <div class="account">
           <span>
             <strong>{{ user.fullName }}</strong>
             <small>{{ user.role }}</small>
           </span>
-          <button type="button" class="secondary" (click)="logout()" [disabled]="loggingOut()">{{ loggingOut() ? 'Signing out...' : 'Sign out' }}</button>
+          <button type="button" class="secondary" (click)="logout()" [disabled]="loggingOut()">
+            {{ loggingOut() ? 'Signing out...' : 'Sign out' }}
+          </button>
         </div>
       </header>
       <main id="main-content" tabindex="-1">
         @if (router.url.includes('forbidden=1')) {
-          <p class="error-message" role="alert">You do not have permission to open that administration page.</p>
+          <p class="error-message" role="alert">
+            You do not have permission to open that administration page.
+          </p>
         }
         <router-outlet />
       </main>
-      <footer class="page-footer">Sun Travels <span>Hotel contract &amp; accommodation management</span>
+      <footer class="page-footer">
+        Sun Travels <span>Hotel contract &amp; accommodation management</span>
       </footer>
     </div>
   </div>

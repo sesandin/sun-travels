@@ -277,6 +277,20 @@ describe('Reservation review and confirmation', () => {
     expect(c.accepted.value).toBe(false);
     expect(TestBed.inject(ReservationService).draft()).toEqual(quote);
   });
+  it('presents quotation, customer and acknowledgment as distinct review steps', () => {
+    const steps: NodeListOf<HTMLElement> = fixture.nativeElement.querySelectorAll('.workflow-step');
+    expect(Array.from(steps, (step) => step.getAttribute('data-step'))).toEqual(['1', '2', '3']);
+    expect(fixture.nativeElement.querySelector('.quoted-total')?.textContent).toContain('230.00');
+    expect(fixture.nativeElement.querySelector('#confirmation-guidance')?.textContent).toContain(
+      'Select a customer',
+    );
+    const confirm: HTMLButtonElement = fixture.nativeElement.querySelector(
+      'button[aria-describedby="confirmation-guidance"]',
+    );
+    expect(confirm.disabled).toBe(true);
+    expect(c.quote()).toEqual(quote);
+    http.expectNone('/api/reservations');
+  });
 });
 
 describe('Reservation directory and details', () => {
@@ -376,6 +390,13 @@ describe('Reservation directory and details', () => {
       'This reservation remains confirmed',
     );
     for (const warning of warnings) expect(f.nativeElement.textContent).toContain(warning.message);
+    expect(
+      f.nativeElement
+        .querySelector('.reservation-identity .status-badge')
+        ?.getAttribute('data-status'),
+    ).toBe('CONFIRMED');
+    const cancelDialog: HTMLDialogElement = f.nativeElement.querySelector('dialog');
+    expect(cancelDialog.getAttribute('aria-labelledby')).toBe('cancel-reservation-title');
     expect(f.componentInstance.reservation()?.status).toBe('CONFIRMED');
     expect(f.nativeElement.textContent).toContain('230.00 USD');
     expect(f.nativeElement.textContent).toContain('Cancel reservation');

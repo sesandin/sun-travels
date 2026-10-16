@@ -8,7 +8,7 @@
 .sidebar {
   width: 252px;
   flex-shrink: 0;
-  background: #102e32;
+  background: var(--sidebar);
   color: #c6d9d8;
   padding: 32px 18px 20px;
   display: flex;
@@ -16,6 +16,8 @@
   position: fixed;
   inset: 0 auto 0 0;
   z-index: 20;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 .brand {
   display: flex;
@@ -59,10 +61,20 @@ nav a,
 nav a {
   text-decoration: none;
   color: white;
+  min-height: 48px;
+  transition: background-color 120ms ease;
+}
+nav a:hover {
+  background: #1b4245;
+}
+nav a:focus-visible {
+  outline-color: var(--gold);
+  outline-offset: -3px;
 }
 nav .selected {
   background: #245052;
   box-shadow: inset 3px 0 #eec078;
+  font-weight: 650;
 }
 nav a > span,
 .upcoming > span:first-child {
@@ -104,6 +116,7 @@ nav a > span,
   color: #8aa7a7;
 }
 .workspace {
+  min-width: 0;
   margin-left: 252px;
   width: calc(100% - 252px);
   display: flex;
@@ -121,6 +134,7 @@ nav a > span,
 .breadcrumb {
   font-size: 13px;
   color: var(--muted);
+  min-width: 0;
 }
 .breadcrumb span {
   padding: 0 13px;
@@ -157,6 +171,7 @@ nav a > span,
   font-size: 12px;
 }
 main {
+  min-width: 0;
   padding: 36px 40px;
   flex: 1;
   max-width: 1600px;
@@ -173,6 +188,7 @@ main {
   color: var(--muted);
 }
 .menu-button,
+.close-navigation,
 .scrim {
   display: none;
 }
@@ -198,16 +214,31 @@ main {
     display: none;
   }
   .account > span {
-    display: none;
+    max-width: 150px;
+    overflow-wrap: anywhere;
   }
 }
 @media (max-width: 760px) {
   .sidebar {
     transform: translateX(-100%);
     transition: transform 0.2s;
+    visibility: hidden;
   }
   .sidebar.open {
     transform: translateX(0);
+    visibility: visible;
+  }
+  .close-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    background: transparent;
+    border-color: #527273;
+    color: white;
+  }
+  .close-navigation span {
+    font-size: 24px;
   }
   .workspace {
     margin-left: 0;
@@ -232,13 +263,38 @@ main {
     padding: 24px 16px;
   }
   .topbar {
-    height: 64px;
+    min-height: 72px;
+    height: auto;
     padding: 0 16px;
+    gap: 12px;
   }
   .page-footer {
     margin: 0 16px;
   }
   .page-footer span {
     display: none;
+  }
+}
+@media (max-width: 480px) {
+  .breadcrumb {
+    font-size: 12px;
+  }
+  .breadcrumb > span {
+    padding: 0 5px;
+  }
+  .account {
+    gap: 8px;
+  }
+  .account > span {
+    display: none;
+  }
+  .account button {
+    white-space: nowrap;
+  }
+  .page-footer {
+    gap: 12px;
+  }
+  .sidebar {
+    width: min(292px, calc(100vw - 48px));
   }
 }

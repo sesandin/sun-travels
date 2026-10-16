@@ -30,7 +30,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest({AuthController.class, ContractController.class, QuotationSearchController.class,
-        CustomerController.class})
+        CustomerController.class, OfferingController.class})
 @Import({SecurityConfig.class, DatabaseUserDetailsService.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
 class AuthenticationSecurityTest {
@@ -40,6 +40,8 @@ class AuthenticationSecurityTest {
     PasswordEncoder encoder;
     @MockitoBean
     UserRepository users;
+    @MockitoBean
+    OfferingService offerings;
     @MockitoBean
     ContractService contracts;
     @MockitoBean
@@ -207,4 +209,18 @@ class AuthenticationSecurityTest {
         mvc.perform(post("/api/search/selection").with(csrf()).contentType("application/json").content(
                 selection)).andExpect(status().isUnauthorized());
     }
+
+    @Test
+    void seasonalRemovalRequiresAdminSessionAndCsrf() throws Exception {
+        mvc.perform(delete("/api/offerings/3/seasonal-rates/4").with(csrf()))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(delete("/api/offerings/3/seasonal-rates/4").session(login("agent01")).with(csrf()))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/offerings/3/seasonal-rates/4").session(login("admin01")))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/api/offerings/3/seasonal-rates/4").session(login("admin01")).with(csrf()))
+                .andExpect(status().isNoContent());
+        verify(offerings).removeSeason(3, 4);
+    }
+
 }

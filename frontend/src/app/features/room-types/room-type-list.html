@@ -8,7 +8,9 @@
     <button type="button" class="primary" (click)="openEditor()">+ Create room type</button>
   </header>
   @if (notice()) {
-    <p class="success-message"><output>{{ notice() }}</output></p>
+    <p class="success-message">
+      <output>{{ notice() }}</output>
+    </p>
   }
   <div class="list-panel" [attr.aria-busy]="loading()">
     <div class="panel-heading">
@@ -16,7 +18,9 @@
         <h2>Room type directory</h2>
         <p>Shared room categories across hotel contracts.</p>
       </div>
-      <button type="button" class="secondary" [disabled]="loading()" (click)="loadRoomTypes()">Refresh</button>
+      <button type="button" class="secondary" [disabled]="loading()" (click)="loadRoomTypes()">
+        Refresh
+      </button>
     </div>
     <div class="filters">
       <div>
@@ -33,7 +37,7 @@
     @if (loading()) {
       <div class="state" role="status">
         <span class="spinner" aria-hidden="true"></span>
-        <h3>Loading room types?</h3>
+        <h3>Loading room types...</h3>
       </div>
     } @else if (error()) {
       <div class="state">
@@ -43,7 +47,11 @@
     } @else if (!filtered().length) {
       <div class="state">
         <h3>{{ roomTypes().length ? 'No matching room types' : 'No room types yet' }}</h3>
-        <p>{{ roomTypes().length ? 'Try another search.' : 'Create your first reusable room category.' }}</p>
+        <p>
+          {{
+            roomTypes().length ? 'Try another search.' : 'Create your first reusable room category.'
+          }}
+        </p>
         @if (roomTypes().length) {
           <button type="button" class="secondary" (click)="query.set('')">Clear search</button>
         } @else {
@@ -51,9 +59,11 @@
         }
       </div>
     } @else {
-      <div class="table-scroll">
+      <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable results">
         <table>
-          <caption class="sr-only">Room types and management actions</caption>
+          <caption class="sr-only">
+            Room types and management actions
+          </caption>
           <thead>
             <tr>
               <th scope="col">Room type</th>
@@ -75,14 +85,18 @@
                     class="text-button"
                     [attr.aria-label]="'Edit ' + row.name"
                     (click)="openEditor(row)"
-                  >Edit</button>
+                  >
+                    Edit
+                  </button>
                 </td>
               </tr>
             }
           </tbody>
         </table>
       </div>
-      <div class="list-footer"><output>Showing {{ filtered().length }} of {{ roomTypes().length }} room types</output></div>
+      <div class="list-footer">
+        <output>Showing {{ filtered().length }} of {{ roomTypes().length }} room types</output>
+      </div>
     }
   </div>
 </section>
@@ -108,8 +122,7 @@
         aria-describedby="name-error"
       />
       <p id="name-error" class="field-error">{{ validationMessage('name') }}</p>
-      <label for="room-description">Description <span>(optional)</span>
-      </label>
+      <label for="room-description">Description <span>(optional)</span> </label>
       <textarea
         id="room-description"
         formControlName="description"

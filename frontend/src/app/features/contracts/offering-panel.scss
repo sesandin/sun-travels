@@ -18,26 +18,7 @@ label {
   margin-bottom: 0.4rem;
   font-weight: 600;
 }
-input,
-select {
-  box-sizing: border-box;
-  width: 100%;
-  padding: 0.65rem;
-  border: 1px solid #aebbc8;
-  border-radius: 6px;
-}
-button {
-  padding: 0.55rem 0.8rem;
-  border: 1px solid #aebbc8;
-  border-radius: 6px;
-  background: #fff;
-  color: #173c50;
-  cursor: pointer;
-}
-button:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
+
 .actions,
 .season {
   display: flex;
@@ -69,13 +50,47 @@ dd {
 .success-message {
   color: #176b47;
 }
-:focus-visible {
-  outline: 3px solid #008a9b;
-  outline-offset: 3px;
-}
 
 .linked-offering {
   border-color: var(--primary);
   box-shadow: 0 0 0 2px #17665f20;
   scroll-margin-top: 24px;
+}
+
+.offering {
+  background: var(--surface);
+  border-color: var(--border);
+}
+.offering h4 {
+  font-size: 18px;
+  margin: 0 0 16px;
+}
+.offering dl {
+  background: var(--surface-soft);
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+.offering dt {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.offering dd {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.editor {
+  border-color: var(--border);
+  background: var(--surface-soft);
+}
+.form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+}
+@media (max-width: 480px) {
+  dl {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  dd {
+    margin-bottom: 8px;
+  }
 }

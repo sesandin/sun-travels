@@ -71,4 +71,16 @@ describe('Login', () => {
     await fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/search');
   });
+  it('associates invalid fields with their validation guidance', () => {
+    const fixture = TestBed.createComponent(Login);
+    fixture.detectChanges();
+    fixture.componentInstance.form.markAllAsTouched();
+    fixture.detectChanges();
+    for (const name of ['username', 'password']) {
+      const input: HTMLInputElement = fixture.nativeElement.querySelector('#' + name);
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(input.getAttribute('aria-describedby')).toBe(name + '-error');
+      expect(fixture.nativeElement.querySelector('#' + name + '-error')).toBeTruthy();
+    }
+  });
 });

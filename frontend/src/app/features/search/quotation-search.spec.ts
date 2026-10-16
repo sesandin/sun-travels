@@ -119,12 +119,10 @@ describe('Search and nightly quotations', () => {
   afterEach(() => http.verify());
   function setup() {
     http.expectOne(api + '/search/limits').flush(limits);
-    http
-      .expectOne(api + '/search/filters')
-      .flush({
-        hotels: [{ hotelId: 7, name: 'Ocean Hotel', city: 'Colombo' }],
-        roomTypes: [{ roomTypeId: 3, name: 'Double' }],
-      });
+    http.expectOne(api + '/search/filters').flush({
+      hotels: [{ hotelId: 7, name: 'Ocean Hotel', city: 'Colombo' }],
+      roomTypes: [{ roomTypeId: 3, name: 'Double' }],
+    });
     fixture.detectChanges();
   }
   function fill() {
@@ -347,13 +345,11 @@ describe('Search and nightly quotations', () => {
     setup();
     fill();
     c.search();
-    http
-      .expectOne(api + '/search/quotations')
-      .flush({
-        ...response,
-        unavailableOptions: [unavailableOption],
-        matchingUnavailableOptions: 1,
-      });
+    http.expectOne(api + '/search/quotations').flush({
+      ...response,
+      unavailableOptions: [unavailableOption],
+      matchingUnavailableOptions: 1,
+    });
     fixture.detectChanges();
     const toggle: HTMLInputElement = fixture.nativeElement.querySelector(
       '.unavailable-toggle input',
@@ -379,15 +375,13 @@ describe('Search and nightly quotations', () => {
     fill();
     c.showUnavailable.setValue(false);
     c.search();
-    http
-      .expectOne(api + '/search/quotations')
-      .flush({
-        ...response,
-        quotations: [],
-        matchingOptions: 0,
-        unavailableOptions: [{ ...unavailableOption, indicativeTotalPrice: null }],
-        matchingUnavailableOptions: 1,
-      });
+    http.expectOne(api + '/search/quotations').flush({
+      ...response,
+      quotations: [],
+      matchingOptions: 0,
+      unavailableOptions: [{ ...unavailableOption, indicativeTotalPrice: null }],
+      matchingUnavailableOptions: 1,
+    });
     fixture.detectChanges();
     const reveal = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
@@ -1049,5 +1043,21 @@ describe('Search and nightly quotations', () => {
     );
     expect(c.customQuote()).toBeNull();
     expect(c.selectionError()).toContain('capacity');
+  });
+  it('groups required stay inputs separately from optional filters without changing the request', () => {
+    setup();
+    fill();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.checkout-preview output')?.textContent).toContain(
+      '2026-10-27',
+    );
+    expect(fixture.nativeElement.querySelector('.optional-filters')?.textContent).toContain(
+      'Optional filters',
+    );
+    expect(fixture.nativeElement.querySelectorAll('.room-number').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('.selection-panel')).toBeNull();
+    expect(c.selectionRoomPrice(0, 999)).toBeNull();
+    expect(c.rooms.at(0).controls.adults.value).toBe(2);
+    expect(c.limits()?.maxRooms).toBe(8);
   });
 });

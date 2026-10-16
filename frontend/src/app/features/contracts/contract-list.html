@@ -17,7 +17,9 @@
   <p role="alert" class="error-message">{{ linkError() }}</p>
 }
 @if (notice()) {
-  <p class="success-message"><output>{{ notice() }}</output></p>
+  <p class="success-message">
+    <output>{{ notice() }}</output>
+  </p>
 }
 <section class="list-panel" aria-label="Contract directory">
   <div class="panel-heading">
@@ -67,7 +69,7 @@
   } @else if (!filtered().length) {
     <div class="state">No matching contracts</div>
   } @else {
-    <div class="table-scroll">
+    <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable results">
       <table>
         <thead>
           <tr>
@@ -90,7 +92,9 @@
               <td>{{ row.markupPercentage }}%</td>
               <td>{{ row.currencyCode }}</td>
               <td>
-                <span class="badge">{{ row.status }}</span>
+                <span class="badge status-badge" [attr.data-status]="row.status">{{
+                  row.status
+                }}</span>
               </td>
               <td>
                 <div class="actions">

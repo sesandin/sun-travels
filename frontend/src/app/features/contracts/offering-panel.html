@@ -37,7 +37,9 @@
           <dt>Maximum adults per room</dt>
           <dd>{{ row.maxAdults }}</dd>
           <dt>Offering status</dt>
-          <dd>{{ row.status }}</dd>
+          <dd>
+            <span class="status-badge" [attr.data-status]="row.status">{{ row.status }}</span>
+          </dd>
         </dl>
         <div class="actions">
           @if (contract().status === 'DRAFT') {
@@ -58,12 +60,17 @@
       </article>
     }
     @if (contract().status === 'DRAFT') {
-      <button type="button" (click)="open()" [disabled]="saving()">Add Offering</button>
+      <button class="primary" type="button" (click)="open()" [disabled]="saving()">
+        Add Offering
+      </button>
     }
   }
   @if (!canMaintain()) {
     @if (contract().status === 'SUSPENDED') {
-      <p>Offering status can still be changed. ENABLED offerings remain unavailable for new sales until the contract is APPROVED and the hotel is ACTIVE.</p>
+      <p>
+        Offering status can still be changed. ENABLED offerings remain unavailable for new sales
+        until the contract is APPROVED and the hotel is ACTIVE.
+      </p>
     }
     <p>
       Historical offerings are preserved. Rate and seasonal maintenance is unavailable for
@@ -71,7 +78,9 @@
     </p>
   }
   @if (notice()) {
-    <p class="success-message"><output>{{ notice() }}</output></p>
+    <p class="success-message">
+      <output>{{ notice() }}</output>
+    </p>
   }
   @if (mode()) {
     <section #editor tabindex="-1" class="editor" aria-label="Offering editor">
@@ -144,7 +153,11 @@
                 99999999.99 with at most two decimal places.
               </p>
             }
-            <button type="submit" [disabled]="roomsLoading() || !!roomsError() || !rooms().length">
+            <button
+              class="primary"
+              type="submit"
+              [disabled]="roomsLoading() || !!roomsError() || !rooms().length"
+            >
               {{ saving() ? 'Saving...' : 'Save offering' }}
             </button>
           </fieldset>
@@ -153,7 +166,9 @@
         <form [formGroup]="rateForm" (ngSubmit)="save()">
           <fieldset [disabled]="saving()">
             <legend>Edit approved base rate</legend>
-            <label for="approved-base-rate">Rate per adult per night ({{ contract().currencyCode }})</label>
+            <label for="approved-base-rate"
+              >Rate per adult per night ({{ contract().currencyCode }})</label
+            >
             <input
               id="approved-base-rate"
               type="number"
@@ -171,7 +186,9 @@
               Room type, allocated rooms and maximum adults remain locked. Confirmed pricing remains
               unchanged.
             </p>
-            <button type="submit">{{ saving() ? 'Saving...' : 'Save base rate' }}</button>
+            <button class="primary" type="submit">
+              {{ saving() ? 'Saving...' : 'Save base rate' }}
+            </button>
           </fieldset>
         </form>
       } @else {
@@ -187,7 +204,9 @@
               Suspension prevents this offering being used for new business. Existing confirmed
               reservations remain unchanged.
             </p>
-            <button type="submit">{{ saving() ? 'Saving...' : 'Confirm status' }}</button>
+            <button class="primary" type="submit">
+              {{ saving() ? 'Saving...' : 'Confirm status' }}
+            </button>
           </fieldset>
         </form>
       }
