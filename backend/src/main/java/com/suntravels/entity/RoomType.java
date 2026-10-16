@@ -7,7 +7,9 @@ public class RoomType {
  private Integer roomTypeId;
  @Column(name="name", nullable=false, length=100) private String name;
  @Column(name="description", length=255) private String description;
- public RoomType() {}
+ public RoomType() {
+        // Required by persistence or JSON binding; fields are populated after construction.
+    }
  public Integer getRoomTypeId() { return roomTypeId; }
  public String getName() { return name; }
  public void setName(String name) { this.name=name; }

@@ -25,6 +25,8 @@ import org.springframework.security.web.authentication.session.ChangeSessionIdAu
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+    private static final String ADMIN = "ADMIN";
+    private static final String AGENT = "AGENT";
     @Bean PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
     @Bean AuthenticationManager authenticationManager(DatabaseUserDetailsService users, PasswordEncoder encoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(users);
@@ -36,6 +38,8 @@ public class SecurityConfig {
         return new ChangeSessionIdAuthenticationStrategy();
     }
     @Bean CookieCsrfTokenRepository csrfTokenRepository() {
+        // Angular reads XSRF-TOKEN and echoes it in its X-XSRF-TOKEN request header.
+        // Session authentication cookies remain HttpOnly; this is only the CSRF token cookie.
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         repository.setCookiePath("/");
         repository.setCookieCustomizer(cookie -> cookie.sameSite("Lax"));
@@ -60,11 +64,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/**").authenticated()
-                        .requestMatchers("/api/search/**").hasAnyRole("ADMIN", "AGENT")
-                        .requestMatchers("/api/customers/**").hasAnyRole("ADMIN", "AGENT")
-                        .requestMatchers("/api/reservations", "/api/reservations/**").hasAnyRole("ADMIN", "AGENT")
+                        .requestMatchers("/api/search/**").hasAnyRole(ADMIN, AGENT)
+                        .requestMatchers("/api/customers/**").hasAnyRole(ADMIN, AGENT)
+                        .requestMatchers("/api/reservations", "/api/reservations/**").hasAnyRole(ADMIN, AGENT)
                         .requestMatchers("/api/hotels/**", "/api/room-types/**", "/api/contracts/**", "/api/offerings/**")
-                            .hasRole("ADMIN")
+                            .hasRole(ADMIN)
                         .requestMatchers("/api/**").denyAll()
                         .anyRequest().permitAll())
                 .build();

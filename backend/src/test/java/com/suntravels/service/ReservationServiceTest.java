@@ -52,7 +52,9 @@ class ReservationServiceTest {
   verify(reservations).night(202,in,new BigDecimal("100.00"),markup,new BigDecimal("115.00"));
  }
  @Test void perRoomAdultCapacityCannotUseCombinedOccupancy() {
-  assertEquals("UNAVAILABLE",assertThrows(ReservationException.class,()->service.confirm(request("1035",3))).getCode());noWrites();
+  var requestForAssertion1 = request("1035",3);
+
+  assertEquals("UNAVAILABLE",assertThrows(ReservationException.class,()->service.confirm(requestForAssertion1)).getCode());noWrites();
  }
  @Test void invalidDatesAndCustomerAreRejectedBeforeWrites() {
   var r=request("690",2);
@@ -64,22 +66,32 @@ class ReservationServiceTest {
   assertEquals("CUSTOMER_NOT_FOUND",assertThrows(ReservationException.class,()->service.confirm(r)).getCode());noWrites();
  }
  @Test void emptyOrModifiedSelectionsCannotBeConfirmed() {
-  assertThrows(ReservationException.class,()->service.confirm(request("0")));
+  var requestForAssertion2 = request("0");
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion2));
   var r=request("690",2);var other=new ReservationRequest(9,1,88,in,out,r.rooms(),r.acceptedTotal(),"USD");
   assertThrows(ReservationException.class,()->service.confirm(other));noWrites();
  }
  @Test void ineligibleSelectionIsRejectedWhenSearchNoLongerReturnsIt() {
-  when(data.candidates(any())).thenReturn(List.of());assertThrows(ReservationException.class,()->service.confirm(request("690",2)));noWrites();
+  when(data.candidates(any())).thenReturn(List.of());
+  var requestForAssertion3 = request("690",2);
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion3));noWrites();
  }
  @Test void priceChangeReturnsSellingQuoteAndNoPartialHeader() {
-  var ex=assertThrows(ReservationException.class,()->service.confirm(request("500",2)));
+  var requestForAssertion4 = request("500",2);
+
+  var ex=assertThrows(ReservationException.class,()->service.confirm(requestForAssertion4));
   assertEquals("PRICE_CHANGED",ex.getCode());assertEquals(new BigDecimal("690.00"),ex.getQuotation().totalPrice());
   assertEquals(3,ex.getQuotation().rooms().get(0).nightlyPrices().size());noWrites();
  }
  @Test void updatedAmountMustMatchAgainAndCurrencyMustAlsoMatch() {
-  assertThrows(ReservationException.class,()->service.confirm(request("500",2)));
+  var requestForAssertion5 = request("500",2);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion5));
   service.confirm(request("690",2));verify(reservations).detail(101);
-  var r=request("690",2);assertEquals("PRICE_CHANGED",assertThrows(ReservationException.class,()->service.confirm(new ReservationRequest(9,1,4,in,out,r.rooms(),r.acceptedTotal(),"EUR"))).getCode());
+  var r=request("690",2);
+  var requestForAssertion6 = new ReservationRequest(9,1,4,in,out,r.rooms(),r.acceptedTotal(),"EUR");
+  assertEquals("PRICE_CHANGED",assertThrows(ReservationException.class,()->service.confirm(requestForAssertion6)).getCode());
  }
  @Test void seasonalMixedRateLeavesSingleNightFieldsNull() {
   when(data.seasons(Set.of(7))).thenReturn(List.of(new Season(1,7,in.plusDays(1),in.plusDays(1),new BigDecimal("150.00"))));
@@ -90,9 +102,13 @@ class ReservationServiceTest {
  @Test void fullInventoryAndPartialStayInventoryRejectGroupedRoomDemand() {
   when(data.candidates(any())).thenReturn(List.of(candidate(2,2)));
   when(data.bookedRooms(Set.of(7),in,out)).thenReturn(List.of(new BookedRoom(20,7,in.plusDays(1),in.plusDays(2),2)));
-  assertThrows(ReservationException.class,()->service.confirm(request("1380",2,2)));noWrites();
+  var requestForAssertion7 = request("1380",2,2);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion7));noWrites();
   when(data.candidates(any())).thenReturn(List.of(candidate(2,1)));
-  assertThrows(ReservationException.class,()->service.confirm(request("690",2)));noWrites();
+  var requestForAssertion8 = request("690",2);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion8));noWrites();
  }
  @Test void recentIdenticalRetryReturnsExistingBookingWithoutNewInventoryConsumption() {
   var saved=new ReservationResponse(101,9,"Customer",null,null,in,out,3,"CONFIRMED",LocalDateTime.now(),"USD",new BigDecimal("690.00"),List.of());
@@ -124,7 +140,9 @@ class ReservationServiceTest {
  }
  @Test void decreasedContractualOccupancyRejectsConfirmationBeforeAnyWrite() {
   when(data.candidates(any())).thenReturn(List.of(candidate(6,3)));
-  assertEquals("UNAVAILABLE",assertThrows(ReservationException.class,()->service.confirm(request("4140",12))).getCode());
+  var requestForAssertion9 = request("4140",12);
+
+  assertEquals("UNAVAILABLE",assertThrows(ReservationException.class,()->service.confirm(requestForAssertion9)).getCode());
   noWrites();
  }
 }

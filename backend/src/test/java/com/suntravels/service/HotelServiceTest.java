@@ -30,12 +30,8 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import com.suntravels.dto.HotelUpdateRequest;
-import com.suntravels.exception.HotelNotFoundException;
 
-import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 import com.suntravels.dto.HotelStatusUpdateRequest;
 @ExtendWith(MockitoExtension.class)

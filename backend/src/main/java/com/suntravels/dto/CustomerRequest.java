@@ -12,7 +12,7 @@ public class CustomerRequest {
     private String name;
 
     @Size(max = 20, message = "Phone must be at most 20 characters")
-    @Pattern(regexp = "^\\s*$|^(?=.*[0-9])[+0-9(). \\-]{5,20}$",
+    @Pattern(regexp = "^\\s*$|^(?=.*\\d)[+0-9(). \\-]{5,20}$",
             message = "Phone must use 5 to 20 international phone characters and include a digit")
     private String phone;
 

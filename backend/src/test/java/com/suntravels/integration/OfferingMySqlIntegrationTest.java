@@ -98,7 +98,9 @@ class OfferingMySqlIntegrationTest {
   var first=service.createSeason(offeringId,new SeasonalRateRequest(from,from.plusDays(10),BigDecimal.TEN));
   service.createSeason(offeringId,new SeasonalRateRequest(from.plusDays(11),to,BigDecimal.ONE));
   service.updateSeason(offeringId,first.seasonalRateId(),new SeasonalRateRequest(from,from.plusDays(10),BigDecimal.ONE));
-  assertEquals(409,assertThrows(OfferingException.class,()->service.createSeason(offeringId,new SeasonalRateRequest(from.plusDays(10),from.plusDays(10),BigDecimal.ONE))).getStatus());
+  var requestForAssertion1 = new SeasonalRateRequest(from.plusDays(10),from.plusDays(10),BigDecimal.ONE);
+
+  assertEquals(409,assertThrows(OfferingException.class,()->service.createSeason(offeringId,requestForAssertion1)).getStatus());
   Integer otherRoom=tx().execute(t -> { RoomType r=new RoomType(); r.setName("Other test "+UUID.randomUUID()); return rooms.saveAndFlush(r).getRoomTypeId(); });
   Integer otherOffering=null;
   try {

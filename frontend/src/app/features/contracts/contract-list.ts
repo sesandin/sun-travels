@@ -145,7 +145,8 @@ export class ContractList implements OnInit {
     if (this.saving() || this.detailsLoading()) return;
     if (row && row.status !== 'DRAFT' && row.status !== 'APPROVED') return;
     this.selected.set(row);
-    this.mode.set(!row ? 'create' : row.status === 'DRAFT' ? 'edit' : 'markup');
+    if (!row) this.mode.set('create');
+    else this.mode.set(row.status === 'DRAFT' ? 'edit' : 'markup');
     this.submissionError.set('');
     this.notice.set('');
     this.form.reset({
@@ -246,15 +247,10 @@ export class ContractList implements OnInit {
         mode === 'create'
           ? this.service.createContract(payload)
           : this.service.updateContract(row!.contractId, payload);
-    } else if (mode === 'approve' && row?.status === 'DRAFT')
-      request = this.service.approveContract(row.contractId);
-    else if (mode === 'reapprove' && row?.status === 'SUSPENDED')
-      request = this.service.reapproveContract(row.contractId);
-    else if (mode === 'suspend' && row?.status === 'APPROVED')
-      request = this.service.suspendContract(row.contractId);
-    else if (mode === 'terminate' && row && row.status !== 'TERMINATED')
-      request = this.service.terminateContract(row.contractId);
-    else return;
+    } else {
+      request = this.lifecycleRequest(mode, row);
+      if (!request) return;
+    }
     this.saving.set(true);
     this.submissionError.set('');
     request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
@@ -272,5 +268,17 @@ export class ContractList implements OnInit {
         this.submissionError.set(apiError(e));
       },
     });
+  }
+
+  private lifecycleRequest(mode: ReturnType<ContractList['mode']>, row: Contract | null) {
+    if (mode === 'approve' && row?.status === 'DRAFT')
+      return this.service.approveContract(row.contractId);
+    if (mode === 'reapprove' && row?.status === 'SUSPENDED')
+      return this.service.reapproveContract(row.contractId);
+    if (mode === 'suspend' && row?.status === 'APPROVED')
+      return this.service.suspendContract(row.contractId);
+    if (mode === 'terminate' && row && row.status !== 'TERMINATED')
+      return this.service.terminateContract(row.contractId);
+    return undefined;
   }
 }

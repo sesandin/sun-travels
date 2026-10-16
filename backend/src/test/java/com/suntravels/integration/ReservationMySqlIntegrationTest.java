@@ -21,7 +21,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.mockito.ArgumentMatchers.*;
 
 /** Opt in with SUNTRAVELS_RESERVATION_MYSQL_TESTS=true and an existing disposable MySQL 8 *_test schema.
  * No schema provisioning, dumps, Testcontainers or operational records are used.
@@ -79,15 +78,21 @@ class ReservationMySqlIntegrationTest {
  @Test void unavailableSearchDiagnosticsCannotBypassDirectConfirmationRevalidation() {
   var occupancy=search.search(searchRequest(3));assertTrue(occupancy.quotations().isEmpty());
   assertEquals(QuotationSearchResponse.ReasonCode.MAX_ADULT_OCCUPANCY,occupancy.unavailableOptions().get(0).reasons().get(0).code());
-  assertThrows(ReservationException.class,()->service.confirm(request("1035",3)));
+  var requestForAssertion1 = request("1035",3);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion1));
   jdbc.update("update contract_room_offering set contracted_room_count=1 where offering_id=?",offering);
   var inventory=search.search(searchRequest(2,1));assertTrue(inventory.quotations().isEmpty());
   assertEquals(QuotationSearchResponse.ReasonCode.INSUFFICIENT_INVENTORY,inventory.unavailableOptions().get(0).reasons().get(0).code());
-  assertThrows(ReservationException.class,()->service.confirm(request("1035",2,1)));
+  var requestForAssertion2 = request("1035",2,1);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion2));
   jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)",hotel,in.plusDays(1),in.plusDays(1),"Reservation fixture");
   var closure=search.search(searchRequest(2));assertTrue(closure.quotations().isEmpty());
   assertEquals(QuotationSearchResponse.ReasonCode.HOTEL_CLOSED,closure.unavailableOptions().get(0).reasons().get(0).code());
-  assertThrows(ReservationException.class,()->service.confirm(request("690",2)));assertEquals(0,bookingCount());
+  var requestForAssertion3 = request("690",2);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion3));assertEquals(0,bookingCount());
  }
  @Test void oneAndMultipleRoomsPersistNightlySnapshotsAndDirectoryTotals() {
   var r=service.confirm(request("1035",2,1));assertEquals("CONFIRMED",r.status());assertEquals(2,r.rooms().size());assertEquals(new BigDecimal("1035.00"),r.totalPrice());
@@ -98,10 +103,14 @@ class ReservationMySqlIntegrationTest {
  @ParameterizedTest @CsvSource({"INACTIVE,APPROVED,ENABLED","ACTIVE,DRAFT,ENABLED","ACTIVE,SUSPENDED,ENABLED","ACTIVE,TERMINATED,ENABLED","ACTIVE,APPROVED,SUSPENDED"})
  void freshEligibilityRejectsInactiveHotelUnapprovedContractAndDisabledOffering(String h,String c,String o) {
   jdbc.update("update hotel set status=? where hotel_id=?",h,hotel);jdbc.update("update contract set status=? where contract_id=?",c,contract);jdbc.update("update contract_room_offering set status=? where offering_id=?",o,offering);
-  assertThrows(ReservationException.class,()->service.confirm(request("690",2)));assertEquals(0,bookingCount());
+  var requestForAssertion4 = request("690",2);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion4));assertEquals(0,bookingCount());
  }
  @Test void validityClosureCapacityAndCustomerAreValidated() {
-  assertThrows(ReservationException.class,()->service.confirm(request("1035",3)));
+  var requestForAssertion5 = request("1035",3);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion5));
   var r=request("690",2);var invalidCustomer=new ReservationRequest(Integer.MAX_VALUE,hotel,contract,in,out,r.rooms(),r.acceptedTotal(),"USD");
   assertEquals("CUSTOMER_NOT_FOUND",assertThrows(ReservationException.class,()->service.confirm(invalidCustomer)).getCode());
   jdbc.update("update contract set valid_to=? where contract_id=?",out.minusDays(2),contract);
@@ -113,9 +122,13 @@ class ReservationMySqlIntegrationTest {
  @Test void seasonalChangeRequiresAcknowledgmentAndSnapshotsSurviveMaintenanceAndCancellation() {
   var initial=search.search(searchRequest(2)).quotations().get(0);assertEquals(new BigDecimal("690.00"),initial.totalPrice());
   jdbc.update("insert into offering_seasonal_rate(offering_id,valid_from,valid_to,rate_per_person_per_night) values (?,?,?,?)",offering,in.plusDays(1),in.plusDays(1),new BigDecimal("150"));
-  var ex=assertThrows(ReservationException.class,()->service.confirm(request("690",2)));assertEquals("PRICE_CHANGED",ex.getCode());assertEquals(new BigDecimal("805.00"),ex.getQuotation().totalPrice());assertEquals(0,bookingCount());
+  var requestForAssertion6 = request("690",2);
+
+  var ex=assertThrows(ReservationException.class,()->service.confirm(requestForAssertion6));assertEquals("PRICE_CHANGED",ex.getCode());assertEquals(new BigDecimal("805.00"),ex.getQuotation().totalPrice());assertEquals(0,bookingCount());
   jdbc.update("update contract set markup_percentage=20 where contract_id=?",contract);
-  assertEquals("PRICE_CHANGED",assertThrows(ReservationException.class,()->service.confirm(request("805",2))).getCode());assertEquals(0,bookingCount());
+  var requestForAssertion7 = request("805",2);
+
+  assertEquals("PRICE_CHANGED",assertThrows(ReservationException.class,()->service.confirm(requestForAssertion7)).getCode());assertEquals(0,bookingCount());
   var booked=service.confirm(request("840",2));
   assertNull(jdbc.queryForMap("select booked_rate_per_person_per_night from reservation_item where reservation_id=?",booked.reservationId()).get("booked_rate_per_person_per_night"));
   var before=jdbc.queryForList("select n.* from reservation_item_nightly_rate n join reservation_item i on i.reservation_item_id=n.reservation_item_id where i.reservation_id=? order by occupied_date",booked.reservationId());
@@ -135,7 +148,9 @@ class ReservationMySqlIntegrationTest {
   jdbc.update("update contract_room_offering set contracted_room_count=1 where offering_id=?",offering);
   var booked=service.confirm(request(in.plusDays(1),in.plusDays(2),"230",2));
   assertTrue(search.search(searchRequest(2)).quotations().isEmpty());
-  assertThrows(ReservationException.class,()->service.confirm(request("690",2)));
+  var requestForAssertion8 = request("690",2);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion8));
   var cancelled=service.cancel(booked.reservationId());assertEquals("CANCELLED",cancelled.status());assertEquals(cancelled,service.cancel(booked.reservationId()));
   assertEquals(1,search.search(searchRequest(2)).quotations().size());assertEquals("CONFIRMED",service.confirm(request("690",2)).status());
  }
@@ -146,7 +161,9 @@ class ReservationMySqlIntegrationTest {
   var writes=new java.util.concurrent.atomic.AtomicInteger();
   doAnswer(call->{if(writes.incrementAndGet()==2) throw new IllegalStateException("Injected second-night failure");return call.callRealMethod();})
    .when(repository).night(anyInt(),any(),any(),any(),any());
-  assertThrows(IllegalStateException.class,()->service.confirm(request("690",2)));assertEquals(0,bookingCount());
+  var requestForAssertion9 = request("690",2);
+
+  assertThrows(IllegalStateException.class,()->service.confirm(requestForAssertion9));assertEquals(0,bookingCount());
   assertEquals(2,writes.get());
   assertEquals(0,jdbc.queryForObject("select count(*) from reservation_item where offering_id=?",Integer.class,offering));
  }
@@ -172,7 +189,10 @@ class ReservationMySqlIntegrationTest {
     jdbc.update("update contract set markup_percentage=20 where contract_id=?",contract);
    }));
    assertTrue(locked.await(5,TimeUnit.SECONDS));
-   var confirmation=pool.submit(()->assertThrows(ReservationException.class,()->service.confirm(request("690",2))));
+   var confirmation=pool.submit(() -> {
+    var selectedRequest = request("690", 2);
+    return assertThrows(ReservationException.class, () -> service.confirm(selectedRequest));
+   });
    release.countDown();maintenance.get(30,TimeUnit.SECONDS);
    assertEquals("PRICE_CHANGED",confirmation.get(30,TimeUnit.SECONDS).getCode());assertEquals(0,bookingCount());
   } finally {release.countDown();pool.shutdownNow();assertTrue(pool.awaitTermination(30,TimeUnit.SECONDS));}
@@ -202,7 +222,7 @@ class ReservationMySqlIntegrationTest {
   var selection=new QuotationSelectionRequest(hotel,contract,in,out,List.of(new ReservationRequest.Room(otherOffering,1),new ReservationRequest.Room(offering,2)));
   var quote=search.customize(selection);assertEquals(new BigDecimal("1207.50"),quote.totalPrice());
   var booked=service.confirm(new ReservationRequest(customer,hotel,contract,in,out,selection.rooms(),quote.totalPrice(),quote.currencyCode()));
-  assertEquals(List.of(otherOffering,offering),booked.rooms().stream().map(r->r.offeringId()).toList());
+  assertEquals(List.of(otherOffering,offering),booked.rooms().stream().map(ReservationResponse.Item::offeringId).toList());
   assertThrows(com.suntravels.exception.QuotationSearchException.class,()->search.customize(selection));
   service.cancel(booked.reservationId());assertEquals(quote.totalPrice(),search.customize(selection).totalPrice());
   assertEquals(6,jdbc.queryForObject("select count(*) from reservation_item_nightly_rate n join reservation_item i on i.reservation_item_id=n.reservation_item_id where i.reservation_id=?",Integer.class,booked.reservationId()));
@@ -214,7 +234,9 @@ class ReservationMySqlIntegrationTest {
   var q=search.search(searchRequest(12)).quotations().get(0);
   assertEquals(new BigDecimal("4140.00"),q.totalPrice());
   jdbc.update("update contract_room_offering set max_adults=6 where offering_id=?",offering);
-  assertEquals("UNAVAILABLE",assertThrows(ReservationException.class,()->service.confirm(request("4140",12))).getCode());
+  var requestForAssertion10 = request("4140",12);
+
+  assertEquals("UNAVAILABLE",assertThrows(ReservationException.class,()->service.confirm(requestForAssertion10)).getCode());
   assertEquals(0,bookingCount());
   jdbc.update("update contract_room_offering set max_adults=12 where offering_id=?",offering);
   var booked=service.confirm(request("4140",12));assertEquals("CONFIRMED",booked.status());
@@ -239,7 +261,9 @@ class ReservationMySqlIntegrationTest {
   assertEquals(booked.rooms(),current.rooms());assertEquals(booked.totalPrice(),current.totalPrice());
   assertEquals(itemsBefore,storedItems(booked.reservationId()));assertEquals(nightsBefore,storedNights(booked.reservationId()));
   assertTrue(search.search(searchRequest(1)).quotations().isEmpty());
-  assertThrows(ReservationException.class,()->service.confirm(request("345",1)));
+  var requestForAssertion11 = request("345",1);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion11));
   assertEquals(1,bookingCount());
   assertEquals(current.warnings(),service.list(Integer.toString(booked.reservationId()),"CONFIRMED",0,20).reservations().get(0).warnings());
   hotelStatus(HotelStatus.ACTIVE);assertTrue(service.detail(booked.reservationId()).warnings().isEmpty());
@@ -254,7 +278,9 @@ class ReservationMySqlIntegrationTest {
   assertEquals(List.of(ReservationResponse.WarningCode.HOTEL_CLOSURE),warningCodes(service.detail(booked.reservationId())));
   var result=search.search(searchRequest(1));assertTrue(result.quotations().isEmpty());
   assertEquals(QuotationSearchResponse.ReasonCode.HOTEL_CLOSED,result.unavailableOptions().get(0).reasons().get(0).code());
-  assertThrows(ReservationException.class,()->service.confirm(request("345",1)));
+  var requestForAssertion12 = request("345",1);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion12));
   assertEquals(itemsBefore,storedItems(booked.reservationId()));assertEquals(nightsBefore,storedNights(booked.reservationId()));
   var cancelled=service.cancel(booked.reservationId());assertEquals("CANCELLED",cancelled.status());assertTrue(cancelled.warnings().isEmpty());
   assertEquals(itemsBefore,storedItems(booked.reservationId()));assertEquals(nightsBefore,storedNights(booked.reservationId()));
@@ -291,7 +317,9 @@ class ReservationMySqlIntegrationTest {
   assertEquals("CONFIRMED",service.detail(first.reservationId()).status());
   assertEquals(List.of(ReservationResponse.WarningCode.CONTRACT_SUSPENDED),warningCodes(service.detail(first.reservationId())));
   assertTrue(search.search(searchRequest(1)).quotations().isEmpty());
-  assertThrows(ReservationException.class,()->service.confirm(request("690",2)));
+  var requestForAssertion13 = request("690",2);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion13));
   var ex=assertThrows(com.suntravels.exception.ContractException.class,()->contractService.terminateContract(contract));
   assertTrue(ex.getMessage().contains("2 ongoing or upcoming confirmed reservations"));
   assertEquals(ContractStatus.SUSPENDED,contractService.getContractById(contract).status());
@@ -316,7 +344,9 @@ class ReservationMySqlIntegrationTest {
   assertEquals(List.of(ReservationResponse.WarningCode.OFFERING_SUSPENDED),warningCodes(detail));
   assertEquals(offering,detail.warnings().get(0).offeringId());assertNotNull(detail.warnings().get(0).roomTypeName());
   assertThrows(com.suntravels.exception.QuotationSearchException.class,()->search.customize(selection));
-  assertThrows(ReservationException.class,()->service.confirm(request("345",1)));
+  var requestForAssertion14 = request("345",1);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion14));
   assertEquals(List.of(otherOffering),search.search(searchRequest(1)).quotations().stream().map(r->r.rooms().get(0).offeringId()).toList());
   offeringService.status(offering,new OfferingStatusRequest(OfferingStatus.ENABLED));
   assertTrue(service.detail(booked.reservationId()).warnings().isEmpty());assertEquals(2,search.search(searchRequest(1)).quotations().size());
@@ -324,11 +354,15 @@ class ReservationMySqlIntegrationTest {
   offeringService.status(offering,new OfferingStatusRequest(OfferingStatus.SUSPENDED));
   offeringService.status(offering,new OfferingStatusRequest(OfferingStatus.ENABLED));
   assertTrue(search.search(searchRequest(1)).quotations().isEmpty());
-  assertThrows(ReservationException.class,()->service.confirm(request("345",1)));
+  var requestForAssertion15 = request("345",1);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion15));
   assertEquals(itemsBefore,storedItems(booked.reservationId()));assertEquals(nightsBefore,storedNights(booked.reservationId()));
   contractService.reapproveContract(contract);hotelStatus(HotelStatus.INACTIVE);
   assertTrue(search.search(searchRequest(1)).quotations().isEmpty());
-  assertThrows(ReservationException.class,()->service.confirm(request("345",1)));
+  var requestForAssertion16 = request("345",1);
+
+  assertThrows(ReservationException.class,()->service.confirm(requestForAssertion16));
   hotelStatus(HotelStatus.ACTIVE);assertEquals(2,search.search(searchRequest(1)).quotations().size());
  }
  @Test void allFourWarningsAreIndependentDeduplicatedAndDisappearWhenConditionsClear() {
@@ -380,7 +414,10 @@ class ReservationMySqlIntegrationTest {
     try {assertTrue(release.await(10,TimeUnit.SECONDS));}catch(InterruptedException ex){Thread.currentThread().interrupt();throw new IllegalStateException(ex);}
    }));
    assertTrue(terminated.await(10,TimeUnit.SECONDS));
-   var booking=pool.submit(()->assertThrows(ReservationException.class,()->service.confirm(request("690",2))));
+   var booking=pool.submit(() -> {
+    var selectedRequest = request("690", 2);
+    return assertThrows(ReservationException.class, () -> service.confirm(selectedRequest));
+   });
    release.countDown();change.get(20,TimeUnit.SECONDS);assertEquals("UNAVAILABLE",booking.get(20,TimeUnit.SECONDS).getCode());
    assertEquals(0,bookingCount());assertEquals(ContractStatus.TERMINATED,contractService.getContractById(contract).status());
   } finally {release.countDown();pool.shutdownNow();assertTrue(pool.awaitTermination(20,TimeUnit.SECONDS));}

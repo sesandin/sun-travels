@@ -28,16 +28,12 @@ import com.suntravels.dto.HotelUpdateRequest;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
-import com.suntravels.exception.HotelNotFoundException;
 
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
-import jakarta.validation.Validator;
 import static org.mockito.Mockito.verifyNoInteractions;
 import com.suntravels.dto.HotelStatusUpdateRequest;
 

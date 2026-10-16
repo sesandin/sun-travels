@@ -19,12 +19,27 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CustomerServiceTest {
     @Mock CustomerRepository repository;
+
+    @Test void emailValidationPreservesExistingInteriorDotSemantics() {
+        CustomerService service = serviceWithSavingIds();
+        for (String email : List.of("a@example.com", "a@a.b.", "a@..b", "a@a..b")) {
+            assertEquals(email, service.createCustomer(request("Alice", null, email)).email());
+        }
+    }
+
+    @Test void emailValidationRejectsMissingInteriorDotsAndWhitespace() {
+        CustomerService service = new CustomerService(repository);
+        for (String email : List.of("a@example", "a@.ab", "a@ab.", "a@.a.", "a@a b.c", "a@@b.c")) {
+            CustomerRequest invalid = request("Alice", null, email);
+            assertThrows(InvalidCustomerException.class, () -> service.createCustomer(invalid));
+        }
+        verifyNoInteractions(repository);
+    }
 
     @Test void createsPhoneOnlyEmailOnlyAndBothWhileNormalizing() {
         CustomerService service = serviceWithSavingIds();
@@ -38,12 +53,24 @@ class CustomerServiceTest {
 
     @Test void rejectsInvalidBusinessFieldsEvenOutsideMvcValidation() {
         CustomerService service = new CustomerService(repository);
-        assertThrows(InvalidCustomerException.class, () -> service.createCustomer(request(" ", "+94771234567", null)));
-        assertThrows(InvalidCustomerException.class, () -> service.createCustomer(request("Alice", " ", null)));
-        assertThrows(InvalidCustomerException.class, () -> service.createCustomer(request("Alice", "letters", null)));
-        assertThrows(InvalidCustomerException.class, () -> service.createCustomer(request("Alice", null, "bad-email")));
-        assertThrows(InvalidCustomerException.class, () -> service.createCustomer(request("x".repeat(151), "+94771234567", null)));
-        assertThrows(InvalidCustomerException.class, () -> service.createCustomer(request("Alice", "+" + "1".repeat(20), null)));
+        var requestForAssertion1 = request(" ", "+94771234567", null);
+
+        assertThrows(InvalidCustomerException.class, () -> service.createCustomer(requestForAssertion1));
+        var requestForAssertion2 = request("Alice", " ", null);
+
+        assertThrows(InvalidCustomerException.class, () -> service.createCustomer(requestForAssertion2));
+        var requestForAssertion3 = request("Alice", "letters", null);
+
+        assertThrows(InvalidCustomerException.class, () -> service.createCustomer(requestForAssertion3));
+        var requestForAssertion4 = request("Alice", null, "bad-email");
+
+        assertThrows(InvalidCustomerException.class, () -> service.createCustomer(requestForAssertion4));
+        var requestForAssertion5 = request("x".repeat(151), "+94771234567", null);
+
+        assertThrows(InvalidCustomerException.class, () -> service.createCustomer(requestForAssertion5));
+        var requestForAssertion6 = request("Alice", "+" + "1".repeat(20), null);
+
+        assertThrows(InvalidCustomerException.class, () -> service.createCustomer(requestForAssertion6));
         verifyNoInteractions(repository);
     }
 
@@ -61,7 +88,9 @@ class CustomerServiceTest {
         when(repository.findById(99)).thenReturn(Optional.empty());
         CustomerService service = new CustomerService(repository);
         assertThrows(CustomerNotFoundException.class, () -> service.getCustomer(99));
-        assertThrows(CustomerNotFoundException.class, () -> service.updateCustomer(99, request("Name", "+94771234567", null)));
+        var requestForAssertion7 = request("Name", "+94771234567", null);
+
+        assertThrows(CustomerNotFoundException.class, () -> service.updateCustomer(99, requestForAssertion7));
         verify(repository, never()).save(any());
     }
 
@@ -77,7 +106,8 @@ class CustomerServiceTest {
         verify(repository).findAll(any(Specification.class), page.capture()); assertEquals(20, page.getValue().getPageSize());
         assertThrows(InvalidCustomerException.class, () -> service.searchCustomers("", -1, 20));
         assertThrows(InvalidCustomerException.class, () -> service.searchCustomers("", 0, 51));
-        assertThrows(InvalidCustomerException.class, () -> service.searchCustomers("x".repeat(151), 0, 20));
+        String tooLong = "x".repeat(151);
+        assertThrows(InvalidCustomerException.class, () -> service.searchCustomers(tooLong, 0, 20));
     }
 
     @Test void blankSearchUsesUnfilteredPagingAndSpecialCharactersRemainLiteral() {

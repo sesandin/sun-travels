@@ -2,8 +2,6 @@ package com.suntravels.entity;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 @Entity @Table(name="offering_seasonal_rate")
 public class OfferingSeasonalRate {
  @Id @GeneratedValue(strategy=GenerationType.IDENTITY) @Column(name="seasonal_rate_id") private Integer seasonalRateId;

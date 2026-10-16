@@ -24,7 +24,9 @@ class RoomTypeServiceTest {
  }
  @Test void rejectsDuplicateCreateWithoutSaving() {
   when(repository.existsByNameIgnoreCase("Deluxe")).thenReturn(true);
-  assertThrows(DuplicateRoomTypeException.class,() -> service.createRoomType(request("Deluxe",null)));
+  var requestForAssertion1 = request("Deluxe",null);
+
+  assertThrows(DuplicateRoomTypeException.class,() -> service.createRoomType(requestForAssertion1));
   verify(repository,never()).save(any());
  }
  @Test void updatesExistingTypeAndAllowsItsOwnName() {
@@ -38,12 +40,16 @@ class RoomTypeServiceTest {
   RoomType room=new RoomType(); room.setName("Standard");
   when(repository.findById(3)).thenReturn(Optional.of(room));
   when(repository.existsByNameIgnoreCaseAndRoomTypeIdNot("Deluxe",3)).thenReturn(true);
-  assertThrows(DuplicateRoomTypeException.class,() -> service.updateRoomType(3,request("Deluxe",null)));
+  var requestForAssertion2 = request("Deluxe",null);
+
+  assertThrows(DuplicateRoomTypeException.class,() -> service.updateRoomType(3,requestForAssertion2));
   assertEquals("Standard",room.getName()); verify(repository,never()).save(any());
  }
  @Test void missingReadAndUpdateAreNotFound() {
   assertThrows(RoomTypeNotFoundException.class,() -> service.getRoomTypeById(9));
-  assertThrows(RoomTypeNotFoundException.class,() -> service.updateRoomType(9,request("Standard",null)));
+  var requestForAssertion3 = request("Standard",null);
+
+  assertThrows(RoomTypeNotFoundException.class,() -> service.updateRoomType(9,requestForAssertion3));
  }
  @Test void listsResponseDtos() {
   RoomType room=new RoomType(); room.setName("Standard");

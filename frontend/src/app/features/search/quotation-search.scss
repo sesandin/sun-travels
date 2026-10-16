@@ -235,6 +235,9 @@ fieldset {
 }
 .quote-actions button {
   max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
 }
 .room-summary {
   display: flex;
@@ -397,7 +400,6 @@ td {
 .quotation { border-left: 3px solid var(--primary); }
 .customization-action { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 20px; }
 .selection-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
-.quote-actions button { white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
 .selection-panel select { min-width: 0; width: 100%; }
 @media (max-width: 600px) {
   .quote-actions button { width: 100%; }

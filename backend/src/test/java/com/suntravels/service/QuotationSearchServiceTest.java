@@ -174,17 +174,22 @@ class QuotationSearchServiceTest {
  @Test void customizedRepeatedOfferingsShareInventoryAndRejectForeignReferences() {
   when(hotels.existsById(1)).thenReturn(true);
   candidates(candidate(7,4,1,2,1,"35","USD"),candidate(8,5,2,3,8,"55","USD"));
-  assertThrows(QuotationSearchException.class,()->service.customize(selection(4,7,7)));
-  assertThrows(QuotationSearchException.class,()->service.customize(selection(4,7,8)));
-  assertThrows(QuotationSearchException.class,()->service.customize(selection(99,7)));
+  var selectedRoomsForAssertion1 = selection(4,7,7);
+  assertThrows(QuotationSearchException.class, () -> service.customize(selectedRoomsForAssertion1));
+  var selectedRoomsForAssertion2 = selection(4,7,8);
+  assertThrows(QuotationSearchException.class, () -> service.customize(selectedRoomsForAssertion2));
+  var selectedRoomsForAssertion3 = selection(99,7);
+  assertThrows(QuotationSearchException.class, () -> service.customize(selectedRoomsForAssertion3));
  }
 
  @Test void customizedCrossContractAndCrossHotelReferencesAreRejectedIndependently() {
   when(hotels.existsById(1)).thenReturn(true);
   candidates(candidate(7,4,1,2,3,"35","USD"),candidate(8,5,1,3,8,"55","USD"));
-  assertThrows(QuotationSearchException.class,()->service.customize(selection(4,7,8)));
+  var selectedRoomsForAssertion4 = selection(4,7,8);
+  assertThrows(QuotationSearchException.class, () -> service.customize(selectedRoomsForAssertion4));
   candidates(candidate(7,4,1,2,3,"35","USD"),candidate(8,4,2,3,8,"55","USD"));
-  assertThrows(QuotationSearchException.class,()->service.customize(selection(4,7,8)));
+  var selectedRoomsForAssertion5 = selection(4,7,8);
+  assertThrows(QuotationSearchException.class, () -> service.customize(selectedRoomsForAssertion5));
  }
 
  @ParameterizedTest @CsvSource({"1,2,true","2,2,true","3,2,false","3,3,true","5,6,true","7,6,false","12,12,true","13,12,false"})
@@ -210,7 +215,9 @@ class QuotationSearchServiceTest {
   var q=service.customize(new QuotationSelectionRequest(1,4,in,out,List.of(new ReservationRequest.Room(7,12),new ReservationRequest.Room(8,5))));
   assertEquals(List.of(12,5),q.rooms().stream().map(RoomAllocation::adults).toList());
   assertEquals(new BigDecimal("5865.00"),q.totalPrice());
-  assertThrows(QuotationSearchException.class,()->service.customize(new QuotationSelectionRequest(1,4,in,out,List.of(new ReservationRequest.Room(8,12)))));
+  var requestForAssertion1 = new QuotationSelectionRequest(1,4,in,out,List.of(new ReservationRequest.Room(8,12)));
+
+  assertThrows(QuotationSearchException.class,()->service.customize(requestForAssertion1));
  }
  @Test void eightRoomsRemainAllowedWithoutATotalAdultCeiling() {
   candidates(candidate(7,4,1,12,8,"100","USD"));

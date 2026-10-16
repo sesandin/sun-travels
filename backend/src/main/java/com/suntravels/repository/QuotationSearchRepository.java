@@ -10,7 +10,9 @@ import org.springframework.stereotype.Repository;
 /** Snapshot SELECTs only. Deliberately separate from lifecycle FOR UPDATE guards. */
 @Repository
 public class QuotationSearchRepository {
- public static final int MAX_OFFERINGS=500, MAX_SEASONS=10000, MAX_BOOKED_ITEMS=20000;
+ public static final int MAX_OFFERINGS = 500;
+ public static final int MAX_SEASONS = 10000;
+ public static final int MAX_BOOKED_ITEMS = 20000;
  public record Candidate(int offeringId,int contractId,int hotelId,String hotelName,String city,
   String contractCode,String currency,BigDecimal markup,LocalDate validFrom,LocalDate validTo,
   int roomTypeId,String roomTypeName,BigDecimal baseRate,int contractedRooms,int maxAdults) {}
@@ -25,6 +27,8 @@ public class QuotationSearchRepository {
   return candidates(request,true);
  }
  private List<Candidate> candidates(QuotationSearchRequest request,boolean closed) {
+  // Only fixed SQL fragments and internal numeric bounds are concatenated below.
+  // Request dates, IDs and city remain named parameters, never executable SQL text.
   Map<String,Object> p=new HashMap<>(); p.put("in",request.checkIn()); p.put("out",request.checkOut()); p.put("last",request.checkOut().minusDays(1));
   String sql="""
    select o.offering_id,c.contract_id,h.hotel_id,h.name as hotel_name,h.city,c.contract_code,

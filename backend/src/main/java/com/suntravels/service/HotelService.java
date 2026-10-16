@@ -93,6 +93,11 @@ public class HotelService {
         return response;
     }
 
+    /**
+     * Coordinates sales eligibility with confirmation through the shared hotel lock.
+     * Inactivation changes only the hotel; existing confirmed bookings and snapshots
+     * remain historical commitments and receive derived operational warnings.
+     */
     @Transactional(timeout=20)
     public HotelResponse updateHotelStatus(
             Integer hotelId,

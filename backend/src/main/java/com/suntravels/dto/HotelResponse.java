@@ -5,7 +5,7 @@ import com.suntravels.entity.HotelStatus;
 public class HotelResponse {
 
     public HotelResponse(){
-
+        // Required by persistence or JSON binding; fields are populated after construction.
     }
 
     private Integer hotelId;

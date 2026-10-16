@@ -12,7 +12,7 @@ import jakarta.validation.constraints.Size;
 public class HotelRequest {
 
     public HotelRequest(){
-
+        // Required by persistence or JSON binding; fields are populated after construction.
     }
 
     @NotBlank(message = "Hotel name is required")

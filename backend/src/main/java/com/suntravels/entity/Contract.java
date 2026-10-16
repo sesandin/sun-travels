@@ -32,7 +32,9 @@ public class Contract {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) @JoinColumn(name = "hotel_id", nullable = false)
     private Hotel hotel;
 
-    public Contract() {}
+    public Contract() {
+        // Required by persistence or JSON binding; fields are populated after construction.
+    }
     public Integer getContractId() { return contractId; }
     public String getContractCode() { return contractCode; }
     public void setContractCode(String contractCode) { this.contractCode = contractCode; }

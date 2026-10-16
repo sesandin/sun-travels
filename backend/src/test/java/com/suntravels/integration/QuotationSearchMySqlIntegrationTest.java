@@ -102,7 +102,9 @@ class QuotationSearchMySqlIntegrationTest {
   assertEquals(1,search.search(request(2)).quotations().get(0).rooms().get(0).availableRoomsForStay());assertTrue(search.search(request(2,1)).quotations().isEmpty());
  }
  @Test void fullyBookedAndOverbookedHaveDifferentOutcomes() {
-  booking(offer,"CONFIRMED",0,3,3);assertTrue(search.search(request(1)).quotations().isEmpty());booking(offer,"CONFIRMED",1,2,1);assertEquals(409,assertThrows(QuotationSearchException.class,()->search.search(request(1))).getStatus());
+  booking(offer,"CONFIRMED",0,3,3);assertTrue(search.search(request(1)).quotations().isEmpty());booking(offer,"CONFIRMED",1,2,1);
+  var requestForAssertion1 = request(1);
+  assertEquals(409,assertThrows(QuotationSearchException.class,()->search.search(requestForAssertion1)).getStatus());
  }
  @Test void unrelatedOfferingConsumptionDoesNotReduceRequestedRoomInventory() {
   RoomType other=new RoomType();other.setName("Other "+UUID.randomUUID());other=types.saveAndFlush(other);ContractRoomOffering o=newOffering(contract,other,3,2,"150");booking(o,"CONFIRMED",0,3,3);
@@ -118,13 +120,19 @@ class QuotationSearchMySqlIntegrationTest {
  }
  @ParameterizedTest @EnumSource(value=ContractStatus.class,names={"SUSPENDED","TERMINATED"}) void oldContractCommitmentsOutsideOldValidityCannotBecomeExtraInventory(ContractStatus status) {
   Contract old=newContract(status,in.minusDays(100),in.minusDays(50));ContractRoomOffering prior=newOffering(old,type,3,2,"100");booking(prior,"CONFIRMED",0,3,1);
-  assertEquals(409,assertThrows(QuotationSearchException.class,()->search.search(request(1))).getStatus());
+  var requestForAssertion2 = request(1);
+
+  assertEquals(409,assertThrows(QuotationSearchException.class,()->search.search(requestForAssertion2)).getStatus());
  }
  @Test void malformedOrDuplicateApprovalDataFailsClosed() {
-  newContract(ContractStatus.APPROVED,in.minusDays(1),out);assertEquals(409,assertThrows(QuotationSearchException.class,()->search.search(request(1))).getStatus());
+  newContract(ContractStatus.APPROVED,in.minusDays(1),out);
+  var requestForAssertion3 = request(1);
+  assertEquals(409,assertThrows(QuotationSearchException.class,()->search.search(requestForAssertion3)).getStatus());
  }
  @Test void overlappingSeasonalDataIsNeverArbitrarilySelected() {
-  season(in,in.plusDays(1),"120");season(in.plusDays(1),out,"130");assertEquals(409,assertThrows(QuotationSearchException.class,()->search.search(request(1))).getStatus());
+  season(in,in.plusDays(1),"120");season(in.plusDays(1),out,"130");
+  var requestForAssertion4 = request(1);
+  assertEquals(409,assertThrows(QuotationSearchException.class,()->search.search(requestForAssertion4)).getStatus());
  }
  @Test void searchDoesNotMutateConfirmedReservationOrSnapshotRows() {
   Integer reservation=booking(offer,"CONFIRMED",0,3,1);Integer item=jdbc.queryForObject("select reservation_item_id from reservation_item where reservation_id=?",Integer.class,reservation);

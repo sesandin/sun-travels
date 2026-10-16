@@ -21,8 +21,10 @@ import java.util.Locale;
 @Transactional(readOnly = true)
 public class CustomerService {
     public static final int MAX_PAGE_SIZE = 50;
-    private static final Pattern EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
-    private static final Pattern PHONE = Pattern.compile("^(?=.*[0-9])[+0-9(). \\-]{5,20}$");
+    // Choose the first interior domain dot deterministically. Possessive quantifiers
+    // preserve the existing accepted characters without retrying every possible split.
+    private static final Pattern EMAIL = Pattern.compile("^[^\\s@]++@[^\\s@][^\\s@.]*+\\.[^\\s@]++$");
+    private static final Pattern PHONE = Pattern.compile("^(?=.*\\d)[+0-9(). \\-]{5,20}$");
 
     private final CustomerRepository repository;
 
@@ -90,7 +92,7 @@ public class CustomerService {
 
     private String normalize(String value) { return value == null || value.isBlank() ? null : value.trim(); }
     private Integer parsePositiveInteger(String value) {
-        if (value == null || !value.matches("[1-9][0-9]*")) return null;
+        if (value == null || !value.matches("[1-9]\\d*")) return null;
         try { return Integer.valueOf(value); } catch (NumberFormatException ignored) { return null; }
     }
     private Specification<Customer> searchSpecification(String query, Integer exactId) {

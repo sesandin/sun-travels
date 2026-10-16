@@ -47,11 +47,15 @@ class ContractServiceTest {
   when(hotels.findForUpdate(7)).thenReturn(Optional.of(hotel)); when(repository.saveAndFlush(any())).thenAnswer(i->{Contract row=i.getArgument(0); ReflectionTestUtils.setField(row,"contractId",4); return row;}); when(repository.existsByContractCodeAndContractIdNot("C004",4)).thenReturn(true);
   error(409,()->service.createContract(request())); verify(repository,times(1)).saveAndFlush(any()); verify(repository,never()).findById(any());
  }
- @Test void databaseCreationRaceHasSafeError() { when(hotels.findForUpdate(7)).thenReturn(Optional.of(hotel)); when(repository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("secret SQL")); var ex=assertThrows(ContractException.class,()->service.createContract(request())); assertEquals(409,ex.getStatus()); assertFalse(ex.getMessage().contains("secret")); }
+ @Test void databaseCreationRaceHasSafeError() { when(hotels.findForUpdate(7)).thenReturn(Optional.of(hotel)); when(repository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("secret SQL"));
+   var requestForAssertion1 = request();
+   var ex=assertThrows(ContractException.class,()->service.createContract(requestForAssertion1)); assertEquals(409,ex.getStatus()); assertFalse(ex.getMessage().contains("secret")); }
  @Test void invalidHeadersBeforeAnyWrite() {
   for(var r:List.of(new ContractRequest(7,to,from,BigDecimal.ZERO,"USD"),new ContractRequest(7,from,to,new BigDecimal("-0.01"),"USD"),new ContractRequest(7,from,to,new BigDecimal("1000"),"USD"),new ContractRequest(7,from,to,new BigDecimal("1.001"),"USD"),new ContractRequest(7,from,to,BigDecimal.ZERO,"usd"))) error(400,()->service.createContract(r)); verifyNoInteractions(repository,hotels);
  }
- @Test void missingHotelAndContract() { assertThrows(HotelNotFoundException.class,()->service.createContract(request())); error(404,()->service.approveContract(1)); error(404,()->service.terminateContract(1)); }
+ @Test void missingHotelAndContract() {
+   var requestForAssertion2 = request();
+   assertThrows(HotelNotFoundException.class,()->service.createContract(requestForAssertion2)); error(404,()->service.approveContract(1)); error(404,()->service.terminateContract(1)); }
  @Test void draftHeaderUpdatesPreserveLegacyCode() { locked(); saving(); service.updateContract(1,request()); assertEquals("LEGACY",c.getContractCode()); assertEquals(new BigDecimal("15.00"),c.getMarkupPercentage()); }
  @Test void shrinkingDatesCannotExcludeSeasonalPeriod() { locked(); when(seasons.countOutsideContract(1,from,to)).thenReturn(1L); error(409,()->service.updateContract(1,request())); assertEquals(BigDecimal.TEN,c.getMarkupPercentage()); verify(repository,never()).saveAndFlush(any()); }
  @ParameterizedTest @EnumSource(value=ContractStatus.class,names={"APPROVED","SUSPENDED","TERMINATED"}) void nonDraftHeaderImmutable(ContractStatus status) { c.setStatus(status); locked(); error(409,()->service.updateContract(1,request())); assertEquals("LEGACY",c.getContractCode()); }

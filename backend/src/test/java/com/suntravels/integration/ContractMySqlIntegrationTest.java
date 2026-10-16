@@ -18,7 +18,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
+import java.util.function.Consumer;
 import static org.junit.jupiter.api.Assertions.*;
 
 /** Opt in on a disposable MySQL 8 database with the existing schema.
@@ -137,7 +139,8 @@ class ContractMySqlIntegrationTest {
         });
         var before = jdbc.queryForMap("select * from contract where contract_id=?", legacy);
         Integer count = jdbc.queryForObject("select count(*) from contract where hotel_id=?", Integer.class, hotelId);
-        assertEquals(409, assertThrows(ContractException.class, () -> contract(hotelId, today, today.plusDays(30))).getStatus());
+        LocalDate validTo = today.plusDays(30);
+        assertEquals(409, assertThrows(ContractException.class, () -> contract(hotelId, today, validTo)).getStatus());
         assertEquals(count, jdbc.queryForObject("select count(*) from contract where hotel_id=?", Integer.class, hotelId));
         assertEquals(before, jdbc.queryForMap("select * from contract where contract_id=?", legacy));
         assertEquals(0, jdbc.queryForObject("select count(*) from contract where hotel_id=? and contract_code like 'TMP-%'", Integer.class, hotelId));
@@ -168,9 +171,11 @@ class ContractMySqlIntegrationTest {
     }
 
     @Test void failedOuterTransactionRollsBackApprovalStatus() {
-        assertThrows(IllegalStateException.class, () -> tx().executeWithoutResult(t -> {
+        TransactionTemplate transaction = tx();
+        Consumer<TransactionStatus> rollback = t -> {
             service.approveContract(candidateId); throw new IllegalStateException("force rollback");
-        }));
+        };
+        assertThrows(IllegalStateException.class, () -> transaction.executeWithoutResult(rollback));
         assertEquals(ContractStatus.DRAFT, service.getContractById(candidateId).status());
     }
 

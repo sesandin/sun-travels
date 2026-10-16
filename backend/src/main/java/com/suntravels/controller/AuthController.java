@@ -48,7 +48,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request,
+    public ResponseEntity<AuthenticatedUserResponse> login(@Valid @RequestBody LoginRequest request,
                                    HttpServletRequest httpRequest, HttpServletResponse response) {
         try {
             Authentication authentication = authenticationManager.authenticate(
