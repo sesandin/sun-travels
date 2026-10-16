@@ -81,13 +81,29 @@ export interface UnavailableAccommodation {
   contractCode: string;
   currencyCode: string;
   availabilityStatus: 'NOT_AVAILABLE';
-  offerings: { offeringId: number; roomTypeId: number; roomTypeName: string; maxAdults: number; availableRoomsForStay: number }[];
-  reasons: { code: 'INSUFFICIENT_INVENTORY' | 'MAX_ADULT_OCCUPANCY' | 'HOTEL_CLOSED'; message: string }[];
+  offerings: {
+    offeringId: number;
+    roomTypeId: number;
+    roomTypeName: string;
+    maxAdults: number;
+    availableRoomsForStay: number;
+  }[];
+  reasons: {
+    code: 'INSUFFICIENT_INVENTORY' | 'MAX_ADULT_OCCUPANCY' | 'HOTEL_CLOSED';
+    message: string;
+  }[];
   indicativeTotalPrice: number | null;
 }
 
 export interface SelectionOffering {
- hotelId: number; hotelName: string; contractId: number; offeringId: number; roomTypeName: string;
- maxAdults: number; availableRoomsForStay: number; currencyCode: string; hotelClosed: boolean;
- rooms: { roomNumber: number; adults: number; totalPrice: number | null }[];
+  hotelId: number;
+  hotelName: string;
+  contractId: number;
+  offeringId: number;
+  roomTypeName: string;
+  maxAdults: number;
+  availableRoomsForStay: number;
+  currencyCode: string;
+  hotelClosed: boolean;
+  rooms: { roomNumber: number; adults: number; totalPrice: number | null }[];
 }

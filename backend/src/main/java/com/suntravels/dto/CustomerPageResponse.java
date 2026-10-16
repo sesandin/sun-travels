@@ -7,4 +7,6 @@ public record CustomerPageResponse(
         int page,
         int size,
         long totalElements,
-        int totalPages) {}
+        int totalPages
+) {
+}

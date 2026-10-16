@@ -27,17 +27,31 @@ import org.springframework.security.web.authentication.session.ChangeSessionIdAu
 public class SecurityConfig {
     private static final String ADMIN = "ADMIN";
     private static final String AGENT = "AGENT";
-    @Bean PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
-    @Bean AuthenticationManager authenticationManager(DatabaseUserDetailsService users, PasswordEncoder encoder) {
+
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    AuthenticationManager authenticationManager(DatabaseUserDetailsService users, PasswordEncoder encoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(users);
         provider.setPasswordEncoder(encoder);
         return new ProviderManager(provider);
     }
-    @Bean SecurityContextRepository securityContextRepository() { return new HttpSessionSecurityContextRepository(); }
-    @Bean SessionAuthenticationStrategy sessionAuthenticationStrategy() {
+
+    @Bean
+    SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
+    }
+
+    @Bean
+    SessionAuthenticationStrategy sessionAuthenticationStrategy() {
         return new ChangeSessionIdAuthenticationStrategy();
     }
-    @Bean CookieCsrfTokenRepository csrfTokenRepository() {
+
+    @Bean
+    CookieCsrfTokenRepository csrfTokenRepository() {
         // Angular reads XSRF-TOKEN and echoes it in its X-XSRF-TOKEN request header.
         // Session authentication cookies remain HttpOnly; this is only the CSRF token cookie.
         CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
@@ -46,31 +60,28 @@ public class SecurityConfig {
         return repository;
     }
 
-    @Bean SecurityFilterChain securityFilterChain(HttpSecurity http,
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http,
             JsonAuthenticationEntryPoint authenticationEntryPoint,
             JsonAccessDeniedHandler accessDeniedHandler,
-            CookieCsrfTokenRepository csrfRepository) throws Exception {
+            CookieCsrfTokenRepository csrfRepository) {
         CsrfTokenRequestAttributeHandler csrfHandler = new CsrfTokenRequestAttributeHandler();
         csrfHandler.setCsrfRequestAttributeName(null);
-        return http
-                .cors(cors -> {})
-                .csrf(csrf -> csrf.csrfTokenRepository(csrfRepository).csrfTokenRequestHandler(csrfHandler))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                        .sessionFixation(fixation -> fixation.changeSessionId()))
-                .securityContext(context -> context.requireExplicitSave(true))
-                .exceptionHandling(errors -> errors.authenticationEntryPoint(authenticationEntryPoint)
-                        .accessDeniedHandler(accessDeniedHandler))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-                        .requestMatchers("/api/auth/**").authenticated()
-                        .requestMatchers("/api/search/**").hasAnyRole(ADMIN, AGENT)
-                        .requestMatchers("/api/customers/**").hasAnyRole(ADMIN, AGENT)
-                        .requestMatchers("/api/reservations", "/api/reservations/**").hasAnyRole(ADMIN, AGENT)
-                        .requestMatchers("/api/hotels/**", "/api/room-types/**", "/api/contracts/**", "/api/offerings/**")
-                            .hasRole(ADMIN)
-                        .requestMatchers("/api/**").denyAll()
-                        .anyRequest().permitAll())
-                .build();
+        return http.cors(cors -> {
+        }).csrf(csrf -> csrf.csrfTokenRepository(csrfRepository).csrfTokenRequestHandler(
+                csrfHandler)).sessionManagement(
+                session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED).sessionFixation(
+                        fixation -> fixation.changeSessionId())).securityContext(
+                context -> context.requireExplicitSave(true)).exceptionHandling(
+                errors -> errors.authenticationEntryPoint(authenticationEntryPoint).accessDeniedHandler(
+                        accessDeniedHandler)).authorizeHttpRequests(
+                auth -> auth.requestMatchers(HttpMethod.GET, "/api/auth/csrf").permitAll().requestMatchers(
+                        HttpMethod.POST, "/api/auth/login").permitAll().requestMatchers(
+                        "/api/auth/**").authenticated().requestMatchers("/api/search/**").hasAnyRole(ADMIN,
+                        AGENT).requestMatchers("/api/customers/**").hasAnyRole(ADMIN, AGENT).requestMatchers(
+                        "/api/reservations", "/api/reservations/**").hasAnyRole(ADMIN, AGENT).requestMatchers(
+                        "/api/hotels/**", "/api/room-types/**", "/api/contracts/**",
+                        "/api/offerings/**").hasRole(ADMIN).requestMatchers(
+                        "/api/**").denyAll().anyRequest().permitAll()).build();
     }
 }

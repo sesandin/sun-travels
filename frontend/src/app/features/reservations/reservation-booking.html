@@ -1,55 +1,155 @@
-<header class="page-heading"><div><span class="eyebrow">RESERVATIONS</span><h1>Review and confirm</h1><p>Confirm accommodation directly with the customer. Availability and price are rechecked when you confirm.</p></div><a routerLink="/search">Back to search</a></header>
-@if (quote(); as q) {
- <section class="panel"><h2>{{ q.hotelName }}</h2><p>{{ q.checkIn }} → {{ q.checkOut }} · {{ q.nights }} nights · {{ q.rooms.length }} rooms</p>
-  @for (room of q.rooms; track $index) {
-   <article class="room"><h3>Room {{ $index + 1 }} · {{ room.roomTypeName }} · {{ room.adults }} adults</h3>
-    <p>{{ room.totalPrice | number:'1.2-2' }} {{ q.currencyCode }}</p>
-    <details><summary>Nightly selling prices</summary><table><thead><tr><th>Occupied date</th><th>Selling price</th></tr></thead><tbody>
-     @for (night of room.nightlyPrices; track night.occupiedDate) { <tr><td>{{ night.occupiedDate }}</td><td>{{ night.sellingPrice | number:'1.2-2' }} {{ q.currencyCode }}</td></tr> }
-    </tbody></table></details>
-   </article>
-  }
-  <p class="total">Stay total: {{ q.totalPrice | number:'1.2-2' }} {{ q.currencyCode }}</p>
- </section>
- <section class="panel"><h2>Customer</h2>
-  @if (selected(); as c) {
-   <div class="selected-customer" role="status">
-    <div class="customer-identity">
-     <span class="selection-label">Customer selected</span>
-     <h3>{{ c.name }}</h3>
-     <div class="customer-contact"><span>Customer #{{ c.customerId }}</span>@if (c.phone) { <span>{{ c.phone }}</span> }@if (c.email) { <span>{{ c.email }}</span> }</div>
-    </div>
-    <button type="button" class="secondary" (click)="changeCustomer()" [disabled]="busy() || customerBusy()">Change customer</button>
-   </div>
-  } @else {
-  <form [formGroup]="customerSearch" (ngSubmit)="searchCustomers()" class="filters"><label>Find by name, phone, email or ID<input formControlName="query" maxlength="150"></label><button type="submit" class="secondary" [disabled]="customerBusy() || busy()">Find customers</button></form>
-  @if (customerBusy()) { <p role="status">Loading customer…</p> }
-  @if (customerError()) { <p role="alert" class="error-message">{{ customerError() }}</p> }
-  @if (customerSearched() && !customerBusy() && !customerError() && !customers().length) { <p role="status">No customers found. Try another search or register a new customer.</p> }
-  @for (customer of customers(); track customer.customerId) {
-   <button class="customer-choice secondary" type="button" (click)="select(customer)" [disabled]="busy() || customerBusy()"><strong>{{ customer.name }}</strong><span class="customer-contact">#{{ customer.customerId }} @if (customer.phone) { <span>{{ customer.phone }}</span> } @if (customer.email) { <span>{{ customer.email }}</span> }</span><span class="selection-label">Select customer</span></button>
-  }
-  <button type="button" class="secondary" (click)="showRegistration.set(!showRegistration())" [disabled]="busy() || customerBusy()">{{ showRegistration() ? 'Close registration' : 'Register a new customer' }}</button>
-  @if (showRegistration()) {
-   <form [formGroup]="registration" (ngSubmit)="register()"><fieldset [disabled]="customerBusy() || busy()"><legend>New customer</legend>
-    <label>Name<input formControlName="name" maxlength="150" autocomplete="name"></label>
-    <label>Phone<input formControlName="phone" maxlength="20" autocomplete="tel"></label>
-    <label>Email<input formControlName="email" maxlength="150" type="email" autocomplete="email"></label>
-    <p>Provide a name and at least a valid phone number or email address.</p>
-    @if (registration.touched && registration.invalid) { <p role="alert" class="error-message">Check the name (up to 150 characters), phone (5–20 international phone characters), and email.</p> }
-    <button class="primary" [disabled]="registration.invalid || customerBusy() || busy()">Register and select customer</button>
-   </fieldset></form>
-  }
-  }
- </section>
- <section class="panel">
-  @if (error()) { <p class="error-message" role="alert">{{ error() }}</p> }
-  @if (previous(); as old) { <div class="price-change" role="alert"><h2>Price changed — customer acknowledgment required</h2><p>Previously: {{ old.totalPrice | number:'1.2-2' }} {{ old.currencyCode }}</p><p>Current: {{ q.totalPrice | number:'1.2-2' }} {{ q.currencyCode }}</p><p>Review the updated amount with the customer and accept it below. No reservation was created by the price-change response.</p></div> }
-  <label class="check"><input type="checkbox" [formControl]="accepted" [attr.disabled]="busy() ? '' : null">I have reviewed the selected customer, dates, rooms and current total of {{ q.totalPrice | number:'1.2-2' }} {{ q.currencyCode }} with the customer and accept this quotation.</label>
-  <div class="actions">
-  <button type="button" class="primary" (click)="confirm()" [disabled]="busy() || customerBusy() || !selected() || !accepted.value">{{ busy() ? 'Confirming…' : 'Confirm Reservation' }}</button>
-   <button type="button" class="secondary" (click)="cancelBooking()" [disabled]="busy() || customerBusy()">Cancel</button>
+<header class="page-heading">
+  <div>
+    <span class="eyebrow">RESERVATIONS</span>
+    <h1>Review and confirm</h1>
+    <p>Confirm accommodation directly with the customer. Availability and price are rechecked when you confirm.</p>
   </div>
-  <p>For an uncertain network response, check the <a routerLink="/reservations">reservation directory</a> before retrying. Identical confirmations are suppressed for 30 seconds.</p>
- </section>
-} @else { <p class="panel" role="status">Choose an accommodation quotation from <a routerLink="/search">Search &amp; Quotations</a> to start a booking.</p> }
+  <a routerLink="/search">Back to search</a>
+</header>
+@if (quote(); as q) {
+  <section class="panel">
+    <h2>{{ q.hotelName }}</h2>
+    <p>{{ q.checkIn }} → {{ q.checkOut }} · {{ q.nights }} nights · {{ q.rooms.length }} rooms</p>
+    @for (room of q.rooms; track $index) {
+      <article class="room">
+        <h3>Room {{ $index + 1 }} · {{ room.roomTypeName }} · {{ room.adults }} adults</h3>
+        <p>{{ room.totalPrice | number:'1.2-2' }} {{ q.currencyCode }}</p>
+        <details>
+          <summary>Nightly selling prices</summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Occupied date</th>
+                <th>Selling price</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (night of room.nightlyPrices; track night.occupiedDate) {
+                <tr>
+                  <td>{{ night.occupiedDate }}</td>
+                  <td>{{ night.sellingPrice | number:'1.2-2' }} {{ q.currencyCode }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </details>
+      </article>
+    }
+    <p class="total">Stay total: {{ q.totalPrice | number:'1.2-2' }} {{ q.currencyCode }}</p>
+  </section>
+  <section class="panel">
+    <h2>Customer</h2>
+    @if (selected(); as c) {
+      <div class="selected-customer" role="status">
+        <div class="customer-identity">
+          <span class="selection-label">Customer selected</span>
+          <h3>{{ c.name }}</h3>
+          <div class="customer-contact">
+            <span>Customer #{{ c.customerId }}</span>
+            @if (c.phone) {
+              <span>{{ c.phone }}</span>
+            }
+            @if (c.email) {
+              <span>{{ c.email }}</span>
+            }
+          </div>
+        </div>
+        <button
+          type="button"
+          class="secondary"
+          (click)="changeCustomer()"
+          [disabled]="busy() || customerBusy()"
+        >Change customer</button>
+      </div>
+    } @else {
+      <form [formGroup]="customerSearch" (ngSubmit)="searchCustomers()" class="filters">
+        <label>Find by name, phone, email or ID<input formControlName="query" maxlength="150" />
+        </label>
+        <button type="submit" class="secondary" [disabled]="customerBusy() || busy()">Find customers</button>
+      </form>
+      @if (customerBusy()) {
+        <p><output>Loading customer…</output></p>
+      }
+      @if (customerError()) {
+        <p role="alert" class="error-message">{{ customerError() }}</p>
+      }
+      @if (customerSearched() && !customerBusy() && !customerError() && !customers().length) {
+        <p><output>No customers found. Try another search or register a new customer.</output></p>
+      }
+      @for (customer of customers(); track customer.customerId) {
+        <button
+          class="customer-choice secondary"
+          type="button"
+          (click)="select(customer)"
+          [disabled]="busy() || customerBusy()"
+        >
+          <strong>{{ customer.name }}</strong>
+          <span class="customer-contact">#{{ customer.customerId }} @if (customer.phone) {
+              <span>{{ customer.phone }}</span>
+            }
+            @if (customer.email) {
+              <span>{{ customer.email }}</span>
+            }
+          </span>
+          <span class="selection-label">Select customer</span>
+        </button>
+      }
+      <button
+        type="button"
+        class="secondary"
+        (click)="showRegistration.set(!showRegistration())"
+        [disabled]="busy() || customerBusy()"
+      >{{ showRegistration() ? 'Close registration' : 'Register a new customer' }}</button>
+      @if (showRegistration()) {
+        <form [formGroup]="registration" (ngSubmit)="register()">
+          <fieldset [disabled]="customerBusy() || busy()">
+            <legend>New customer</legend>
+            <label>Name<input formControlName="name" maxlength="150" autocomplete="name" />
+            </label>
+            <label>Phone<input formControlName="phone" maxlength="20" autocomplete="tel" />
+            </label>
+            <label>Email<input formControlName="email" maxlength="150" type="email" autocomplete="email" />
+            </label>
+            <p>Provide a name and at least a valid phone number or email address.</p>
+            @if (registration.touched && registration.invalid) {
+              <p role="alert" class="error-message">Check the name (up to 150 characters), phone (5–20 international phone characters), and email.</p>
+            }
+            <button class="primary" [disabled]="registration.invalid || customerBusy() || busy()">Register and select customer</button>
+          </fieldset>
+        </form>
+      }
+    }
+  </section>
+  <section class="panel">
+    @if (error()) {
+      <p class="error-message" role="alert">{{ error() }}</p>
+    }
+    @if (previous(); as old) {
+      <div class="price-change" role="alert">
+        <h2>Price changed — customer acknowledgment required</h2>
+        <p>Previously: {{ old.totalPrice | number:'1.2-2' }} {{ old.currencyCode }}</p>
+        <p>Current: {{ q.totalPrice | number:'1.2-2' }} {{ q.currencyCode }}</p>
+        <p>Review the updated amount with the customer and accept it below. No reservation was created by the price-change response.</p>
+      </div>
+    }
+    <label class="check">
+      <input type="checkbox" [formControl]="accepted" [attr.disabled]="busy() ? '' : null" />I have reviewed the selected customer, dates, rooms and current total of {{ q.totalPrice | number:'1.2-2' }} {{ q.currencyCode }} with the customer and accept this quotation.</label>
+    <div class="actions">
+      <button
+        type="button"
+        class="primary"
+        (click)="confirm()"
+        [disabled]="busy() || customerBusy() || !selected() || !accepted.value"
+      >{{ busy() ? 'Confirming…' : 'Confirm Reservation' }}</button>
+      <button
+        type="button"
+        class="secondary"
+        (click)="cancelBooking()"
+        [disabled]="busy() || customerBusy()"
+      >Cancel</button>
+    </div>
+    <p>For an uncertain network response, check the <a routerLink="/reservations">reservation directory</a> before retrying. Identical confirmations are suppressed for 30 seconds.</p>
+  </section>
+} @else {
+  <p class="panel"><output>Choose an accommodation quotation from <a routerLink="/search">Search &amp; Quotations</a> to start a booking.</output></p>
+}

@@ -10,13 +10,14 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/customers")
 public class CustomerController {
     private final CustomerService service;
-    public CustomerController(CustomerService service) { this.service = service; }
+
+    public CustomerController(CustomerService service) {
+        this.service = service;
+    }
 
     @GetMapping
-    public ResponseEntity<CustomerPageResponse> search(
-            @RequestParam(required = false) String query,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+    public ResponseEntity<CustomerPageResponse> search(@RequestParam(required = false) String query,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(service.searchCustomers(query, page, size));
     }
 
@@ -31,7 +32,8 @@ public class CustomerController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CustomerResponse> update(@PathVariable Integer id, @Valid @RequestBody CustomerRequest request) {
+    public ResponseEntity<CustomerResponse> update(@PathVariable Integer id,
+            @Valid @RequestBody CustomerRequest request) {
         return ResponseEntity.ok(service.updateCustomer(id, request));
     }
 }

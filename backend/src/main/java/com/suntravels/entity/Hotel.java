@@ -1,4 +1,3 @@
-
 package com.suntravels.entity;
 
 import jakarta.persistence.Column;

@@ -33,8 +33,8 @@
     (submit)="$event.preventDefault()"
   >
     <div class="search">
-      <label for="offering-search">Search offerings</label
-      ><input
+      <label for="offering-search">Search offerings</label>
+      <input
         id="offering-search"
         type="search"
         formControlName="search"
@@ -42,8 +42,8 @@
       />
     </div>
     <div>
-      <label for="directory-hotel">Hotel</label
-      ><select id="directory-hotel" formControlName="hotelId">
+      <label for="directory-hotel">Hotel</label>
+      <select id="directory-hotel" formControlName="hotelId">
         <option value="">All hotels</option>
         @for (hotel of hotels(); track hotel.id) {
           <option [value]="hotel.id">{{ hotel.name }}</option>
@@ -51,8 +51,8 @@
       </select>
     </div>
     <div>
-      <label for="directory-contract-status">Contract status</label
-      ><select id="directory-contract-status" formControlName="contractStatus">
+      <label for="directory-contract-status">Contract status</label>
+      <select id="directory-contract-status" formControlName="contractStatus">
         <option value="">All contract statuses</option>
         @for (status of statuses; track status) {
           <option [value]="status">{{ status }}</option>
@@ -60,8 +60,8 @@
       </select>
     </div>
     <div>
-      <label for="directory-room">Room type</label
-      ><select id="directory-room" formControlName="roomTypeId">
+      <label for="directory-room">Room type</label>
+      <select id="directory-room" formControlName="roomTypeId">
         <option value="">All room types</option>
         @for (room of roomTypes(); track room.id) {
           <option [value]="room.id">{{ room.name }}</option>
@@ -69,16 +69,16 @@
       </select>
     </div>
     <div>
-      <label for="directory-status">Offering status</label
-      ><select id="directory-status" formControlName="offeringStatus">
+      <label for="directory-status">Offering status</label>
+      <select id="directory-status" formControlName="offeringStatus">
         <option value="">All offering statuses</option>
         <option value="ENABLED">ENABLED</option>
         <option value="SUSPENDED">SUSPENDED</option>
       </select>
     </div>
     <div>
-      <label for="directory-sort">Sort by</label
-      ><select id="directory-sort" formControlName="sortBy">
+      <label for="directory-sort">Sort by</label>
+      <select id="directory-sort" formControlName="sortBy">
         <option value="hotel">Hotel name</option>
         <option value="contract">Contract code</option>
         <option value="roomType">Room type</option>
@@ -88,8 +88,8 @@
       </select>
     </div>
     <div>
-      <label for="directory-direction">Sort direction</label
-      ><select id="directory-direction" formControlName="direction">
+      <label for="directory-direction">Sort direction</label>
+      <select id="directory-direction" formControlName="direction">
         <option value="asc">Ascending</option>
         <option value="desc">Descending</option>
       </select>
@@ -99,7 +99,7 @@
     </div>
   </form>
   @if (loading()) {
-    <div class="state" role="status">Loading room offerings...</div>
+    <div class="state"><output>Loading room offerings...</output></div>
   } @else if (error()) {
     <div class="state">
       <p role="alert" class="error-message">{{ error() }}</p>
@@ -118,9 +118,9 @@
       <button type="button" class="secondary" (click)="reset()">Reset filters</button>
     </div>
   } @else {
-    <p class="results" role="status" aria-live="polite">
+    <p class="results"><output aria-live="polite">
       Showing {{ first() }}&ndash;{{ last() }} of {{ filtered().length }} matching offerings
-    </p>
+    </output></p>
     <div class="table-scroll">
       <table>
         <caption class="sr-only">
@@ -144,17 +144,15 @@
           @for (row of pageRows(); track row.offeringId) {
             <tr>
               <td data-label="Hotel / Contract">
-                <strong>{{ row.hotelName }}</strong
-                ><small
-                  >{{ row.contractCode }} &middot;
+                <strong>{{ row.hotelName }}</strong>
+                <small>{{ row.contractCode }} &middot;
                   <span
                     class="badge"
                     [class.historical]="
                       row.contractStatus === 'TERMINATED' || row.contractStatus === 'SUSPENDED'
                     "
-                    >{{ row.contractStatus }}</span
-                  ></small
-                >
+                  >{{ row.contractStatus }}</span>
+                </small>
                 @if (row.hotelStatus === 'INACTIVE') {
                   <small class="inactive">Hotel INACTIVE</small>
                 }
@@ -166,12 +164,12 @@
                 {{ row.validFrom }} to {{ row.validTo }}<small>Inclusive occupied nights</small>
               </td>
               <td data-label="Base hotelier rate">
-                <strong
-                  >{{ row.ratePerPersonPerNight | number: '1.2-2' }} {{ row.currencyCode }}</strong
-                ><small>Per adult per night</small>
+                <strong>{{ row.ratePerPersonPerNight | number: '1.2-2' }} {{ row.currencyCode }}</strong>
+                <small>Per adult per night</small>
               </td>
               <td data-label="Contracted rooms">{{ row.contractedRoomCount }}</td>
-              <td data-label="Max adults">{{ row.maxAdults }}<small>Per room</small></td>
+              <td data-label="Max adults">{{ row.maxAdults }}<small>Per room</small>
+              </td>
               <td data-label="Offering status">
                 <span class="badge" [class.historical]="row.status === 'SUSPENDED'">{{
                   row.status
@@ -191,8 +189,7 @@
                     ', contract ' +
                     row.contractCode
                   "
-                  >View / Manage</a
-                >
+                >View / Manage</a>
               </td>
             </tr>
           }
@@ -201,9 +198,9 @@
     </div>
     <nav class="pagination" aria-label="Offering directory pages">
       <button type="button" class="secondary" (click)="changePage(-1)" [disabled]="page() === 1">
-        Previous</button
-      ><span>Page {{ page() }} of {{ pageCount() }}</span
-      ><button
+        Previous</button>
+      <span>Page {{ page() }} of {{ pageCount() }}</span>
+      <button
         type="button"
         class="secondary"
         (click)="changePage(1)"

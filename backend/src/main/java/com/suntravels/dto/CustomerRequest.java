@@ -12,8 +12,7 @@ public class CustomerRequest {
     private String name;
 
     @Size(max = 20, message = "Phone must be at most 20 characters")
-    @Pattern(regexp = "^\\s*$|^(?=.*\\d)[+0-9(). \\-]{5,20}$",
-            message = "Phone must use 5 to 20 international phone characters and include a digit")
+    @Pattern(regexp = "^\\s*$|^(?=.*\\d)[+0-9(). \\-]{5,20}$", message = "Phone must use 5 to 20 international phone characters and include a digit")
     private String phone;
 
     @Size(max = 150, message = "Email must be at most 150 characters")
@@ -25,10 +24,27 @@ public class CustomerRequest {
         return (phone != null && !phone.isBlank()) || (email != null && !email.isBlank());
     }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public String getPhone() { return phone; }
-    public void setPhone(String phone) { this.phone = phone; }
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
 }

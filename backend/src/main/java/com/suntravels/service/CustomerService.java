@@ -28,7 +28,9 @@ public class CustomerService {
 
     private final CustomerRepository repository;
 
-    public CustomerService(CustomerRepository repository) { this.repository = repository; }
+    public CustomerService(CustomerRepository repository) {
+        this.repository = repository;
+    }
 
     public CustomerPageResponse searchCustomers(String rawQuery, int page, int size) {
         if (page < 0) throw new InvalidCustomerException("Page must be zero or greater");
@@ -42,14 +44,15 @@ public class CustomerService {
         Integer exactId = parsePositiveInteger(query);
         PageRequest pageable = PageRequest.of(page, size,
                 Sort.by(Sort.Direction.ASC, "name").and(Sort.by("customerId")));
-        Page<Customer> result = query == null
-                ? repository.findAll(pageable)
-                : repository.findAll(searchSpecification(query, exactId), pageable);
+        Page<Customer> result = query == null ? repository.findAll(pageable) :
+                repository.findAll(searchSpecification(query, exactId), pageable);
         return new CustomerPageResponse(result.getContent().stream().map(this::toResponse).toList(),
                 result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
 
-    public CustomerResponse getCustomer(Integer id) { return toResponse(find(id)); }
+    public CustomerResponse getCustomer(Integer id) {
+        return toResponse(find(id));
+    }
 
     @Transactional
     public CustomerResponse createCustomer(CustomerRequest request) {
@@ -80,7 +83,8 @@ public class CustomerService {
             throw new InvalidCustomerException("Provide at least a phone number or email address");
         }
         if (phone != null && !PHONE.matcher(phone).matches()) {
-            throw new InvalidCustomerException("Phone must use 5 to 20 international phone characters and include a digit");
+            throw new InvalidCustomerException(
+                    "Phone must use 5 to 20 international phone characters and include a digit");
         }
         if (email != null && (email.length() > 150 || !EMAIL.matcher(email).matches())) {
             throw new InvalidCustomerException("Provide a valid email address of at most 150 characters");
@@ -90,11 +94,19 @@ public class CustomerService {
         customer.setEmail(email);
     }
 
-    private String normalize(String value) { return value == null || value.isBlank() ? null : value.trim(); }
+    private String normalize(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
     private Integer parsePositiveInteger(String value) {
         if (value == null || !value.matches("[1-9]\\d*")) return null;
-        try { return Integer.valueOf(value); } catch (NumberFormatException ignored) { return null; }
+        try {
+            return Integer.valueOf(value);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
+
     private Specification<Customer> searchSpecification(String query, Integer exactId) {
         String pattern = "%" + escapeLike(query.toLowerCase(Locale.ROOT)) + "%";
         return (root, criteria, builder) -> {
@@ -106,9 +118,11 @@ public class CustomerService {
             return builder.or(matches.toArray(jakarta.persistence.criteria.Predicate[]::new));
         };
     }
+
     private String escapeLike(String value) {
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
+
     private CustomerResponse toResponse(Customer c) {
         return new CustomerResponse(c.getCustomerId(), c.getName(), c.getPhone(), c.getEmail());
     }

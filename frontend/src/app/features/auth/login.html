@@ -1,18 +1,42 @@
 <main class="login-page">
   <section class="login-card" aria-labelledby="login-title">
-    <div class="brand"><span aria-hidden="true">&#9728;</span><div>Sun Travels<small>STAFF WORKSPACE</small></div></div>
+    <div class="brand">
+      <span aria-hidden="true">&#9728;</span>
+      <div>Sun Travels<small>STAFF WORKSPACE</small>
+      </div>
+    </div>
     <p class="eyebrow">Secure access</p>
     <h1 id="login-title">Welcome back</h1>
     <p class="intro">Sign in with your assigned staff account.</p>
-    @if (sessionMessage()) { <p class="notice" role="status">{{ sessionMessage() }}</p> }
-    @if (error()) { <p class="error-message" role="alert">{{ error() }}</p> }
+    @if (sessionMessage()) {
+      <p class="notice"><output>{{ sessionMessage() }}</output></p>
+    }
+    @if (error()) {
+      <p class="error-message" role="alert">{{ error() }}</p>
+    }
     <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
       <label for="username">Username</label>
-      <input id="username" formControlName="username" autocomplete="username" maxlength="100" autofocus />
-      @if (form.controls.username.touched && form.controls.username.invalid) { <small class="field-error">Enter your username.</small> }
+      <input
+        id="username"
+        formControlName="username"
+        autocomplete="username"
+        maxlength="100"
+        autofocus
+      />
+      @if (form.controls.username.touched && form.controls.username.invalid) {
+        <small class="field-error">Enter your username.</small>
+      }
       <label for="password">Password</label>
-      <input id="password" type="password" formControlName="password" autocomplete="current-password" maxlength="200" />
-      @if (form.controls.password.touched && form.controls.password.invalid) { <small class="field-error">Enter your password.</small> }
+      <input
+        id="password"
+        type="password"
+        formControlName="password"
+        autocomplete="current-password"
+        maxlength="200"
+      />
+      @if (form.controls.password.touched && form.controls.password.invalid) {
+        <small class="field-error">Enter your password.</small>
+      }
       <button class="primary" type="submit" [disabled]="submitting()">
         {{ submitting() ? 'Signing in...' : 'Sign in' }}
       </button>

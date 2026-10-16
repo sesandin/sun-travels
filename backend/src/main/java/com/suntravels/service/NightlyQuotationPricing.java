@@ -3,15 +3,23 @@ package com.suntravels.service;
 import com.suntravels.dto.QuotationSearchResponse.NightlyPrice;
 import com.suntravels.exception.QuotationSearchException;
 import com.suntravels.repository.QuotationSearchRepository.*;
+
 import java.math.*;
 import java.time.LocalDate;
 import java.util.*;
+
 import org.springframework.stereotype.Component;
 
-/** Shared selling-price calculation for quotations and locked confirmation; performs no writes. */
+/**
+ * Shared selling-price calculation for quotations and locked confirmation; performs no writes.
+ */
 @Component
 public class NightlyQuotationPricing {
-    public record Tariff(LocalDate date, BigDecimal rate, Integer seasonId) {
+    public record Tariff(
+            LocalDate date,
+            BigDecimal rate,
+            Integer seasonId
+    ) {
     }
 
     /**
@@ -24,8 +32,8 @@ public class NightlyQuotationPricing {
      */
     public List<Tariff> tariffs(Candidate offering, List<Season> seasons, LocalDate in, LocalDate out) {
         List<Season> sorted = new ArrayList<>(seasons);
-        sorted.sort(Comparator.comparing(Season::from, Comparator.nullsFirst(Comparator.naturalOrder()))
-                .thenComparingInt(Season::id));
+        sorted.sort(Comparator.comparing(Season::from,
+                Comparator.nullsFirst(Comparator.naturalOrder())).thenComparingInt(Season::id));
         validateSeasons(offering, sorted);
         List<Tariff> result = new ArrayList<>();
         int index = 0;
@@ -33,8 +41,9 @@ public class NightlyQuotationPricing {
             while (index < sorted.size() && sorted.get(index).to().isBefore(date)) {
                 index++;
             }
-            Season season = index < sorted.size() && !sorted.get(index).from().isAfter(date)
-                    ? sorted.get(index) : null;
+            Season season =
+                    index < sorted.size() && !sorted.get(index).from().isAfter(date) ? sorted.get(index) :
+                            null;
             result.add(new Tariff(date, season == null ? offering.baseRate() : season.rate(),
                     season == null ? null : season.id()));
         }
@@ -44,10 +53,10 @@ public class NightlyQuotationPricing {
     private void validateSeasons(Candidate offering, List<Season> sorted) {
         LocalDate previousEnd = null;
         for (Season season : sorted) {
-            if (season.offeringId() != offering.offeringId() || season.from() == null || season.to() == null
-                    || season.to().isBefore(season.from()) || season.from().isBefore(offering.validFrom())
-                    || season.to().isAfter(offering.validTo()) || !validRate(season.rate())
-                    || previousEnd != null && !season.from().isAfter(previousEnd)) {
+            if (season.offeringId() != offering.offeringId() || season.from() == null ||
+                    season.to() == null || season.to().isBefore(season.from()) ||
+                    season.from().isBefore(offering.validFrom()) || season.to().isAfter(offering.validTo()) ||
+                    !validRate(season.rate()) || previousEnd != null && !season.from().isAfter(previousEnd)) {
                 throw QuotationSearchException.inconsistent();
             }
             previousEnd = season.to();
@@ -55,26 +64,29 @@ public class NightlyQuotationPricing {
     }
 
     public boolean validRate(BigDecimal rate) {
-        return rate != null && rate.signum() > 0 && rate.scale() <= 2
-                && rate.compareTo(new BigDecimal("99999999.99")) <= 0;
+        return rate != null && rate.signum() > 0 && rate.scale() <= 2 &&
+                rate.compareTo(new BigDecimal("99999999.99")) <= 0;
     }
 
-    /** Applies adults and percentage markup, rounding each room/night to two decimals with HALF_UP. */
+    /**
+     * Applies adults and percentage markup, rounding each room/night to two decimals with HALF_UP.
+     */
     public BigDecimal nightly(Tariff tariff, int adults, BigDecimal markup) {
-        return tariff.rate().multiply(BigDecimal.valueOf(adults))
-                .multiply(BigDecimal.ONE.add(markup.movePointLeft(2)))
-                .setScale(2, RoundingMode.HALF_UP);
+        return tariff.rate().multiply(BigDecimal.valueOf(adults)).multiply(
+                BigDecimal.ONE.add(markup.movePointLeft(2))).setScale(2, RoundingMode.HALF_UP);
     }
 
-    /** Sums already rounded nightly prices, keeping quotation totals consistent with saved snapshots. */
+    /**
+     * Sums already rounded nightly prices, keeping quotation totals consistent with saved snapshots.
+     */
     public BigDecimal total(List<Tariff> tariffs, int adults, BigDecimal markup) {
-        return tariffs.stream().map(t -> nightly(t, adults, markup)).reduce(new BigDecimal("0.00"), BigDecimal::add);
+        return tariffs.stream().map(t -> nightly(t, adults, markup)).reduce(new BigDecimal("0.00"),
+                BigDecimal::add);
     }
 
     public List<NightlyPrice> breakdown(List<Tariff> tariffs, int adults, BigDecimal markup) {
-        return tariffs.stream()
-                .map(t -> new NightlyPrice(t.date(), t.seasonId() == null ? "BASE" : "SEASONAL",
-                        t.seasonId(), nightly(t, adults, markup)))
-                .toList();
+        return tariffs.stream().map(
+                t -> new NightlyPrice(t.date(), t.seasonId() == null ? "BASE" : "SEASONAL", t.seasonId(),
+                        nightly(t, adults, markup))).toList();
     }
 }

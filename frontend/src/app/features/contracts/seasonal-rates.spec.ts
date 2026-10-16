@@ -154,14 +154,12 @@ describe('Seasonal rate management', () => {
       ratePerPersonPerNight: 0.01,
     });
     c.save();
-    http
-      .expectOne(url)
-      .flush({
-        ...seasonal,
-        validFrom: contract.validTo,
-        validTo: contract.validTo,
-        ratePerPersonPerNight: 0.01,
-      });
+    http.expectOne(url).flush({
+      ...seasonal,
+      validFrom: contract.validTo,
+      validTo: contract.validTo,
+      ratePerPersonPerNight: 0.01,
+    });
     expect(c.notice()).toContain('Confirmed reservation prices remain unchanged');
   });
   for (const status of ['SUSPENDED', 'TERMINATED'] as const)

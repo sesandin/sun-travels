@@ -1,6 +1,19 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { apiError } from './api-error';
 describe('API error messages', () => {
+  it('uses a friendly field label for malformed validation field names', () => {
+    const error = new HttpErrorResponse({
+      status: 400,
+      error: {
+        errors: [
+          { field: { name: 'customer' }, defaultMessage: 'Required' },
+          { field: ['dates'], message: 'Invalid dates' },
+        ],
+      },
+    });
+    expect(apiError(error)).toBe('Field: Required Field: Invalid dates');
+    expect(apiError(error)).not.toContain('[object Object]');
+  });
   it('preserves mixed validation arrays, field names and message precedence', () => {
     const error = new HttpErrorResponse({
       status: 400,

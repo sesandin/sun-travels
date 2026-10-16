@@ -129,7 +129,9 @@ export class OfferingPanel implements OnInit, OnChanges {
   ngOnInit() {
     this.load();
   }
-  canChangeStatus() { return this.contract().status !== 'TERMINATED'; }
+  canChangeStatus() {
+    return this.contract().status !== 'TERMINATED';
+  }
   canMaintain() {
     return this.contract().status === 'DRAFT' || this.contract().status === 'APPROVED';
   }
@@ -199,7 +201,8 @@ export class OfferingPanel implements OnInit, OnChanges {
     if (!this.saving()) this.mode.set(null);
   }
   save() {
-    if (this.saving() || (this.mode() === 'status' ? !this.canChangeStatus() : !this.canMaintain())) return;
+    if (this.saving() || (this.mode() === 'status' ? !this.canChangeStatus() : !this.canMaintain()))
+      return;
     const row = this.selected(),
       mode = this.mode();
     let req;

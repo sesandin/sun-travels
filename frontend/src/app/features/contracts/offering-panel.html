@@ -11,7 +11,7 @@
     </p>
   }
   @if (loading()) {
-    <p role="status">Loading offerings...</p>
+    <p><output>Loading offerings...</output></p>
   } @else if (error()) {
     <p role="alert" class="error-message">{{ error() }}</p>
     <button type="button" (click)="load()">Retry offerings</button>
@@ -62,20 +62,22 @@
     }
   }
   @if (!canMaintain()) {
-    @if (contract().status === 'SUSPENDED') { <p>Offering status can still be changed. ENABLED offerings remain unavailable for new sales until the contract is APPROVED and the hotel is ACTIVE.</p> }
+    @if (contract().status === 'SUSPENDED') {
+      <p>Offering status can still be changed. ENABLED offerings remain unavailable for new sales until the contract is APPROVED and the hotel is ACTIVE.</p>
+    }
     <p>
       Historical offerings are preserved. Rate and seasonal maintenance is unavailable for
       {{ contract().status }} contracts.
     </p>
   }
   @if (notice()) {
-    <p role="status" class="success-message">{{ notice() }}</p>
+    <p class="success-message"><output>{{ notice() }}</output></p>
   }
   @if (mode()) {
     <section #editor tabindex="-1" class="editor" aria-label="Offering editor">
       @if (mode() === 'draft') {
         @if (roomsLoading()) {
-          <p role="status">Loading room types...</p>
+          <p><output>Loading room types...</output></p>
         }
         @if (roomsError()) {
           <p role="alert" class="error-message">{{ roomsError() }}</p>
@@ -89,8 +91,8 @@
             <legend>{{ selected() ? 'Edit DRAFT offering' : 'Add offering' }}</legend>
             <div class="form-grid">
               <div>
-                <label for="offering-room">Room type</label
-                ><select id="offering-room" formControlName="roomTypeId">
+                <label for="offering-room">Room type</label>
+                <select id="offering-room" formControlName="roomTypeId">
                   <option [ngValue]="null">Select a room type</option>
                   @for (room of rooms(); track room.roomTypeId) {
                     <option [ngValue]="room.roomTypeId">{{ room.name }}</option>
@@ -98,8 +100,8 @@
                 </select>
               </div>
               <div>
-                <label for="offering-rate">Base rate ({{ contract().currencyCode }})</label
-                ><input
+                <label for="offering-rate">Base rate ({{ contract().currencyCode }})</label>
+                <input
                   id="offering-rate"
                   type="number"
                   min="0.01"
@@ -109,8 +111,8 @@
                 />
               </div>
               <div>
-                <label for="offering-rooms">Allocated rooms</label
-                ><input
+                <label for="offering-rooms">Allocated rooms</label>
+                <input
                   id="offering-rooms"
                   type="number"
                   min="1"
@@ -119,8 +121,8 @@
                 />
               </div>
               <div>
-                <label for="offering-adults">Maximum adults per room</label
-                ><input
+                <label for="offering-adults">Maximum adults per room</label>
+                <input
                   id="offering-adults"
                   type="number"
                   min="1"
@@ -129,8 +131,8 @@
                 />
               </div>
               <div>
-                <label for="offering-status">Status</label
-                ><select id="offering-status" formControlName="status">
+                <label for="offering-status">Status</label>
+                <select id="offering-status" formControlName="status">
                   <option>ENABLED</option>
                   <option>SUSPENDED</option>
                 </select>
@@ -151,9 +153,8 @@
         <form [formGroup]="rateForm" (ngSubmit)="save()">
           <fieldset [disabled]="saving()">
             <legend>Edit approved base rate</legend>
-            <label for="approved-base-rate"
-              >Rate per adult per night ({{ contract().currencyCode }})</label
-            ><input
+            <label for="approved-base-rate">Rate per adult per night ({{ contract().currencyCode }})</label>
+            <input
               id="approved-base-rate"
               type="number"
               min="0.01"
@@ -177,8 +178,8 @@
         <form [formGroup]="statusForm" (ngSubmit)="save()">
           <fieldset [disabled]="saving()">
             <legend>Change offering status</legend>
-            <label for="maintained-status">Status</label
-            ><select id="maintained-status" formControlName="status">
+            <label for="maintained-status">Status</label>
+            <select id="maintained-status" formControlName="status">
               <option>ENABLED</option>
               <option>SUSPENDED</option>
             </select>

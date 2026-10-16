@@ -1,3 +1,6 @@
 package com.suntravels.entity;
 
-public enum UserRole { ADMIN, AGENT }
+public enum UserRole {
+    ADMIN,
+    AGENT
+}

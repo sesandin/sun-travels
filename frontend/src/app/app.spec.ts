@@ -23,16 +23,14 @@ describe('App', () => {
     await TestBed.inject(Router).navigateByUrl('/search');
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
-    http
-      .expectOne('/api/search/limits')
-      .flush({
-        businessDate: '2026-10-15',
-        maxRooms: 8,
-        maxNights: 31,
-        maxAdvanceDays: 730,
-        maxResults: 20,
-        allocationPolicy: 'INDIVIDUAL_ROOM_TYPES',
-      });
+    http.expectOne('/api/search/limits').flush({
+      businessDate: '2026-10-15',
+      maxRooms: 8,
+      maxNights: 31,
+      maxAdvanceDays: 730,
+      maxResults: 20,
+      allocationPolicy: 'INDIVIDUAL_ROOM_TYPES',
+    });
     http.expectOne('/api/search/filters').flush({ hotels: [], roomTypes: [] });
     await fixture.whenStable();
     fixture.detectChanges();
@@ -85,8 +83,12 @@ describe('App', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Sun Travels');
     expect(fixture.nativeElement.querySelectorAll('.upcoming').length).toBe(0);
-    expect(fixture.nativeElement.querySelector('a[href="/reservations"]')?.textContent).toContain('Reservations');
-    expect(fixture.nativeElement.querySelector('a[href="/customers"]')?.textContent).toContain('Customers');
+    expect(fixture.nativeElement.querySelector('a[href="/reservations"]')?.textContent).toContain(
+      'Reservations',
+    );
+    expect(fixture.nativeElement.querySelector('a[href="/customers"]')?.textContent).toContain(
+      'Customers',
+    );
     expect(fixture.nativeElement.querySelector('a[href="/room-types"]')?.textContent).toContain(
       'Room Types',
     );
@@ -101,9 +103,17 @@ describe('App', () => {
     expect(fixture.nativeElement.querySelector('.sidebar').classList.contains('open')).toBe(true);
   });
   it('shows an agent only the shared search navigation', async () => {
-    await TestBed.configureTestingModule({ imports: [App], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] }).compileComponents();
+    await TestBed.configureTestingModule({
+      imports: [App],
+      providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
+    }).compileComponents();
     const fixture = TestBed.createComponent(App);
-    TestBed.inject(AuthState).setUser({ userId: 2, username: 'agent01', fullName: 'Agent', role: 'AGENT' });
+    TestBed.inject(AuthState).setUser({
+      userId: 2,
+      username: 'agent01',
+      fullName: 'Agent',
+      role: 'AGENT',
+    });
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('a[href="/search"]')).toBeTruthy();
     expect(fixture.nativeElement.querySelector('a[href="/customers"]')).toBeTruthy();

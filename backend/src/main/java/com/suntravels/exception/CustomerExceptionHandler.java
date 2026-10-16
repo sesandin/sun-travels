@@ -29,19 +29,21 @@ public class CustomerExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<Map<String, Object>> validation(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new LinkedHashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(error ->
-                errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
-        return ResponseEntity.badRequest().body(Map.of(
-                MESSAGE, "Check the customer details", "fieldErrors", errors));
+        ex.getBindingResult().getFieldErrors().forEach(
+                error -> errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
+        return ResponseEntity.badRequest().body(
+                Map.of(MESSAGE, "Check the customer details", "fieldErrors", errors));
     }
 
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
     ResponseEntity<Map<String, String>> malformed(Exception ex) {
-        return ResponseEntity.badRequest().body(Map.of(MESSAGE, "Provide valid customer data and numeric identifiers"));
+        return ResponseEntity.badRequest().body(
+                Map.of(MESSAGE, "Provide valid customer data and numeric identifiers"));
     }
 
     @ExceptionHandler(DataAccessException.class)
     ResponseEntity<Map<String, String>> database(DataAccessException ex) {
-        return ResponseEntity.status(409).body(Map.of(MESSAGE, "The customer could not be saved because the data conflicts with the database"));
+        return ResponseEntity.status(409).body(Map.of(MESSAGE,
+                "The customer could not be saved because the data conflicts with the database"));
     }
 }

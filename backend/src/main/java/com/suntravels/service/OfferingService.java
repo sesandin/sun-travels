@@ -5,7 +5,9 @@ import com.suntravels.entity.*;
 import com.suntravels.exception.*;
 import com.suntravels.repository.*;
 import jakarta.validation.Validator;
+
 import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,8 +22,8 @@ public class OfferingService {
     private final SeasonalRateRepository seasons;
     private final Validator validator;
 
-    public OfferingService(ContractRepository contracts, OfferingRepository offerings, RoomTypeRepository rooms,
-            SeasonalRateRepository seasons, Validator validator) {
+    public OfferingService(ContractRepository contracts, OfferingRepository offerings,
+            RoomTypeRepository rooms, SeasonalRateRepository seasons, Validator validator) {
         this.contracts = contracts;
         this.offerings = offerings;
         this.rooms = rooms;
@@ -39,22 +41,25 @@ public class OfferingService {
             return List.of();
         }
         java.util.Map<Integer, Long> counts = new java.util.HashMap<>();
-        seasons.countPeriodsByOffering().forEach(count -> counts.put(count.getOfferingId(), count.getPeriodCount()));
+        seasons.countPeriodsByOffering().forEach(
+                count -> counts.put(count.getOfferingId(), count.getPeriodCount()));
         return rows.stream().map(offering -> {
             Contract contract = offering.getContract();
             Hotel h = contract.getHotel();
-            return new OfferingDirectoryResponse(offering.getOfferingId(), h.getHotelId(), h.getName(), h.getStatus(),
-                    contract.getContractId(), contract.getContractCode(), contract.getStatus(), contract.getValidFrom(),
-                    contract.getValidTo(),
-                    offering.getRoomType().getRoomTypeId(), offering.getRoomType().getName(), offering.getRatePerPersonPerNight(),
-                    contract.getCurrencyCode(), offering.getContractedRoomCount(), offering.getMaxAdults(), offering.getStatus(),
-                    counts.getOrDefault(offering.getOfferingId(), 0L));
+            return new OfferingDirectoryResponse(offering.getOfferingId(), h.getHotelId(), h.getName(),
+                    h.getStatus(), contract.getContractId(), contract.getContractCode(), contract.getStatus(),
+                    contract.getValidFrom(), contract.getValidTo(), offering.getRoomType().getRoomTypeId(),
+                    offering.getRoomType().getName(), offering.getRatePerPersonPerNight(),
+                    contract.getCurrencyCode(), offering.getContractedRoomCount(), offering.getMaxAdults(),
+                    offering.getStatus(), counts.getOrDefault(offering.getOfferingId(), 0L));
         }).toList();
     }
 
     public List<OfferingResponse> list(Integer contractId) {
-        contracts.findById(contractId).orElseThrow(() -> OfferingException.missing(CONTRACT_LABEL, contractId));
-        return offerings.findByContractContractIdOrderByOfferingId(contractId).stream().map(this::response).toList();
+        contracts.findById(contractId).orElseThrow(
+                () -> OfferingException.missing(CONTRACT_LABEL, contractId));
+        return offerings.findByContractContractIdOrderByOfferingId(contractId).stream().map(
+                this::response).toList();
     }
 
     public OfferingResponse get(Integer id) {
@@ -69,23 +74,24 @@ public class OfferingService {
     // Read-only hotelier-rate lookup; quotation selling prices use NightlyQuotationPricing.
     public java.math.BigDecimal effectiveRate(Integer id, java.time.LocalDate occupiedDate) {
         ContractRoomOffering offering = find(id);
-        if (occupiedDate == null
-                || occupiedDate.isBefore(offering.getContract().getValidFrom())
-                || occupiedDate.isAfter(offering.getContract().getValidTo())) {
+        if (occupiedDate == null || occupiedDate.isBefore(offering.getContract().getValidFrom()) ||
+                occupiedDate.isAfter(offering.getContract().getValidTo())) {
             throw OfferingException.invalid("Occupied date must be within the contract validity period");
         }
-        var matches = seasons.findByOfferingOfferingIdOrderByValidFrom(id).stream()
-                .filter(r -> !occupiedDate.isBefore(r.getValidFrom()) && !occupiedDate.isAfter(r.getValidTo())).toList();
+        var matches = seasons.findByOfferingOfferingIdOrderByValidFrom(id).stream().filter(
+                r -> !occupiedDate.isBefore(r.getValidFrom()) &&
+                        !occupiedDate.isAfter(r.getValidTo())).toList();
         if (matches.size() > 1) {
             throw OfferingException.conflict("Overlapping persisted seasonal rates require correction");
         }
-        return matches.isEmpty() ? offering.getRatePerPersonPerNight() : matches.get(0).getRatePerPersonPerNight();
+        return matches.isEmpty() ? offering.getRatePerPersonPerNight() :
+                matches.get(0).getRatePerPersonPerNight();
     }
 
     @Transactional
     public OfferingResponse create(Integer contractId, OfferingRequest request) {
-        Contract contract = contracts.findForUpdate(contractId)
-                .orElseThrow(() -> OfferingException.missing(CONTRACT_LABEL, contractId));
+        Contract contract = contracts.findForUpdate(contractId).orElseThrow(
+                () -> OfferingException.missing(CONTRACT_LABEL, contractId));
         require(contract, ContractStatus.DRAFT);
         validate(request);
         duplicate(contractId, request.roomTypeId(), 0);
@@ -146,14 +152,18 @@ public class OfferingService {
         ContractRoomOffering offering = locked(id);
         maintainable(offering.getContract());
         validate(request);
-        OfferingSeasonalRate season = rateId == null ? new OfferingSeasonalRate() : seasons.findBySeasonalRateIdAndOfferingOfferingId(rateId, id)
-                .orElseThrow(() -> OfferingException.missing("Seasonal rate for this offering", rateId));
+        OfferingSeasonalRate season = rateId == null ? new OfferingSeasonalRate() :
+                seasons.findBySeasonalRateIdAndOfferingOfferingId(rateId, id).orElseThrow(
+                        () -> OfferingException.missing("Seasonal rate for this offering", rateId));
         Contract contract = offering.getContract();
-        if (request.validFrom().isBefore(contract.getValidFrom()) || request.validTo().isAfter(contract.getValidTo())) {
+        if (request.validFrom().isBefore(contract.getValidFrom()) ||
+                request.validTo().isAfter(contract.getValidTo())) {
             throw OfferingException.invalid("Seasonal dates must remain within the contract validity period");
         }
-        if (!seasons.overlaps(id, rateId == null ? 0 : rateId, request.validFrom(), request.validTo()).isEmpty()) {
-            throw OfferingException.conflict("Seasonal period overlaps another period for this offering (dates are inclusive)");
+        if (!seasons.overlaps(id, rateId == null ? 0 : rateId, request.validFrom(),
+                request.validTo()).isEmpty()) {
+            throw OfferingException.conflict(
+                    "Seasonal period overlaps another period for this offering (dates are inclusive)");
         }
         if (rateId == null) {
             season.setOffering(offering);
@@ -167,8 +177,10 @@ public class OfferingService {
     // Future hotel coordination must use HOTEL -> CONTRACT -> OFFERING -> SEASONAL RATE.
     // Scalar lookup cannot retain stale lifecycle state before acquiring the contract lock.
     private ContractRoomOffering locked(Integer id) {
-        Integer contractId = offerings.findContractId(id).orElseThrow(() -> OfferingException.missing(OFFERING_LABEL, id));
-        contracts.findForUpdate(contractId).orElseThrow(() -> OfferingException.missing(CONTRACT_LABEL, contractId));
+        Integer contractId = offerings.findContractId(id).orElseThrow(
+                () -> OfferingException.missing(OFFERING_LABEL, id));
+        contracts.findForUpdate(contractId).orElseThrow(
+                () -> OfferingException.missing(CONTRACT_LABEL, contractId));
         return offerings.findForUpdate(id).orElseThrow(() -> OfferingException.missing(OFFERING_LABEL, id));
     }
 
@@ -195,7 +207,8 @@ public class OfferingService {
 
     private void maintainable(Contract contract) {
         if (contract.getStatus() != ContractStatus.DRAFT && contract.getStatus() != ContractStatus.APPROVED) {
-            throw OfferingException.conflict("Offering and seasonal maintenance requires a DRAFT or APPROVED contract");
+            throw OfferingException.conflict(
+                    "Offering and seasonal maintenance requires a DRAFT or APPROVED contract");
         }
     }
 
@@ -205,10 +218,9 @@ public class OfferingService {
         }
         var violations = validator.validate(request);
         if (!violations.isEmpty()) {
-            throw OfferingException.invalid(violations.stream()
-                    .map(v -> v.getPropertyPath() + ": " + v.getMessage()).sorted()
-                    .reduce((a, b) -> a + "; " + b)
-                    .orElseThrow());
+            throw OfferingException.invalid(
+                    violations.stream().map(v -> v.getPropertyPath() + ": " + v.getMessage()).sorted().reduce(
+                            (a, b) -> a + "; " + b).orElseThrow());
         }
     }
 
@@ -223,8 +235,8 @@ public class OfferingService {
     private OfferingResponse response(ContractRoomOffering offering) {
         return new OfferingResponse(offering.getOfferingId(), offering.getContract().getContractId(),
                 offering.getRoomType().getRoomTypeId(), offering.getRoomType().getName(),
-                offering.getRatePerPersonPerNight(), offering.getContractedRoomCount(), offering.getMaxAdults(),
-                offering.getStatus(), offering.getContract().getCurrencyCode());
+                offering.getRatePerPersonPerNight(), offering.getContractedRoomCount(),
+                offering.getMaxAdults(), offering.getStatus(), offering.getContract().getCurrencyCode());
     }
 
     private SeasonalRateResponse response(OfferingSeasonalRate season) {

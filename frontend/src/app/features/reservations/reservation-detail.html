@@ -1,26 +1,89 @@
-<header class="page-heading"><h1>Reservation details</h1><a routerLink="/reservations">All reservations</a></header>
-@if (loading()) { <p role="status">Loading reservation…</p> }
-@if (error()) { <p role="alert" class="error-message">{{ error() }}</p><button class="secondary" (click)="load()" [disabled]="loading()">Reload</button> }
-@if (notice()) { <p class="success-message" role="status">{{ notice() }}</p> }
-@if (reservation(); as r) {
- @if (r.status === 'CONFIRMED' && r.warnings?.length) {
-  <aside class="reservation-warning" role="status" aria-label="Hotel operational warnings">
-   <strong>This reservation remains confirmed. Verify arrangements with the hotel.</strong>
-   <ul>@for (warning of r.warnings; track warning.hotelId + ':' + warning.code + ':' + (warning.contractId ?? 0) + ':' + (warning.offeringId ?? 0)) {
-    <li><strong>{{ warning.hotelName }}{{ warning.roomTypeName ? ' - ' + warning.roomTypeName : '' }} &mdash; {{ warning.code === 'HOTEL_INACTIVE' ? 'Hotel inactive' : warning.code === 'HOTEL_CLOSURE' ? 'Hotel closure overlaps this stay' : warning.code === 'CONTRACT_SUSPENDED' ? 'Contract suspended' : warning.code === 'OFFERING_SUSPENDED' ? 'Room offering suspended' : 'Verify hotel arrangements' }}</strong><p>{{ warning.message }}</p></li>
-   }</ul>
-  </aside>
- }
- <section class="panel"><h2>Reservation #{{ r.reservationId }} · {{ r.status }}</h2><p>Created {{ r.createdAt | date:'medium' }}</p><p>Customer #{{ r.customerId }} · {{ r.customerName }} · {{ r.phone }} {{ r.email }}</p><p>{{ r.checkIn }} → {{ r.checkOut }} · {{ r.nights }} nights · {{ r.rooms.length }} rooms</p>
-  @for (room of r.rooms; track room.reservationItemId) { <article class="room"><h3>{{ room.hotelName }} · {{ room.roomTypeName }} · {{ room.adults }} adults</h3><p>Room total: {{ room.totalPrice | number:'1.2-2' }} {{ r.currencyCode }}</p><details open><summary>Booked nightly selling prices</summary><table><thead><tr><th>Occupied date</th><th>Selling price</th></tr></thead><tbody>
-   @for (night of room.nightlyPrices; track night.occupiedDate) { <tr><td>{{ night.occupiedDate }}</td><td>{{ night.sellingPrice | number:'1.2-2' }} {{ r.currencyCode }}</td></tr> }
-  </tbody></table></details></article> }
-  @if (r.totalPrice !== null) { <p class="total">Booked total: {{ r.totalPrice | number:'1.2-2' }} {{ r.currencyCode }}</p> }
-  @else { <p class="error-message">This historical reservation has incomplete nightly snapshots. Its total is unavailable; current contract rates have not been used to reconstruct it.</p> }
-  <div class="actions">
-  @if (r.status === 'CONFIRMED') { <button class="primary danger" type="button" (click)="openCancel()" [disabled]="cancelling()">Cancel reservation</button> }
-   <button class="secondary" type="button" (click)="back()" [disabled]="cancelling()">Back</button>
-  </div>
- </section>
+<header class="page-heading">
+  <h1>Reservation details</h1>
+  <a routerLink="/reservations">All reservations</a>
+</header>
+@if (loading()) {
+  <p><output>Loading reservation…</output></p>
 }
-<dialog #cancelDialog (cancel)="cancelling() ? $event.preventDefault() : null"><div class="panel"><h2>Cancel reservation #{{ reservation()?.reservationId }}?</h2><p>All rooms will be released. The reservation and booked price history will be retained.</p><div class="actions"><button class="secondary" type="button" (click)="closeCancel()" [disabled]="cancelling()">Keep reservation</button><button class="primary danger" type="button" (click)="cancel()" [disabled]="cancelling()">{{ cancelling() ? 'Cancelling…' : 'Confirm cancellation' }}</button></div></div></dialog>
+@if (error()) {
+  <p role="alert" class="error-message">{{ error() }}</p>
+  <button class="secondary" (click)="load()" [disabled]="loading()">Reload</button>
+}
+@if (notice()) {
+  <p class="success-message"><output>{{ notice() }}</output></p>
+}
+@if (reservation(); as r) {
+  @if (r.status === 'CONFIRMED' && r.warnings?.length) {
+    <aside class="reservation-warning" role="status" aria-label="Hotel operational warnings">
+      <strong>This reservation remains confirmed. Verify arrangements with the hotel.</strong>
+      <ul>
+        @for (
+          warning of r.warnings;
+          track warning.hotelId + ':' + warning.code + ':' + (warning.contractId ?? 0) + ':' + (warning.offeringId ?? 0)
+        ) {
+          <li>
+            <strong>{{ warning.hotelName }}{{ warning.roomTypeName ? ' - ' + warning.roomTypeName : '' }} &mdash; {{ warning.code === 'HOTEL_INACTIVE' ? 'Hotel inactive' : warning.code === 'HOTEL_CLOSURE' ? 'Hotel closure overlaps this stay' : warning.code === 'CONTRACT_SUSPENDED' ? 'Contract suspended' : warning.code === 'OFFERING_SUSPENDED' ? 'Room offering suspended' : 'Verify hotel arrangements' }}</strong>
+            <p>{{ warning.message }}</p>
+          </li>
+        }
+      </ul>
+    </aside>
+  }
+  <section class="panel">
+    <h2>Reservation #{{ r.reservationId }} · {{ r.status }}</h2>
+    <p>Created {{ r.createdAt | date:'medium' }}</p>
+    <p>Customer #{{ r.customerId }} · {{ r.customerName }} · {{ r.phone }} {{ r.email }}</p>
+    <p>{{ r.checkIn }} → {{ r.checkOut }} · {{ r.nights }} nights · {{ r.rooms.length }} rooms</p>
+    @for (room of r.rooms; track room.reservationItemId) {
+      <article class="room">
+        <h3>{{ room.hotelName }} · {{ room.roomTypeName }} · {{ room.adults }} adults</h3>
+        <p>Room total: {{ room.totalPrice | number:'1.2-2' }} {{ r.currencyCode }}</p>
+        <details open>
+          <summary>Booked nightly selling prices</summary>
+          <table>
+            <thead>
+              <tr>
+                <th>Occupied date</th>
+                <th>Selling price</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (night of room.nightlyPrices; track night.occupiedDate) {
+                <tr>
+                  <td>{{ night.occupiedDate }}</td>
+                  <td>{{ night.sellingPrice | number:'1.2-2' }} {{ r.currencyCode }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </details>
+      </article>
+    }
+    @if (r.totalPrice !== null) {
+      <p class="total">Booked total: {{ r.totalPrice | number:'1.2-2' }} {{ r.currencyCode }}</p>
+    } @else {
+      <p class="error-message">This historical reservation has incomplete nightly snapshots. Its total is unavailable; current contract rates have not been used to reconstruct it.</p>
+    }
+    <div class="actions">
+      @if (r.status === 'CONFIRMED') {
+        <button
+          class="primary danger"
+          type="button"
+          (click)="openCancel()"
+          [disabled]="cancelling()"
+        >Cancel reservation</button>
+      }
+      <button class="secondary" type="button" (click)="back()" [disabled]="cancelling()">Back</button>
+    </div>
+  </section>
+}
+<dialog #cancelDialog (cancel)="cancelling() ? $event.preventDefault() : null">
+  <div class="panel">
+    <h2>Cancel reservation #{{ reservation()?.reservationId }}?</h2>
+    <p>All rooms will be released. The reservation and booked price history will be retained.</p>
+    <div class="actions">
+      <button class="secondary" type="button" (click)="closeCancel()" [disabled]="cancelling()">Keep reservation</button>
+      <button class="primary danger" type="button" (click)="cancel()" [disabled]="cancelling()">{{ cancelling() ? 'Cancelling…' : 'Confirm cancellation' }}</button>
+    </div>
+  </div>
+</dialog>

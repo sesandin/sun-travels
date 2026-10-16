@@ -11,15 +11,10 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(HotelNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleHotelNotFound(
-            HotelNotFoundException exception) {
+    public ResponseEntity<Map<String, String>> handleHotelNotFound(HotelNotFoundException exception) {
 
-        Map<String, String> error = Map.of(
-                "message", exception.getMessage()
-        );
+        Map<String, String> error = Map.of("message", exception.getMessage());
 
-        return ResponseEntity
-                       .status(HttpStatus.NOT_FOUND)
-                       .body(error);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
     }
 }

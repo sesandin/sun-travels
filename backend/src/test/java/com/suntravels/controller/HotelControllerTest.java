@@ -19,10 +19,12 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.suntravels.dto.HotelResponse;
 import com.suntravels.entity.HotelStatus;
 
 import static org.mockito.Mockito.verify;
+
 import com.suntravels.dto.HotelUpdateRequest;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -31,10 +33,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 
 
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
+
 import static org.mockito.Mockito.verifyNoInteractions;
+
 import com.suntravels.dto.HotelStatusUpdateRequest;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -50,18 +53,13 @@ class HotelControllerTest {
     @BeforeEach
     void setUp() {
 
-        HotelController hotelController =
-                new HotelController(hotelService);
+        HotelController hotelController = new HotelController(hotelService);
 
-        LocalValidatorFactoryBean validator =
-                new LocalValidatorFactoryBean();
+        LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
-        mockMvc = MockMvcBuilders
-                          .standaloneSetup(hotelController)
-                          .setControllerAdvice(new GlobalExceptionHandler())
-                          .setValidator(validator)
-                          .build();
+        mockMvc = MockMvcBuilders.standaloneSetup(hotelController).setControllerAdvice(
+                new GlobalExceptionHandler()).setValidator(validator).build();
     }
 
     @Test
@@ -70,14 +68,11 @@ class HotelControllerTest {
         // Arrange
         Integer hotelId = 99999;
 
-        when(hotelService.getHotelById(hotelId))
-                .thenThrow(new HotelNotFoundException(hotelId));
+        when(hotelService.getHotelById(hotelId)).thenThrow(new HotelNotFoundException(hotelId));
 
         // Act and Assert
-        mockMvc.perform(get("/api/hotels/{id}", hotelId))
-               .andExpect(status().isNotFound())
-               .andExpect(jsonPath("$.message")
-                                  .value("Hotel not found with ID: 99999"));
+        mockMvc.perform(get("/api/hotels/{id}", hotelId)).andExpect(status().isNotFound()).andExpect(
+                jsonPath("$.message").value("Hotel not found with ID: 99999"));
     }
 
     @Test
@@ -97,18 +92,15 @@ class HotelControllerTest {
         response.setStarRating((byte) 5);
         response.setStatus(HotelStatus.ACTIVE);
 
-        when(hotelService.getHotelById(hotelId))
-                .thenReturn(response);
+        when(hotelService.getHotelById(hotelId)).thenReturn(response);
 
         // Act and Assert
-        mockMvc.perform(get("/api/hotels/{id}", hotelId))
-               .andExpect(status().isOk())
-               .andExpect(jsonPath("$.hotelId").value(1))
-               .andExpect(jsonPath("$.name").value("Hilton Colombo"))
-               .andExpect(jsonPath("$.city").value("Colombo"))
-               .andExpect(jsonPath("$.country").value("Sri Lanka"))
-               .andExpect(jsonPath("$.starRating").value(5))
-               .andExpect(jsonPath("$.status").value("ACTIVE"));
+        mockMvc.perform(get("/api/hotels/{id}", hotelId)).andExpect(status().isOk()).andExpect(
+                jsonPath("$.hotelId").value(1)).andExpect(
+                jsonPath("$.name").value("Hilton Colombo")).andExpect(
+                jsonPath("$.city").value("Colombo")).andExpect(
+                jsonPath("$.country").value("Sri Lanka")).andExpect(
+                jsonPath("$.starRating").value(5)).andExpect(jsonPath("$.status").value("ACTIVE"));
 
         verify(hotelService).getHotelById(hotelId);
     }
@@ -130,10 +122,7 @@ class HotelControllerTest {
         response.setStarRating((byte) 5);
         response.setStatus(HotelStatus.INACTIVE);
 
-        when(hotelService.updateHotel(
-                eq(hotelId),
-                any(HotelUpdateRequest.class)
-        )).thenReturn(response);
+        when(hotelService.updateHotel(eq(hotelId), any(HotelUpdateRequest.class))).thenReturn(response);
 
         String requestJson = """
             {
@@ -148,22 +137,13 @@ class HotelControllerTest {
             """;
 
         // Act and Assert
-        mockMvc.perform(
-                       put("/api/hotels/{id}", hotelId)
-                               .contentType("application/json")
-                               .content(requestJson)
-               )
-               .andExpect(status().isOk())
-               .andExpect(jsonPath("$.hotelId").value(1))
-               .andExpect(jsonPath("$.name").value("Hilton Colombo"))
-               .andExpect(jsonPath("$.phone").value("0119999999"))
-               .andExpect(jsonPath("$.starRating").value(5))
-               .andExpect(jsonPath("$.status").value("INACTIVE"));
+        mockMvc.perform(put("/api/hotels/{id}", hotelId).contentType("application/json").content(
+                requestJson)).andExpect(status().isOk()).andExpect(jsonPath("$.hotelId").value(1)).andExpect(
+                jsonPath("$.name").value("Hilton Colombo")).andExpect(
+                jsonPath("$.phone").value("0119999999")).andExpect(
+                jsonPath("$.starRating").value(5)).andExpect(jsonPath("$.status").value("INACTIVE"));
 
-        verify(hotelService).updateHotel(
-                eq(hotelId),
-                any(HotelUpdateRequest.class)
-        );
+        verify(hotelService).updateHotel(eq(hotelId), any(HotelUpdateRequest.class));
     }
 
     @Test
@@ -183,19 +163,12 @@ class HotelControllerTest {
             }
             """;
 
-        when(hotelService.updateHotel(
-                eq(hotelId),
-                any(HotelUpdateRequest.class)
-        )).thenThrow(new HotelNotFoundException(hotelId));
+        when(hotelService.updateHotel(eq(hotelId), any(HotelUpdateRequest.class))).thenThrow(
+                new HotelNotFoundException(hotelId));
 
-        mockMvc.perform(
-                       put("/api/hotels/{id}", hotelId)
-                               .contentType("application/json")
-                               .content(requestJson)
-               )
-               .andExpect(status().isNotFound())
-               .andExpect(jsonPath("$.message")
-                                  .value("Hotel not found with ID: 99999"));
+        mockMvc.perform(put("/api/hotels/{id}", hotelId).contentType("application/json").content(
+                requestJson)).andExpect(status().isNotFound()).andExpect(
+                jsonPath("$.message").value("Hotel not found with ID: 99999"));
     }
 
     @Test
@@ -214,11 +187,8 @@ class HotelControllerTest {
             """;
 
         mockMvc.perform(
-                       put("/api/hotels/{id}", 1)
-                               .contentType("application/json")
-                               .content(invalidJson)
-               )
-               .andExpect(status().isBadRequest());
+                put("/api/hotels/{id}", 1).contentType("application/json").content(invalidJson)).andExpect(
+                status().isBadRequest());
 
         verifyNoInteractions(hotelService);
     }
@@ -230,31 +200,19 @@ class HotelControllerTest {
         response.setName("Hilton Colombo");
         response.setStatus(HotelStatus.INACTIVE);
 
-        when(hotelService.updateHotelStatus(
-                eq(1),
-                any(HotelStatusUpdateRequest.class)
-        )).thenReturn(response);
+        when(hotelService.updateHotelStatus(eq(1), any(HotelStatusUpdateRequest.class))).thenReturn(response);
 
-        mockMvc.perform(
-                       patch("/api/hotels/{id}/status", 1)
-                               .contentType("application/json")
-                               .content("""
+        mockMvc.perform(patch("/api/hotels/{id}/status", 1).contentType("application/json").content("""
                             {"status":"INACTIVE"}
-                            """)
-               )
-               .andExpect(status().isOk())
-               .andExpect(jsonPath("$.hotelId").value(1))
-               .andExpect(jsonPath("$.status").value("INACTIVE"));
+                            """)).andExpect(status().isOk()).andExpect(jsonPath("$.hotelId").value(1)).andExpect(
+                jsonPath("$.status").value("INACTIVE"));
     }
 
     @Test
     void updateHotelStatus_shouldReturn400ForMissingStatus() throws Exception {
         mockMvc.perform(
-                       patch("/api/hotels/{id}/status", 1)
-                               .contentType("application/json")
-                               .content("{}")
-               )
-               .andExpect(status().isBadRequest());
+                patch("/api/hotels/{id}/status", 1).contentType("application/json").content("{}")).andExpect(
+                status().isBadRequest());
 
         verifyNoInteractions(hotelService);
     }

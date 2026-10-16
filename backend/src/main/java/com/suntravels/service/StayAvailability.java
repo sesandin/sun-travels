@@ -2,12 +2,16 @@ package com.suntravels.service;
 
 import com.suntravels.exception.QuotationSearchException;
 import com.suntravels.repository.QuotationSearchRepository.BookedRoom;
+
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+
 import org.springframework.stereotype.Component;
 
-/** Sweep clipped reservation-item intervals. Each item is exactly ONE room. */
+/**
+ * Sweep clipped reservation-item intervals. Each item is exactly ONE room.
+ */
 @Component
 public class StayAvailability {
     /**
@@ -18,7 +22,8 @@ public class StayAvailability {
      *
      * @throws QuotationSearchException if persisted bookings or inventory are inconsistent
      */
-    public int available(int offeringId, int contracted, List<BookedRoom> bookings, LocalDate in, LocalDate out) {
+    public int available(int offeringId, int contracted, List<BookedRoom> bookings, LocalDate in,
+            LocalDate out) {
         int nights = Math.toIntExact(ChronoUnit.DAYS.between(in, out));
         int[] events = new int[nights + 1];
         Set<Integer> seen = new HashSet<>();
@@ -26,9 +31,9 @@ public class StayAvailability {
             throw QuotationSearchException.inconsistent();
         }
         for (BookedRoom booking : bookings) {
-            if (booking.offeringId() != offeringId || !seen.add(booking.itemId()) || booking.adults() <= 0
-                    || booking.checkIn() == null || booking.checkOut() == null
-                    || !booking.checkOut().isAfter(booking.checkIn())) {
+            if (booking.offeringId() != offeringId || !seen.add(booking.itemId()) || booking.adults() <= 0 ||
+                    booking.checkIn() == null || booking.checkOut() == null ||
+                    !booking.checkOut().isAfter(booking.checkIn())) {
                 throw QuotationSearchException.inconsistent();
             }
             LocalDate start = booking.checkIn().isAfter(in) ? booking.checkIn() : in;

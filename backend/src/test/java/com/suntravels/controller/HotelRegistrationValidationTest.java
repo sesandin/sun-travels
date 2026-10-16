@@ -21,24 +21,20 @@ class HotelRegistrationValidationTest {
         service = mock(HotelService.class);
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
-        mvc = MockMvcBuilders.standaloneSetup(new HotelController(service))
-                .setValidator(validator).build();
+        mvc = MockMvcBuilders.standaloneSetup(new HotelController(service)).setValidator(validator).build();
     }
 
     @ParameterizedTest
     @CsvSource({"name,150", "address,255", "city,100", "country,100", "phone,20", "email,100"})
     void registrationShouldRejectOversizedFieldButAcceptBoundary(String field, int max) throws Exception {
-        String boundary = field.equals("email")
-                ? "a@" + "b".repeat(50) + "." + "c".repeat(max - 53)
-                : "a".repeat(max);
-        mvc.perform(post("/api/hotels").contentType("application/json")
-                .content(request(field, boundary + "a")))
-                .andExpect(status().isBadRequest());
+        String boundary =
+                field.equals("email") ? "a@" + "b".repeat(50) + "." + "c".repeat(max - 53) : "a".repeat(max);
+        mvc.perform(post("/api/hotels").contentType("application/json").content(
+                request(field, boundary + "a"))).andExpect(status().isBadRequest());
         verifyNoInteractions(service);
 
-        mvc.perform(post("/api/hotels").contentType("application/json")
-                .content(request(field, boundary)))
-                .andExpect(status().isCreated());
+        mvc.perform(post("/api/hotels").contentType("application/json").content(
+                request(field, boundary))).andExpect(status().isCreated());
         verify(service).createHotel(any());
     }
 

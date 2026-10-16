@@ -65,6 +65,9 @@ describe('Room offerings directory', () => {
   }
   it('loads the global API and displays real commercial terms including history', () => {
     expect(fixture.nativeElement.textContent).toContain('Loading room offerings');
+    expect(fixture.nativeElement.querySelector('.state output')?.textContent).toContain(
+      'Loading room offerings',
+    );
     load();
     const text = fixture.nativeElement.textContent;
     for (const value of [
@@ -83,6 +86,9 @@ describe('Room offerings directory', () => {
     ])
       expect(text).toContain(value);
     expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(2);
+    expect(fixture.nativeElement.querySelector('.results output')?.getAttribute('aria-live')).toBe(
+      'polite',
+    );
     expect(c.rows()[0].contractedRoomCount).toBe(12);
     expect(text).toContain('not live availability');
     expect(text).toContain('Per adult per night');

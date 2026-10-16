@@ -24,16 +24,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+
 import com.suntravels.exception.HotelNotFoundException;
 
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import com.suntravels.dto.HotelUpdateRequest;
 
 
-
 import com.suntravels.dto.HotelStatusUpdateRequest;
+
 @ExtendWith(MockitoExtension.class)
 class HotelServiceTest {
 
@@ -58,8 +60,7 @@ class HotelServiceTest {
         request.setStarRating((byte) 5);
         request.setStatus(HotelStatus.ACTIVE);
 
-        when(hotelRepository.save(any(Hotel.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(hotelRepository.save(any(Hotel.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // ACT
         HotelResponse response = hotelService.createHotel(request);
@@ -75,8 +76,7 @@ class HotelServiceTest {
         assertEquals(Byte.valueOf((byte) 5), response.getStarRating());
         assertEquals(HotelStatus.ACTIVE, response.getStatus());
 
-        ArgumentCaptor<Hotel> hotelCaptor =
-                ArgumentCaptor.forClass(Hotel.class);
+        ArgumentCaptor<Hotel> hotelCaptor = ArgumentCaptor.forClass(Hotel.class);
 
         verify(hotelRepository).save(hotelCaptor.capture());
 
@@ -100,8 +100,7 @@ class HotelServiceTest {
         Hotel savedHotel = mock(Hotel.class);
 
         when(savedHotel.getHotelId()).thenReturn(25);
-        when(hotelRepository.save(any(Hotel.class)))
-                .thenReturn(savedHotel);
+        when(hotelRepository.save(any(Hotel.class))).thenReturn(savedHotel);
 
         // Act
         HotelResponse response = hotelService.createHotel(request);
@@ -131,8 +130,7 @@ class HotelServiceTest {
         hotel2.setStarRating((byte) 4);
         hotel2.setStatus(HotelStatus.INACTIVE);
 
-        when(hotelRepository.findAll())
-                .thenReturn(List.of(hotel1, hotel2));
+        when(hotelRepository.findAll()).thenReturn(List.of(hotel1, hotel2));
 
         // Act
         List<HotelResponse> responses = hotelService.getAllHotels();
@@ -143,17 +141,13 @@ class HotelServiceTest {
 
         assertEquals("Hilton Colombo", responses.get(0).getName());
         assertEquals("Colombo", responses.get(0).getCity());
-        assertEquals(Byte.valueOf((byte) 5),
-                responses.get(0).getStarRating());
-        assertEquals(HotelStatus.ACTIVE,
-                responses.get(0).getStatus());
+        assertEquals(Byte.valueOf((byte) 5), responses.get(0).getStarRating());
+        assertEquals(HotelStatus.ACTIVE, responses.get(0).getStatus());
 
         assertEquals("Grand Hotel", responses.get(1).getName());
         assertEquals("Nuwara Eliya", responses.get(1).getCity());
-        assertEquals(Byte.valueOf((byte) 4),
-                responses.get(1).getStarRating());
-        assertEquals(HotelStatus.INACTIVE,
-                responses.get(1).getStatus());
+        assertEquals(Byte.valueOf((byte) 4), responses.get(1).getStarRating());
+        assertEquals(HotelStatus.INACTIVE, responses.get(1).getStatus());
 
         verify(hotelRepository).findAll();
     }
@@ -162,8 +156,7 @@ class HotelServiceTest {
     void getAllHotels_shouldReturnEmptyListWhenNoHotelsExist() {
 
         // Arrange
-        when(hotelRepository.findAll())
-                .thenReturn(List.of());
+        when(hotelRepository.findAll()).thenReturn(List.of());
 
         // Act
         List<HotelResponse> responses = hotelService.getAllHotels();
@@ -191,8 +184,7 @@ class HotelServiceTest {
         hotel.setStarRating((byte) 5);
         hotel.setStatus(HotelStatus.ACTIVE);
 
-        when(hotelRepository.findById(hotelId))
-                .thenReturn(Optional.of(hotel));
+        when(hotelRepository.findById(hotelId)).thenReturn(Optional.of(hotel));
 
         // Act
         HotelResponse response = hotelService.getHotelById(hotelId);
@@ -217,19 +209,13 @@ class HotelServiceTest {
         // Arrange
         Integer hotelId = 99999;
 
-        when(hotelRepository.findById(hotelId))
-                .thenReturn(Optional.empty());
+        when(hotelRepository.findById(hotelId)).thenReturn(Optional.empty());
 
         // Act and Assert
-        HotelNotFoundException exception = assertThrows(
-                HotelNotFoundException.class,
-                () -> hotelService.getHotelById(hotelId)
-        );
+        HotelNotFoundException exception = assertThrows(HotelNotFoundException.class,
+                () -> hotelService.getHotelById(hotelId));
 
-        assertEquals(
-                "Hotel not found with ID: 99999",
-                exception.getMessage()
-        );
+        assertEquals("Hotel not found with ID: 99999", exception.getMessage());
 
         verify(hotelRepository).findById(hotelId);
     }
@@ -259,21 +245,16 @@ class HotelServiceTest {
         request.setEmail("updated@example.com");
         request.setStarRating((byte) 5);
 
-        when(hotelRepository.findById(hotelId))
-                .thenReturn(Optional.of(existingHotel));
+        when(hotelRepository.findById(hotelId)).thenReturn(Optional.of(existingHotel));
 
-        when(hotelRepository.save(existingHotel))
-                .thenReturn(existingHotel);
+        when(hotelRepository.save(existingHotel)).thenReturn(existingHotel);
 
         // Act
         HotelResponse result = hotelService.updateHotel(hotelId, request);
 
         // Assert
         assertEquals("Hilton Colombo", result.getName());
-        assertEquals(
-                "2 Sir Chittampalam A Gardiner Mawatha",
-                result.getAddress()
-        );
+        assertEquals("2 Sir Chittampalam A Gardiner Mawatha", result.getAddress());
         assertEquals("Colombo", result.getCity());
         assertEquals("Sri Lanka", result.getCountry());
         assertEquals("0119999999", result.getPhone());
@@ -297,20 +278,14 @@ class HotelServiceTest {
 
         HotelUpdateRequest request = new HotelUpdateRequest();
 
-        when(hotelRepository.findById(hotelId))
-                .thenReturn(Optional.empty());
+        when(hotelRepository.findById(hotelId)).thenReturn(Optional.empty());
 
         // Act
-        HotelNotFoundException exception = assertThrows(
-                HotelNotFoundException.class,
-                () -> hotelService.updateHotel(hotelId, request)
-        );
+        HotelNotFoundException exception = assertThrows(HotelNotFoundException.class,
+                () -> hotelService.updateHotel(hotelId, request));
 
         // Assert
-        assertEquals(
-                "Hotel not found with ID: 99999",
-                exception.getMessage()
-        );
+        assertEquals("Hotel not found with ID: 99999", exception.getMessage());
 
         verify(hotelRepository).findById(hotelId);
         verify(hotelRepository, never()).save(any(Hotel.class));
@@ -324,8 +299,7 @@ class HotelServiceTest {
         HotelStatusUpdateRequest request = new HotelStatusUpdateRequest();
         request.setStatus(HotelStatus.ACTIVE);
 
-        when(hotelRepository.findForUpdate(1))
-                .thenReturn(Optional.of(hotel));
+        when(hotelRepository.findForUpdate(1)).thenReturn(Optional.of(hotel));
         when(hotelRepository.save(hotel)).thenReturn(hotel);
 
         HotelResponse response = hotelService.updateHotelStatus(1, request);
@@ -343,8 +317,7 @@ class HotelServiceTest {
         HotelStatusUpdateRequest request = new HotelStatusUpdateRequest();
         request.setStatus(HotelStatus.INACTIVE);
 
-        when(hotelRepository.findForUpdate(1))
-                .thenReturn(Optional.of(hotel));
+        when(hotelRepository.findForUpdate(1)).thenReturn(Optional.of(hotel));
         when(hotelRepository.save(hotel)).thenReturn(hotel);
 
         HotelResponse response = hotelService.updateHotelStatus(1, request);
@@ -362,13 +335,9 @@ class HotelServiceTest {
         HotelStatusUpdateRequest request = new HotelStatusUpdateRequest();
         request.setStatus(HotelStatus.INACTIVE);
 
-        when(hotelRepository.findForUpdate(99999))
-                .thenReturn(Optional.empty());
+        when(hotelRepository.findForUpdate(99999)).thenReturn(Optional.empty());
 
-        assertThrows(
-                HotelNotFoundException.class,
-                () -> hotelService.updateHotelStatus(99999, request)
-        );
+        assertThrows(HotelNotFoundException.class, () -> hotelService.updateHotelStatus(99999, request));
 
         verify(hotelRepository, never()).save(any(Hotel.class));
     }

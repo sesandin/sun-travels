@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PathVariable;
+
 import java.util.List;
+
 import com.suntravels.dto.HotelUpdateRequest;
 import org.springframework.web.bind.annotation.PutMapping;
 
@@ -28,8 +30,7 @@ public class HotelController {
     }
 
     @PostMapping
-    public ResponseEntity<HotelResponse> createHotel(
-            @Valid @RequestBody HotelRequest request) {
+    public ResponseEntity<HotelResponse> createHotel(@Valid @RequestBody HotelRequest request) {
 
         HotelResponse response = hotelService.createHotel(request);
 
@@ -45,8 +46,7 @@ public class HotelController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<HotelResponse> getHotelById(
-            @PathVariable("id") Integer hotelId) {
+    public ResponseEntity<HotelResponse> getHotelById(@PathVariable("id") Integer hotelId) {
 
         HotelResponse response = hotelService.getHotelById(hotelId);
 
@@ -54,8 +54,7 @@ public class HotelController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<HotelResponse> updateHotel(
-            @PathVariable("id") Integer hotelId,
+    public ResponseEntity<HotelResponse> updateHotel(@PathVariable("id") Integer hotelId,
             @Valid @RequestBody HotelUpdateRequest request) {
 
         HotelResponse response = hotelService.updateHotel(hotelId, request);
@@ -64,12 +63,10 @@ public class HotelController {
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<HotelResponse> updateHotelStatus(
-            @PathVariable("id") Integer hotelId,
+    public ResponseEntity<HotelResponse> updateHotelStatus(@PathVariable("id") Integer hotelId,
             @Valid @RequestBody HotelStatusUpdateRequest request) {
 
-        HotelResponse response =
-                hotelService.updateHotelStatus(hotelId, request);
+        HotelResponse response = hotelService.updateHotelStatus(hotelId, request);
 
         return ResponseEntity.ok(response);
     }

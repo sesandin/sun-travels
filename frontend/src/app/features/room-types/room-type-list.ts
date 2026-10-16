@@ -88,9 +88,9 @@ export class RoomTypeList implements OnInit {
   validationMessage(key: 'name' | 'description') {
     const control = this.form.controls[key];
     if (!control.touched || !control.errors) return '';
-    return control.hasError('required')
-      ? 'Room type name is required.'
-      : 'Use at most ' + (key === 'name' ? 100 : 255) + ' characters.';
+    if (control.hasError('required')) return 'Room type name is required.';
+    const maximumLength = key === 'name' ? 100 : 255;
+    return 'Use at most ' + maximumLength + ' characters.';
   }
   save() {
     this.form.markAllAsTouched();

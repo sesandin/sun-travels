@@ -2,18 +2,12 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-import {
-  Hotel,
-  HotelCreateRequest,
-  HotelUpdateRequest,
-  HotelStatus,
-} from '../models/hotel.model';
+import { Hotel, HotelCreateRequest, HotelUpdateRequest, HotelStatus } from '../models/hotel.model';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class HotelService {
-
   private readonly http = inject(HttpClient);
 
   private readonly apiUrl = '/api/hotels';
@@ -35,9 +29,6 @@ export class HotelService {
   }
 
   updateHotelStatus(id: number, status: HotelStatus): Observable<Hotel> {
-    return this.http.patch<Hotel>(
-      `${this.apiUrl}/${id}/status`,
-      { status }
-    );
+    return this.http.patch<Hotel>(`${this.apiUrl}/${id}/status`, { status });
   }
 }

@@ -14,10 +14,7 @@ export interface Hotel {
 
 export type HotelCreateRequest = Omit<Hotel, 'hotelId'>;
 
-export type HotelUpdateRequest = Omit<
-  Hotel,
-  'hotelId' | 'status'
->;
+export type HotelUpdateRequest = Omit<Hotel, 'hotelId' | 'status'>;
 
 export interface HotelStatusUpdateRequest {
   status: HotelStatus;

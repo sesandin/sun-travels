@@ -17,7 +17,7 @@
   <p role="alert" class="error-message">{{ linkError() }}</p>
 }
 @if (notice()) {
-  <p role="status" class="success-message">{{ notice() }}</p>
+  <p class="success-message"><output>{{ notice() }}</output></p>
 }
 <section class="list-panel" aria-label="Contract directory">
   <div class="panel-heading">
@@ -29,8 +29,8 @@
   </div>
   <div class="filters">
     <div>
-      <label for="contract-search">Search contracts</label
-      ><input
+      <label for="contract-search">Search contracts</label>
+      <input
         id="contract-search"
         type="search"
         placeholder="Contract code, hotel or currency"
@@ -39,8 +39,8 @@
       />
     </div>
     <div>
-      <label for="contract-status">Status</label
-      ><select
+      <label for="contract-status">Status</label>
+      <select
         id="contract-status"
         [value]="statusFilter()"
         (change)="statusFilter.set($any($event.target).value)"
@@ -53,7 +53,7 @@
     </div>
   </div>
   @if (loading()) {
-    <div class="state" role="status">Loading contracts...</div>
+    <div class="state"><output>Loading contracts...</output></div>
   } @else if (error()) {
     <div class="state" role="alert">
       <p class="error-message">{{ error() }}</p>
@@ -83,8 +83,8 @@
           @for (row of filtered(); track row.contractId) {
             <tr>
               <td>
-                <strong>{{ row.contractCode }}</strong
-                ><small>{{ row.hotelName }}</small>
+                <strong>{{ row.contractCode }}</strong>
+                <small>{{ row.hotelName }}</small>
               </td>
               <td>{{ row.validFrom }} to {{ row.validTo }}</td>
               <td>{{ row.markupPercentage }}%</td>
@@ -182,7 +182,7 @@
     }
     @if (mode() === 'create' || mode() === 'edit') {
       @if (hotelsLoading()) {
-        <p role="status">Loading hotels...</p>
+        <p><output>Loading hotels...</output></p>
       }
       @if (hotelError()) {
         <p role="alert" class="error-message">{{ hotelError() }}</p>
@@ -199,8 +199,8 @@
               <p>{{ selected()?.contractCode ?? 'Generated automatically after creation' }}</p>
             </div>
             <div>
-              <label for="hotel">Hotel</label
-              ><select id="hotel" formControlName="hotelId">
+              <label for="hotel">Hotel</label>
+              <select id="hotel" formControlName="hotelId">
                 <option [ngValue]="null">Select a hotel</option>
                 @for (hotel of hotels(); track hotel.hotelId) {
                   <option [ngValue]="hotel.hotelId">{{ hotel.name }}</option>
@@ -211,29 +211,30 @@
               }
             </div>
             <div>
-              <label for="from">Valid from</label
-              ><input id="from" type="date" formControlName="validFrom" />
+              <label for="from">Valid from</label>
+              <input id="from" type="date" formControlName="validFrom" />
               @if (form.controls.validFrom.touched && form.controls.validFrom.invalid) {
                 <p class="field-error">Choose a start date.</p>
               }
             </div>
             <div>
-              <label for="to">Valid to</label
-              ><input id="to" type="date" formControlName="validTo" />
+              <label for="to">Valid to</label>
+              <input id="to" type="date" formControlName="validTo" />
               @if (form.controls.validTo.touched && form.controls.validTo.invalid) {
                 <p class="field-error">Choose an end date.</p>
               }
             </div>
             <div>
-              <label for="markup">Markup percentage</label
-              ><input
+              <label for="markup">Markup percentage</label>
+              <input
                 id="markup"
                 type="number"
                 min="0"
                 max="999.99"
                 step="0.01"
                 formControlName="markupPercentage"
-              /><small>15 means 15%.</small>
+              />
+              <small>15 means 15%.</small>
               @if (
                 form.controls.markupPercentage.touched && form.controls.markupPercentage.invalid
               ) {
@@ -241,13 +242,8 @@
               }
             </div>
             <div>
-              <label for="currency">Currency code</label
-              ><input
-                id="currency"
-                formControlName="currencyCode"
-                maxlength="3"
-                placeholder="USD"
-              />
+              <label for="currency">Currency code</label>
+              <input id="currency" formControlName="currencyCode" maxlength="3" placeholder="USD" />
               @if (form.controls.currencyCode.touched && form.controls.currencyCode.invalid) {
                 <p class="field-error">Use three uppercase letters.</p>
               }
@@ -258,8 +254,8 @@
           }
           <p>New contracts start as DRAFT. Open contract details to add room offerings.</p>
           <div class="actions">
-            <button type="button" (click)="closeEditor()">Cancel</button
-            ><button
+            <button type="button" (click)="closeEditor()">Cancel</button>
+            <button
               class="primary"
               type="submit"
               [disabled]="saving() || hotelsLoading() || !!hotelError() || !hotels().length"
@@ -276,8 +272,8 @@
       </p>
       <form [formGroup]="markupForm" (ngSubmit)="save()">
         <fieldset [disabled]="saving()">
-          <label for="approved-markup">Markup percentage</label
-          ><input
+          <label for="approved-markup">Markup percentage</label>
+          <input
             id="approved-markup"
             type="number"
             min="0"
@@ -289,8 +285,8 @@
             <p class="field-error">Use 0 to 999.99 with at most two decimal places.</p>
           }
           <div class="actions">
-            <button type="button" (click)="closeEditor()">Cancel</button
-            ><button class="primary" type="submit">
+            <button type="button" (click)="closeEditor()">Cancel</button>
+            <button class="primary" type="submit">
               {{ saving() ? 'Saving...' : 'Save markup' }}
             </button>
           </div>
@@ -298,7 +294,7 @@
       </form>
     } @else if (mode() === 'details') {
       @if (detailsLoading()) {
-        <p role="status">Loading contract details...</p>
+        <p><output>Loading contract details...</output></p>
       } @else if (!submissionError()) {
         <dl>
           <dt>Contract code</dt>
@@ -345,8 +341,8 @@
       </p>
       <p>Confirm {{ mode() }} for {{ selected()?.contractCode }}?</p>
       <div class="actions">
-        <button type="button" (click)="closeEditor()" [disabled]="saving()">Cancel</button
-        ><button type="button" class="primary" (click)="save()" [disabled]="saving()">
+        <button type="button" (click)="closeEditor()" [disabled]="saving()">Cancel</button>
+        <button type="button" class="primary" (click)="save()" [disabled]="saving()">
           {{ saving() ? 'Saving...' : 'Confirm' }}
         </button>
       </div>

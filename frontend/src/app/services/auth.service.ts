@@ -18,7 +18,8 @@ export class AuthService {
         tap((user) => this.state.setUser(user)),
         catchError((error: HttpErrorResponse) => {
           this.state.setUser(null);
-          if (error.status !== 401) this.state.sessionMessage.set('Unable to restore your session.');
+          if (error.status !== 401)
+            this.state.sessionMessage.set('Unable to restore your session.');
           return of(null);
         }),
         tap(() => this.state.ready.set(true)),
@@ -31,13 +32,21 @@ export class AuthService {
   login(request: LoginRequest) {
     return this.csrf().pipe(
       switchMap(() => this.http.post<AuthenticatedUser>('/api/auth/login', request)),
-      tap((user) => { this.state.setUser(user); this.state.sessionMessage.set(''); }),
+      tap((user) => {
+        this.state.setUser(user);
+        this.state.sessionMessage.set('');
+      }),
     );
   }
   logout() {
     return this.http.post<void>('/api/auth/logout', {}).pipe(
-      tap(() => { this.state.setUser(null); this.state.sessionMessage.set(''); }),
+      tap(() => {
+        this.state.setUser(null);
+        this.state.sessionMessage.set('');
+      }),
     );
   }
-  private csrf() { return this.http.get<{ headerName: string; token: string }>('/api/auth/csrf'); }
+  private csrf() {
+    return this.http.get<{ headerName: string; token: string }>('/api/auth/csrf');
+  }
 }

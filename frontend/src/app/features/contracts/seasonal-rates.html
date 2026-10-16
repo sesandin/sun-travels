@@ -5,7 +5,7 @@
     offering's allocated rooms.
   </p>
   @if (loading()) {
-    <p role="status">Loading seasonal rates...</p>
+    <p><output>Loading seasonal rates...</output></p>
   } @else if (error()) {
     <p role="alert" class="error-message">{{ error() }}</p>
     <button type="button" (click)="load()">Retry seasonal rates</button>
@@ -15,10 +15,8 @@
     }
     @for (row of rows(); track row.seasonalRateId) {
       <div class="season">
-        <span
-          >{{ row.validFrom }} to {{ row.validTo }} (inclusive): {{ row.ratePerPersonPerNight }}
-          {{ contract().currencyCode }} per adult per night</span
-        >
+        <span>{{ row.validFrom }} to {{ row.validTo }} (inclusive): {{ row.ratePerPersonPerNight }}
+          {{ contract().currencyCode }} per adult per night</span>
         @if (canMaintain()) {
           <button type="button" (click)="open(row)" [disabled]="saving()">
             Edit seasonal rate
@@ -31,7 +29,7 @@
     }
   }
   @if (notice()) {
-    <p role="status" class="success-message">{{ notice() }}</p>
+    <p class="success-message"><output>{{ notice() }}</output></p>
   }
   @if (editing()) {
     <form
@@ -45,8 +43,8 @@
         <legend>{{ selected() ? 'Edit seasonal period' : 'Add seasonal period' }}</legend>
         <div class="form-grid">
           <div>
-            <label [for]="'season-from-' + offering().offeringId">Start date</label
-            ><input
+            <label [for]="'season-from-' + offering().offeringId">Start date</label>
+            <input
               [id]="'season-from-' + offering().offeringId"
               type="date"
               formControlName="validFrom"
@@ -55,8 +53,8 @@
             />
           </div>
           <div>
-            <label [for]="'season-to-' + offering().offeringId">End date</label
-            ><input
+            <label [for]="'season-to-' + offering().offeringId">End date</label>
+            <input
               [id]="'season-to-' + offering().offeringId"
               type="date"
               formControlName="validTo"
@@ -65,9 +63,8 @@
             />
           </div>
           <div>
-            <label [for]="'season-rate-' + offering().offeringId"
-              >Rate per adult per night ({{ contract().currencyCode }})</label
-            ><input
+            <label [for]="'season-rate-' + offering().offeringId">Rate per adult per night ({{ contract().currencyCode }})</label>
+            <input
               [id]="'season-rate-' + offering().offeringId"
               type="number"
               min="0.01"
@@ -91,8 +88,8 @@
           overlap another seasonal period.
         </p>
         <div class="actions">
-          <button type="button" (click)="cancel()">Cancel</button
-          ><button type="submit">{{ saving() ? 'Saving...' : 'Save seasonal rate' }}</button>
+          <button type="button" (click)="cancel()">Cancel</button>
+          <button type="submit">{{ saving() ? 'Saving...' : 'Save seasonal rate' }}</button>
         </div>
       </fieldset>
     </form>

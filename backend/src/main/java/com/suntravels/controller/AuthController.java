@@ -6,7 +6,9 @@ import com.suntravels.security.DatabaseUserPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+
 import java.util.Map;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -32,8 +34,9 @@ public class AuthController {
     private final CsrfTokenRepository csrfRepository;
     private final SecurityContextHolderStrategy contextHolder = SecurityContextHolder.getContextHolderStrategy();
 
-    public AuthController(AuthenticationManager authenticationManager, SecurityContextRepository contextRepository,
-                          SessionAuthenticationStrategy sessionStrategy, CsrfTokenRepository csrfRepository) {
+    public AuthController(AuthenticationManager authenticationManager,
+            SecurityContextRepository contextRepository, SessionAuthenticationStrategy sessionStrategy,
+            CsrfTokenRepository csrfRepository) {
         this.authenticationManager = authenticationManager;
         this.contextRepository = contextRepository;
         this.sessionStrategy = sessionStrategy;
@@ -49,10 +52,11 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthenticatedUserResponse> login(@Valid @RequestBody LoginRequest request,
-                                   HttpServletRequest httpRequest, HttpServletResponse response) {
+            HttpServletRequest httpRequest, HttpServletResponse response) {
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    UsernamePasswordAuthenticationToken.unauthenticated(request.username().trim(), request.password()));
+                    UsernamePasswordAuthenticationToken.unauthenticated(request.username().trim(),
+                            request.password()));
             sessionStrategy.onAuthentication(authentication, httpRequest, response);
             SecurityContext context = contextHolder.createEmptyContext();
             context.setAuthentication(authentication);
@@ -71,13 +75,14 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(Authentication authentication, HttpServletRequest request,
-                                       HttpServletResponse response) {
+            HttpServletResponse response) {
         new SecurityContextLogoutHandler().logout(request, response, authentication);
         return ResponseEntity.noContent().build();
     }
 
     private DatabaseUserPrincipal principal(Authentication authentication) {
-        if (authentication == null || !(authentication.getPrincipal() instanceof DatabaseUserPrincipal principal)) {
+        if (authentication == null ||
+                !(authentication.getPrincipal() instanceof DatabaseUserPrincipal principal)) {
             throw new BadCredentialsException("Authentication is required");
         }
         return principal;
@@ -85,7 +90,7 @@ public class AuthController {
 
     @ExceptionHandler(BadCredentialsException.class)
     ResponseEntity<Map<String, String>> invalidCredentials() {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(Map.of("message", "Invalid username or password."));
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                Map.of("message", "Invalid username or password."));
     }
 }

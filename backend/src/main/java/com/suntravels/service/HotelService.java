@@ -43,25 +43,21 @@ public class HotelService {
 
         List<Hotel> hotels = hotelRepository.findAll();
 
-        return hotels.stream()
-                     .map(this::toResponse)
-                     .toList();
+        return hotels.stream().map(this::toResponse).toList();
     }
 
     public HotelResponse getHotelById(Integer hotelId) {
 
-        Hotel hotel = hotelRepository.findById(hotelId)
-                                     .orElseThrow(() -> new HotelNotFoundException(hotelId));
+        Hotel hotel = hotelRepository.findById(hotelId).orElseThrow(
+                () -> new HotelNotFoundException(hotelId));
 
         return toResponse(hotel);
     }
 
-    public HotelResponse updateHotel(
-            Integer hotelId,
-            HotelUpdateRequest request) {
+    public HotelResponse updateHotel(Integer hotelId, HotelUpdateRequest request) {
 
-        Hotel hotel = hotelRepository.findById(hotelId)
-                                     .orElseThrow(() -> new HotelNotFoundException(hotelId));
+        Hotel hotel = hotelRepository.findById(hotelId).orElseThrow(
+                () -> new HotelNotFoundException(hotelId));
 
         hotel.setName(request.getName());
         hotel.setAddress(request.getAddress());
@@ -98,13 +94,11 @@ public class HotelService {
      * Inactivation changes only the hotel; existing confirmed bookings and snapshots
      * remain historical commitments and receive derived operational warnings.
      */
-    @Transactional(timeout=20)
-    public HotelResponse updateHotelStatus(
-            Integer hotelId,
-            HotelStatusUpdateRequest request) {
+    @Transactional(timeout = 20)
+    public HotelResponse updateHotelStatus(Integer hotelId, HotelStatusUpdateRequest request) {
 
-        Hotel hotel = hotelRepository.findForUpdate(hotelId)
-                                     .orElseThrow(() -> new HotelNotFoundException(hotelId));
+        Hotel hotel = hotelRepository.findForUpdate(hotelId).orElseThrow(
+                () -> new HotelNotFoundException(hotelId));
 
         hotel.setStatus(request.getStatus());
 

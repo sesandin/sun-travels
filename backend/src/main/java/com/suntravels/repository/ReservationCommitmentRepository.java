@@ -4,13 +4,15 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Read-only data access: no reservation entities or booking CRUD.
+/**
+ * Read-only data access: no reservation entities or booking CRUD.
  * Caller holds HOTEL -> CONTRACT -> OFFERING locks. Future confirmations,
  * date/status/item changes and hotel closures must acquire the same HOTEL lock.
  * FOR UPDATE provides a fresh MySQL current read rather than an earlier snapshot.
@@ -52,16 +54,17 @@ public class ReservationCommitmentRepository {
                 """, Integer.class, contractId);
     }
 
-    public List<Integer> replacementConflicts(Integer hotelId, Integer candidateId,
-            LocalDate from, LocalDate to, LocalDate today, Set<Integer> roomIds) {
+    public List<Integer> replacementConflicts(Integer hotelId, Integer candidateId, LocalDate from,
+            LocalDate to, LocalDate today, Set<Integer> roomIds) {
         return named.queryForList(SELECT + """
                 where c.hotel_id = :hotel and c.contract_id <> :candidate
                   and r.status = 'CONFIRMED' and r.check_out_date > :today
                   and r.check_in_date <= :to and r.check_out_date > :from
                   and o.room_type_id in (:rooms)
                 order by r.reservation_id for update
-                """, Map.of("hotel", hotelId, "candidate", candidateId, "today", today,
-                        "to", to, "from", from, "rooms", roomIds), Integer.class);
+                """,
+                Map.of("hotel", hotelId, "candidate", candidateId, "today", today, "to", to, "from", from,
+                        "rooms", roomIds), Integer.class);
     }
 
     public List<Integer> invalidForReplacement(Integer hotelId, Integer candidateId, Set<Integer> roomIds) {
