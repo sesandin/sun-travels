@@ -2,7 +2,7 @@
   <header class="page-heading">
     <div>
       <p class="eyebrow">ACCOMMODATION REFERENCE DATA</p>
-      <h1 id="page-title">Room type management</h1>
+      <h1 id="page-title">Room Type Management</h1>
       <p>Manage reusable room categories for your accommodation partners.</p>
     </div>
     <button type="button" class="primary" (click)="openEditor()">Create room type</button>
@@ -15,7 +15,7 @@
   <div class="list-panel" [attr.aria-busy]="loading()">
     <div class="panel-heading">
       <div>
-        <h2>Room type directory</h2>
+        <h2>Room Type Directory</h2>
         <p>Shared room categories across hotel contracts.</p>
       </div>
       <button type="button" class="secondary" [disabled]="loading()" (click)="loadRoomTypes()">
@@ -37,7 +37,7 @@
     @if (loading()) {
       <div class="state" role="status">
         <span class="spinner" aria-hidden="true"></span>
-        <h3>Loading room types...</h3>
+        <h3>Loading Room Types...</h3>
       </div>
     } @else if (error()) {
       <div class="state">
@@ -49,8 +49,8 @@
         <h3>
           {{
             $any(directory.summary()['totalRecords'] ?? 0)
-              ? 'No matching room types'
-              : 'No room types yet'
+              ? 'No Matching Room Types'
+              : 'No Room Types Yet'
           }}
         </h3>
         <p>
@@ -88,7 +88,7 @@
                   <strong>{{ row.name }}</strong>
                   <small>Room type #{{ row.roomTypeId }}</small>
                 </td>
-                <td class="description">{{ row.description || '?' }}</td>
+                <td class="description">{{ row.description || 'Not provided' }}</td>
                 <td>
                   <button
                     type="button"
@@ -121,7 +121,7 @@
   (cancel)="saving() ? $event.preventDefault() : closeEditor()"
 >
   <form [formGroup]="form" (ngSubmit)="save()" class="room-form">
-    <h2 id="editor-title">{{ selected() ? 'Edit room type' : 'Create room type' }}</h2>
+    <h2 id="editor-title">{{ selected() ? 'Edit Room Type' : 'Create Room Type' }}</h2>
     <p>Define a room category that can be reused across contracts.</p>
     @if (submissionError()) {
       <p class="error-message" role="alert">{{ submissionError() }}</p>
@@ -149,7 +149,7 @@
       <p id="description-error" class="field-error">{{ validationMessage('description') }}</p>
       <div class="actions">
         <button type="button" class="secondary" (click)="closeEditor()">Cancel</button>
-        <button type="submit" class="primary">{{ saving() ? 'Saving?' : 'Save room type' }}</button>
+        <button type="submit" class="primary">{{ saving() ? 'Saving...' : 'Save room type' }}</button>
       </div>
     </fieldset>
   </form>

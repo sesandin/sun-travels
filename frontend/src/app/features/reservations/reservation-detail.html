@@ -1,7 +1,7 @@
 <header class="page-heading">
   <div>
     <span class="eyebrow">RESERVATIONS</span>
-    <h1>Reservation details</h1>
+    <h1>Reservation Details</h1>
     <p>Review the booked stay, saved prices and hotel arrangements.</p>
   </div>
   <a routerLink="/reservations">All reservations</a>
@@ -92,10 +92,10 @@
         <dd>{{ r.rooms.length }}</dd>
       </div>
     </dl>
-    <h2 class="section-title">Rooms and booked pricing</h2>
+    <h2 class="section-title">Rooms and Booked Pricing</h2>
     @for (room of r.rooms; track room.reservationItemId) {
       <article class="room">
-        <h3>{{ room.hotelName }} · {{ room.roomTypeName }} · {{ room.adults }} adults</h3>
+        <h3>{{ room.hotelName }} · {{ room.roomTypeName }} · {{ room.adults }} Adults</h3>
         <p class="money room-selling-total">
           Room total: {{ room.totalPrice | number: '1.2-2' }} {{ r.currencyCode }}
         </p>
@@ -156,7 +156,7 @@
   (cancel)="cancelling() ? $event.preventDefault() : null"
 >
   <div class="panel">
-    <h2 id="cancel-reservation-title">Cancel reservation #{{ reservation()?.reservationId }}?</h2>
+    <h2 id="cancel-reservation-title">Cancel Reservation #{{ reservation()?.reservationId }}?</h2>
     <p id="cancel-reservation-description">
       All rooms will be released. The reservation and booked price history will be retained.
     </p>

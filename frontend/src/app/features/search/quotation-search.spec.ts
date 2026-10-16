@@ -256,7 +256,7 @@ describe('Search and nightly quotations', () => {
       .flush({ ...response, quotations: [], matchingOptions: 0 });
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain(
-      'No single room type can accommodate this request',
+      'No Single Room Type Can Accommodate This Request',
     );
     expect(c.error()).toBe('');
   });

@@ -2,7 +2,7 @@
   <header class="page-heading">
     <div>
       <p class="eyebrow">YOUR ACCOMMODATION NETWORK</p>
-      <h1 id="page-title">Hotel management</h1>
+      <h1 id="page-title">Hotel Management</h1>
       <p>Manage your hotel partners, details and availability for new sales.</p>
     </div>
     <button type="button" class="primary" (click)="openEditor()">Register hotel</button>
@@ -16,24 +16,24 @@
     <div>
       <span>Registered hotels</span>
       <strong>{{
-        loading() || error() ? '�' : $any(directory.summary()['totalRecords'] ?? 0)
+        loading() || error() ? '—' : $any(directory.summary()['totalRecords'] ?? 0)
       }}</strong>
     </div>
     <div>
       <span>Active partners</span>
-      <strong>{{ loading() || error() ? '�' : activeCount() }}</strong>
+      <strong>{{ loading() || error() ? '—' : activeCount() }}</strong>
     </div>
     <div>
       <span>Inactive partners</span>
       <strong>{{
-        loading() || error() ? '�' : $any(directory.summary()['totalRecords'] ?? 0) - activeCount()
+        loading() || error() ? '—' : $any(directory.summary()['totalRecords'] ?? 0) - activeCount()
       }}</strong>
     </div>
   </div>
   <div class="list-panel" [attr.aria-busy]="loading()">
     <div class="panel-heading">
       <div>
-        <h2>Hotel directory</h2>
+        <h2>Hotel Directory</h2>
         <p>All your accommodation partners in one place.</p>
       </div>
       <button type="button" class="secondary" [disabled]="loading()" (click)="loadHotels()">
@@ -67,7 +67,7 @@
     @if (loading()) {
       <div class="state" role="status">
         <span class="spinner" aria-hidden="true"></span>
-        <h3>Loading hotel partners�</h3>
+        <h3>Loading Hotel Partners...</h3>
         <p>Retrieving the latest records.</p>
       </div>
     } @else if (error()) {
@@ -77,7 +77,7 @@
       </div>
     } @else if (!filtered().length) {
       <div class="state">
-        <span class="empty-icon" aria-hidden="true">�</span>
+        <span class="empty-icon" aria-hidden="true">&#9637;</span>
         <h3>
           {{
             $any(directory.summary()['totalRecords'] ?? 0)
@@ -123,7 +123,7 @@
               <tr>
                 <td>
                   <div class="hotel-name">
-                    <span class="hotel-icon" aria-hidden="true">�</span>
+                    <span class="hotel-icon" aria-hidden="true">&#9637;</span>
                     <div>
                       <strong>{{ hotel.name }}</strong>
                       <small>Partner #{{ hotel.hotelId }}</small>
@@ -133,7 +133,7 @@
                 <td>
                   {{ hotel.city }}<small>{{ hotel.country }}</small>
                 </td>
-                <td><span class="stars" aria-hidden="true">?</span> {{ hotel.starRating }} / 5</td>
+                <td><span class="stars" aria-hidden="true">&#9733;</span> {{ hotel.starRating }} / 5</td>
                 <td>
                   <span
                     class="badge status-badge"
@@ -201,7 +201,7 @@
 >
   <div class="confirmation">
     <h2 id="status-title">
-      {{ statusTarget()?.status === 'ACTIVE' ? 'Deactivate' : 'Activate' }} hotel?
+      {{ statusTarget()?.status === 'ACTIVE' ? 'Deactivate' : 'Activate' }} Hotel?
     </h2>
     <p>
       <strong>{{ statusTarget()?.name }}</strong>
@@ -229,7 +229,7 @@
       >
         {{
           statusBusy()
-            ? 'Updating�'
+            ? 'Updating...'
             : 'Confirm ' + (statusTarget()?.status === 'ACTIVE' ? 'deactivation' : 'activation')
         }}
       </button>

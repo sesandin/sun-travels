@@ -210,11 +210,11 @@
         <dd>{{ booking.createdAt | date: 'medium' }}</dd>
       </div>
     </dl>
-    <h3 class="modal-section-title">Booked rooms</h3>
+    <h3 class="modal-section-title">Booked Rooms</h3>
     @for (room of booking.rooms; track room.reservationItemId; let i = $index) {
       <article class="modal-room">
         <div>
-          <h4>Room {{ i + 1 }} &middot; {{ room.roomTypeName }}</h4>
+          <h4>Room {{ i + 1 }} &Middot; {{ room.roomTypeName }}</h4>
           <p>
             {{ room.hotelName }} &middot; {{ room.adults }}
             {{ room.adults === 1 ? 'adult' : 'adults' }}

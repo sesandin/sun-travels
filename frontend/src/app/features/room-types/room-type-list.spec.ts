@@ -5,7 +5,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { RoomTypeList } from './room-type-list';
 const url = '/api/room-types';
 const row = { roomTypeId: 7, name: 'Deluxe', description: 'Sea view' };
-describe('Room type management', () => {
+describe('Room Type Management', () => {
   let http: HttpTestingController;
   let fixture: ReturnType<typeof TestBed.createComponent<RoomTypeList>>;
   let component: RoomTypeList;
@@ -42,7 +42,7 @@ describe('Room type management', () => {
       .expectOne((r) => r.url === url + '/page')
       .flush(directoryPage([], 0, 0, { totalRecords: 1 }));
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('No matching room types');
+    expect(fixture.nativeElement.textContent).toContain('No Matching Room Types');
   });
   it('shows errors and retries to an empty state', () => {
     http.expectOne((r) => r.url === url + '/page').error(new ProgressEvent('error'));
@@ -51,7 +51,7 @@ describe('Room type management', () => {
     component.loadRoomTypes();
     http.expectOne((r) => r.url === url + '/page').flush(directoryPage([]));
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('No room types yet');
+    expect(fixture.nativeElement.textContent).toContain('No Room Types Yet');
   });
   it('validates blank names and both length limits without sending writes', () => {
     load();

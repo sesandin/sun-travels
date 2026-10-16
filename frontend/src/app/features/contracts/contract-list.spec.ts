@@ -77,7 +77,7 @@ describe('Contract management', () => {
     component.loadContracts();
     http.expectOne((r) => r.url === url + '/page').flush(directoryPage([]));
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('No contracts yet');
+    expect(fixture.nativeElement.textContent).toContain('No Contracts Yet');
   });
   it('blocks creation when hotels cannot be loaded and supports retry', () => {
     http.expectOne((r) => r.url === url + '/page').flush(directoryPage([]));

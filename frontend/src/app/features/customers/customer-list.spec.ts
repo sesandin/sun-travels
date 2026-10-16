@@ -56,7 +56,7 @@ describe('CustomerList', () => {
     );
     request.flush({ ...page, customers: [], totalElements: 0, totalPages: 0 });
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('No matching customers');
+    expect(fixture.nativeElement.textContent).toContain('No Matching Customers');
     http.verify();
   });
 

@@ -2,7 +2,7 @@
   <header class="page-heading">
     <div>
       <p class="eyebrow">TRAVELLER RECORDS</p>
-      <h1 id="page-title">Customer management</h1>
+      <h1 id="page-title">Customer Management</h1>
       <p>Find, register and maintain customer contact details for future reservations.</p>
     </div>
     <button type="button" class="primary" (click)="openEditor()">Add customer</button>
@@ -15,7 +15,7 @@
   <div class="list-panel" [attr.aria-busy]="loading()">
     <div class="panel-heading">
       <div>
-        <h2>Customer directory</h2>
+        <h2>Customer Directory</h2>
         <p>Search by name, phone, email or exact customer ID.</p>
       </div>
       <button type="button" class="secondary" [disabled]="loading()" (click)="load()">
@@ -48,7 +48,7 @@
     @if (loading()) {
       <div class="state" role="status">
         <span class="spinner" aria-hidden="true"></span>
-        <h3>Loading customers...</h3>
+        <h3>Loading Customers...</h3>
       </div>
     } @else if (error()) {
       <div class="state">
@@ -57,7 +57,7 @@
       </div>
     } @else if (!customers().length) {
       <div class="state">
-        <h3>{{ appliedQuery() ? 'No matching customers' : 'No customers yet' }}</h3>
+        <h3>{{ appliedQuery() ? 'No Matching Customers' : 'No Customers Yet' }}</h3>
         <p>
           {{
             appliedQuery()
@@ -126,7 +126,7 @@
   (cancel)="saving() ? $event.preventDefault() : closeEditor()"
 >
   <form [formGroup]="form" (ngSubmit)="save()" class="customer-form">
-    <h2 id="customer-editor-title">{{ selected() ? 'Customer details' : 'Register customer' }}</h2>
+    <h2 id="customer-editor-title">{{ selected() ? 'Customer Details' : 'Register Customer' }}</h2>
     <p>
       {{
         selected()

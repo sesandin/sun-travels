@@ -8,7 +8,7 @@
   </div>
 </header>
 <section class="panel" aria-labelledby="search-title">
-  <h2 id="search-title">Stay and requested rooms</h2>
+  <h2 id="search-title">Stay and Requested Rooms</h2>
   @if (setupLoading()) {
     <p><output>Loading search dates, hotels and room types...</output></p>
   }
@@ -25,7 +25,7 @@
   <form [formGroup]="form" (ngSubmit)="search()">
     <fieldset [disabled]="searching() || setupLoading() || !!setupError()">
       <div class="form-section-heading">
-        <h3>Stay dates</h3>
+        <h3>Stay Dates</h3>
         <span class="field-kind">Required</span>
       </div>
       <div class="form-grid">
@@ -87,7 +87,7 @@
       }
       <div formArrayName="rooms" class="room-requests">
         <div class="form-section-heading">
-          <h3>Number of rooms: {{ rooms.length }}</h3>
+          <h3>Number of Rooms: {{ rooms.length }}</h3>
           <span class="field-kind">Adults are required for each room</span>
         </div>
         @for (room of rooms.controls; track room; let i = $index) {
@@ -146,7 +146,7 @@
       </div>
       <section class="optional-filters" aria-labelledby="optional-filters-title">
         <div class="form-section-heading">
-          <h3 id="optional-filters-title">Narrow your search</h3>
+          <h3 id="optional-filters-title">Narrow Your Search</h3>
           <span class="field-kind">Optional filters</span>
         </div>
         <div class="form-grid">
@@ -220,7 +220,7 @@
 @if (response(); as result) {
   <section class="results" aria-label="Quotation results">
     <div class="results-heading">
-      <h2>{{ groupedQuotations().length }} available room-type options</h2>
+      <h2>{{ groupedQuotations().length }} Available Room-type Options</h2>
       <p>
         {{ result.checkIn }} to {{ result.checkOut }} &middot; {{ result.nights }} occupied nights
       </p>
@@ -247,7 +247,7 @@
     }
     @if (!groupedQuotations().length) {
       <div class="panel state" role="status">
-        <h3>No single room type can accommodate this request</h3>
+        <h3>No Single Room Type Can Accommodate This Request</h3>
         <p>
           {{
             canCustomize() && customizationGroups().length

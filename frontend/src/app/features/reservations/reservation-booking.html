@@ -1,7 +1,7 @@
 <header class="page-heading">
   <div>
     <span class="eyebrow">RESERVATIONS</span>
-    <h1>Review and confirm</h1>
+    <h1>Review and Confirm</h1>
     <p>
       Confirm accommodation directly with the customer. Availability and price are rechecked when
       you confirm.
@@ -37,7 +37,7 @@
     </dl>
     @for (room of q.rooms; track $index) {
       <article class="room">
-        <h3>Room {{ $index + 1 }} · {{ room.roomTypeName }} · {{ room.adults }} adults</h3>
+        <h3>Room {{ $index + 1 }} · {{ room.roomTypeName }} · {{ room.adults }} Adults</h3>
         <p class="money room-selling-total">
           {{ room.totalPrice | number: '1.2-2' }} {{ q.currencyCode }}
         </p>
@@ -176,13 +176,13 @@
   </section>
   <section class="panel confirmation-panel" aria-labelledby="booking-confirm-title">
     <span class="workflow-step" data-step="3">Confirm with the customer</span>
-    <h2 id="booking-confirm-title">Final review</h2>
+    <h2 id="booking-confirm-title">Final Review</h2>
     @if (error()) {
       <p class="error-message" role="alert">{{ error() }}</p>
     }
     @if (previous(); as old) {
       <div class="price-change" role="alert">
-        <h2>Price changed — customer acknowledgment required</h2>
+        <h2>Price Changed — Customer Acknowledgment Required</h2>
         <p>Previously: {{ old.totalPrice | number: '1.2-2' }} {{ old.currencyCode }}</p>
         <p>Current: {{ q.totalPrice | number: '1.2-2' }} {{ q.currencyCode }}</p>
         <p>

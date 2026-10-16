@@ -24,7 +24,7 @@
 <section class="list-panel" aria-label="Contract directory">
   <div class="panel-heading">
     <div>
-      <h2>Contract directory</h2>
+      <h2>Contract Directory</h2>
       <p>{{ $any(directory.summary()['totalRecords'] ?? 0) }} agreements</p>
     </div>
     <button type="button" (click)="loadContracts()" [disabled]="loading()">Refresh</button>
@@ -63,7 +63,7 @@
     </div>
   } @else if (!$any(directory.summary()['totalRecords'] ?? 0)) {
     <div class="state">
-      <h2>No contracts yet</h2>
+      <h2>No Contracts Yet</h2>
       <p>Create a DRAFT agreement to get started.</p>
     </div>
   } @else if (!filtered().length) {
@@ -173,20 +173,20 @@
     <h2 id="editor-title">
       {{
         mode() === 'create'
-          ? 'Create contract'
+          ? 'Create Contract'
           : mode() === 'edit'
-            ? 'Edit DRAFT contract'
+            ? 'Edit DRAFT Contract'
             : mode() === 'markup'
-              ? 'Edit approved markup'
+              ? 'Edit Approved Markup'
               : mode() === 'details'
-                ? 'Contract details'
+                ? 'Contract Details'
                 : mode() === 'approve'
-                  ? 'Approve contract'
+                  ? 'Approve Contract'
                   : mode() === 'reapprove'
-                    ? 'Reapprove contract'
+                    ? 'Reapprove Contract'
                     : mode() === 'suspend'
-                      ? 'Suspend contract'
-                      : 'Terminate contract'
+                      ? 'Suspend Contract'
+                      : 'Terminate Contract'
       }}
     </h2>
     @if (submissionError()) {
