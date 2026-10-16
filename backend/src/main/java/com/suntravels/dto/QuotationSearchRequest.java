@@ -9,5 +9,5 @@ public record QuotationSearchRequest(@NotNull @JsonDeserialize(using=StrictSearc
  @Size(max=100) String city,
  @Positive @JsonDeserialize(using=StrictSearchInteger.class) Integer hotelId,
  @Positive @JsonDeserialize(using=StrictSearchInteger.class) Integer roomTypeId) {
- public record RequestedRoom(@NotNull @Min(1) @Max(10) @JsonDeserialize(using=StrictSearchInteger.class) Integer adults) {}
+ public record RequestedRoom(@NotNull @Min(1) @JsonDeserialize(using=StrictSearchInteger.class) Integer adults) {}
 }

@@ -20,15 +20,14 @@ import org.springframework.transaction.annotation.*;
 @Service
 @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ,timeout=15)
 public class QuotationSearchService {
- public static final int MAX_ROOMS=8,MAX_ADULTS=10,MAX_NIGHTS=31,MAX_ADVANCE_DAYS=730,MAX_RESULTS=20;
- public static final String POLICY="LOWEST_TOTAL_PER_CONTRACT";
+ public static final int MAX_ROOMS=8,MAX_NIGHTS=31,MAX_ADVANCE_DAYS=730,MAX_RESULTS=20;
  private final QuotationSearchRepository data; private final HotelRepository hotels; private final RoomTypeRepository rooms;
  private final Validator validator; private final Clock clock; private final NightlyQuotationPricing pricing;
- private final StayAvailability inventory; private final RoomAllocationEngine allocator;
- public QuotationSearchService(QuotationSearchRepository data,HotelRepository hotels,RoomTypeRepository rooms,Validator validator,Clock clock,NightlyQuotationPricing pricing,StayAvailability inventory,RoomAllocationEngine allocator) {
-  this.data=data;this.hotels=hotels;this.rooms=rooms;this.validator=validator;this.clock=clock;this.pricing=pricing;this.inventory=inventory;this.allocator=allocator;
+ private final StayAvailability inventory;
+ public QuotationSearchService(QuotationSearchRepository data,HotelRepository hotels,RoomTypeRepository rooms,Validator validator,Clock clock,NightlyQuotationPricing pricing,StayAvailability inventory) {
+  this.data=data;this.hotels=hotels;this.rooms=rooms;this.validator=validator;this.clock=clock;this.pricing=pricing;this.inventory=inventory;
  }
- public Limits limits() { return new Limits(LocalDate.now(clock),MAX_ROOMS,MAX_ADULTS,MAX_NIGHTS,MAX_ADVANCE_DAYS,MAX_RESULTS,POLICY); }
+ public Limits limits() { return new Limits(LocalDate.now(clock),MAX_ROOMS,MAX_NIGHTS,MAX_ADVANCE_DAYS,MAX_RESULTS,"INDIVIDUAL_ROOM_TYPES"); }
  public QuotationSearchFilters filters() {
   var hotelOptions=hotels.findAll(Sort.by(Sort.Order.asc("name"),Sort.Order.asc("hotelId"))).stream()
    .filter(h->h.getStatus()==HotelStatus.ACTIVE)
@@ -37,12 +36,36 @@ public class QuotationSearchService {
    .map(r->new QuotationSearchFilters.RoomTypeOption(r.getRoomTypeId(),r.getName())).toList();
   return new QuotationSearchFilters(hotelOptions,roomOptions);
  }
- public QuotationSearchResponse search(QuotationSearchRequest request) {
+ public List<OfferingOccupancy> occupancy(Integer hotelId,Integer roomTypeId,LocalDate checkIn,LocalDate checkOut,String city) {
+  if(hotelId==null || roomTypeId==null) throw QuotationSearchException.invalid("Select a hotel and room type for occupancy guidance");
+  var request=new QuotationSearchRequest(checkIn,checkOut,List.of(new QuotationSearchRequest.RequestedRoom(1)),city,hotelId,roomTypeId);
+  validate(request,LocalDate.now(clock));
+  var candidates=data.candidates(request);
+  if(candidates.size()>QuotationSearchRepository.MAX_OFFERINGS) throw QuotationSearchException.tooBroad();
+  if(candidates.stream().anyMatch(c->c.maxAdults()<1)) throw QuotationSearchException.inconsistent();
+  return candidates.stream().map(c->new OfferingOccupancy(c.offeringId(),c.roomTypeId(),c.roomTypeName(),c.maxAdults())).toList();
+ }
+ public QuotationSearchResponse search(QuotationSearchRequest request) { return evaluate(request,null); }
+ public Quotation customize(QuotationSelectionRequest selection) {
+  if(selection==null || !validator.validate(selection).isEmpty()) throw QuotationSearchException.invalid("Check selected hotel, contract, dates and rooms");
+  var request=new QuotationSearchRequest(selection.checkIn(),selection.checkOut(),selection.rooms().stream()
+   .map(r->new QuotationSearchRequest.RequestedRoom(r.adults())).toList(),null,selection.hotelId(),null);
+  var result=evaluate(request,selection);
+  if(result.quotations().size()!=1 || !result.quotations().get(0).hotelId().equals(selection.hotelId())) {
+   String reason=result.unavailableOptions().stream().flatMap(o->o.reasons().stream()).map(UnavailabilityReason::message).collect(Collectors.joining(" "));
+   throw QuotationSearchException.invalid(reason.isBlank()?"Selected rooms are unavailable or do not belong to the same eligible hotel and contract":reason);
+  }
+  return result.quotations().get(0);
+ }
+ private QuotationSearchResponse evaluate(QuotationSearchRequest request,QuotationSelectionRequest selection) {
   LocalDate today=LocalDate.now(clock); validate(request,today);
-  List<Candidate> candidates=data.candidates(request);
+  List<Candidate> closed=data.closedCandidates(request);
+  Set<Integer> closedOfferingIds=closed.stream().map(Candidate::offeringId).collect(Collectors.toSet());
+  List<Candidate> candidates=new ArrayList<>(data.candidates(request));candidates.addAll(closed);
+  if(selection!=null) candidates.removeIf(c->c.contractId()!=selection.contractId());
   if(candidates.size()>QuotationSearchRepository.MAX_OFFERINGS) throw QuotationSearchException.tooBroad();
   int nights=(int)ChronoUnit.DAYS.between(request.checkIn(),request.checkOut());
-  if(candidates.isEmpty()) return response(request,today,nights,List.of());
+  if(candidates.isEmpty()) return response(request,today,nights,List.of(),List.of());
   Set<Integer> ids=candidates.stream().map(Candidate::offeringId).collect(Collectors.toSet());
   Set<Integer> contracts=candidates.stream().map(Candidate::contractId).collect(Collectors.toSet());
   Set<Integer> hotelIds=candidates.stream().map(Candidate::hotelId).collect(Collectors.toSet());
@@ -61,30 +84,64 @@ public class QuotationSearchService {
    tariffs.put(c.offeringId(),pricing.tariffs(c,bySeason.getOrDefault(c.offeringId(),List.of()),request.checkIn(),request.checkOut()));
    available.put(c.offeringId(),inventory.available(c.offeringId(),c.contractedRooms(),byBooking.getOrDefault(c.offeringId(),List.of()),request.checkIn(),request.checkOut()));
   }
-  List<Quotation> results=new ArrayList<>();
-  Map<Integer,List<Candidate>> groups=candidates.stream().collect(Collectors.groupingBy(Candidate::contractId,TreeMap::new,Collectors.toList()));
+  List<Quotation> results=new ArrayList<>();List<UnavailableOption> unavailable=new ArrayList<>();
+  List<SelectionOffering> choices=candidates.stream().map(c->new SelectionOffering(c.hotelId(),c.hotelName(),c.contractId(),c.offeringId(),c.roomTypeName(),c.maxAdults(),available.get(c.offeringId()),c.currency(),closedOfferingIds.contains(c.offeringId()),
+   java.util.stream.IntStream.range(0,request.rooms().size()).mapToObj(r->new SelectionRoom(r+1,request.rooms().get(r).adults(),
+    request.rooms().get(r).adults()<=c.maxAdults()?pricing.total(tariffs.get(c.offeringId()),request.rooms().get(r).adults(),c.markup()):null)).toList())).toList();
+  Map<Integer,List<Candidate>> groups=candidates.stream().collect(Collectors.groupingBy(c->selection!=null?c.contractId():c.offeringId(),TreeMap::new,Collectors.toList()));
   for(List<Candidate> group:groups.values()) {
    group.sort(Comparator.comparingInt(Candidate::offeringId)); Candidate parent=group.get(0);
    if(group.stream().anyMatch(c->c.hotelId()!=parent.hotelId() || !c.currency().equals(parent.currency()) || c.markup().compareTo(parent.markup())!=0)) throw QuotationSearchException.inconsistent();
-   int count=request.rooms().size(); BigDecimal[][] costs=new BigDecimal[count][group.size()]; int[] capacities=new int[group.size()];
-   for(int o=0;o<group.size();o++) {
-    Candidate c=group.get(o); capacities[o]=available.get(c.offeringId());
-    for(int r=0;r<count;r++) if(request.rooms().get(r).adults()<=c.maxAdults()) costs[r][o]=pricing.total(tariffs.get(c.offeringId()),request.rooms().get(r).adults(),c.markup());
-   }
-   Optional<int[]> allocation=allocator.allocate(costs,capacities); if(allocation.isEmpty()) continue;
-   int[] assigned=allocation.orElseThrow(),used=new int[group.size()]; for(int o:assigned) used[o]++;
-   List<RoomAllocation> allocated=new ArrayList<>(); BigDecimal total=new BigDecimal("0.00");
+   int count=request.rooms().size();
+   Map<Integer,Candidate> byId=group.stream().collect(Collectors.toMap(Candidate::offeringId,c->c));
+   List<Candidate> selected=new ArrayList<>();
+   Map<Integer,Integer> demand=new HashMap<>();
+   List<String> occupancyErrors=new ArrayList<>();
    for(int r=0;r<count;r++) {
-    int o=assigned[r],adults=request.rooms().get(r).adults();Candidate c=group.get(o);BigDecimal price=costs[r][o];total=total.add(price);
-    allocated.add(new RoomAllocation(r+1,adults,c.offeringId(),c.roomTypeId(),c.roomTypeName(),c.contractedRooms(),capacities[o],used[o],capacities[o]-used[o],price,pricing.breakdown(tariffs.get(c.offeringId()),adults,c.markup())));
+    // Primary results use one room type; customized results use exactly the submitted offering IDs.
+    Candidate c=selection==null?parent:byId.get(selection.rooms().get(r).offeringId());
+    if(c==null) throw QuotationSearchException.invalid("Selected offering does not belong to the same eligible hotel and approved contract");
+    selected.add(c);demand.merge(c.offeringId(),1,Integer::sum);
+    int adults=request.rooms().get(r).adults();
+    if(adults>c.maxAdults()) occupancyErrors.add("Maximum "+c.maxAdults()+" adults per room. Room "+(r+1)+" requests "+adults+" adults; maximum is "+c.maxAdults()+".");
+   }
+   List<UnavailabilityReason> reasons=new ArrayList<>();
+   if(selected.stream().anyMatch(c->closedOfferingIds.contains(c.offeringId())))
+    reasons.add(new UnavailabilityReason(ReasonCode.HOTEL_CLOSED,"Hotel is closed during the requested stay."));
+   if(!occupancyErrors.isEmpty()) reasons.add(new UnavailabilityReason(ReasonCode.MAX_ADULT_OCCUPANCY,String.join(" ",occupancyErrors)));
+   for(Candidate c:group) {
+    int requested=demand.getOrDefault(c.offeringId(),0),remaining=available.get(c.offeringId());
+    if(requested>remaining) reasons.add(new UnavailabilityReason(ReasonCode.INSUFFICIENT_INVENTORY,
+     "Only "+remaining+(remaining==1?" room available; ":" rooms available; ")+requested+" requested."));
+   }
+   // Pricing always follows the same explicit offerings, including any non-bookable indicative total.
+   List<BigDecimal> roomPrices=new ArrayList<>();BigDecimal total=new BigDecimal("0.00");
+   if(occupancyErrors.isEmpty()) for(int r=0;r<count;r++) {
+    Candidate c=selected.get(r);BigDecimal price=pricing.total(tariffs.get(c.offeringId()),request.rooms().get(r).adults(),c.markup());
+    roomPrices.add(price);total=total.add(price);
+   }
+   if(!reasons.isEmpty()) {
+    unavailable.add(new UnavailableOption(parent.hotelId(),parent.hotelName(),parent.city(),parent.contractId(),parent.contractCode(),parent.currency(),
+     AvailabilityStatus.NOT_AVAILABLE,group.stream().map(c->new UnavailableOffering(c.offeringId(),c.roomTypeId(),c.roomTypeName(),c.maxAdults(),available.get(c.offeringId()))).toList(),List.copyOf(reasons),occupancyErrors.isEmpty()?total:null));
+    continue;
+   }
+   List<RoomAllocation> allocated=new ArrayList<>();
+   for(int r=0;r<count;r++) {
+    Candidate c=selected.get(r);int adults=request.rooms().get(r).adults(),availableRooms=available.get(c.offeringId()),used=demand.get(c.offeringId());
+    allocated.add(new RoomAllocation(r+1,adults,c.offeringId(),c.roomTypeId(),c.roomTypeName(),c.contractedRooms(),availableRooms,used,availableRooms-used,roomPrices.get(r),pricing.breakdown(tariffs.get(c.offeringId()),adults,c.markup())));
    }
    results.add(new Quotation(parent.hotelId(),parent.hotelName(),parent.city(),parent.contractId(),parent.contractCode(),parent.currency(),request.checkIn(),request.checkOut(),nights,List.copyOf(allocated),total,"INFORMATIONAL"));
   }
   results.sort(Comparator.comparing(Quotation::currencyCode).thenComparing(Quotation::totalPrice).thenComparing(Quotation::hotelId).thenComparing(Quotation::contractId));
-  return response(request,today,nights,results);
+  unavailable.sort(Comparator.comparing(UnavailableOption::hotelName).thenComparingInt(UnavailableOption::hotelId).thenComparingInt(UnavailableOption::contractId));
+  var result=response(request,today,nights,results,unavailable);
+  return new QuotationSearchResponse(result.businessDate(),result.checkIn(),result.checkOut(),result.nights(),result.quotations(),result.matchingOptions(),result.truncated(),
+   selection==null?"INDIVIDUAL_ROOM_TYPES":"EXPLICIT_SELECTION",result.notice(),result.unavailableOptions(),result.matchingUnavailableOptions(),result.unavailableTruncated(),choices);
  }
- private QuotationSearchResponse response(QuotationSearchRequest r,LocalDate today,int nights,List<Quotation> quotes) {
-  return new QuotationSearchResponse(today,r.checkIn(),r.checkOut(),nights,List.copyOf(quotes.subList(0,Math.min(MAX_RESULTS,quotes.size()))),quotes.size(),quotes.size()>MAX_RESULTS,POLICY,"Informational quotation only. Prices and availability must be rechecked atomically at reservation confirmation. Results are ordered by currency, then total price.");
+ private QuotationSearchResponse response(QuotationSearchRequest r,LocalDate today,int nights,List<Quotation> quotes,List<UnavailableOption> unavailable) {
+  return new QuotationSearchResponse(today,r.checkIn(),r.checkOut(),nights,List.copyOf(quotes.subList(0,Math.min(MAX_RESULTS,quotes.size()))),quotes.size(),quotes.size()>MAX_RESULTS,"INDIVIDUAL_ROOM_TYPES",
+   "Informational quotation only. Prices and availability must be rechecked atomically at reservation confirmation. Available options are shown first, ordered by currency, then total price.",
+   List.copyOf(unavailable.subList(0,Math.min(MAX_RESULTS,unavailable.size()))),unavailable.size(),unavailable.size()>MAX_RESULTS);
  }
  private void validate(QuotationSearchRequest r,LocalDate today) {
   if(r==null) throw QuotationSearchException.invalid("Search details are required");

@@ -53,15 +53,44 @@ class QuotationSearchMySqlIntegrationTest {
  @ParameterizedTest @CsvSource({"ACTIVE,APPROVED,ENABLED,true","INACTIVE,APPROVED,ENABLED,false","ACTIVE,DRAFT,ENABLED,false","ACTIVE,SUSPENDED,ENABLED,false","ACTIVE,TERMINATED,ENABLED,false","ACTIVE,APPROVED,SUSPENDED,false"})
  void actualSqlAppliesHotelContractAndOfferingEligibility(String h,String c,String o,boolean match) {
   hotel.setStatus(HotelStatus.valueOf(h));hotels.saveAndFlush(hotel);contract.setStatus(ContractStatus.valueOf(c));contracts.saveAndFlush(contract);offer.setStatus(OfferingStatus.valueOf(o));offerings.saveAndFlush(offer);
-  assertEquals(match,!search.search(request(2)).quotations().isEmpty());
+  var result=search.search(request(2));
+  assertEquals(match,!result.quotations().isEmpty());assertTrue(result.unavailableOptions().isEmpty());
  }
  @Test void fullStayContractValidityIsInclusiveForNightsAndExclusiveForCheckout() {
   contract.setValidTo(out.minusDays(1));contracts.saveAndFlush(contract);assertEquals(1,search.search(request(2)).quotations().size());
-  contract.setValidTo(out.minusDays(2));contracts.saveAndFlush(contract);assertTrue(search.search(request(2)).quotations().isEmpty());
+  contract.setValidTo(out.minusDays(2));contracts.saveAndFlush(contract);assertTrue(search.search(request(2)).quotations().isEmpty());assertTrue(search.search(request(2)).unavailableOptions().isEmpty());
+ }
+ @Test void occupancyUsesApprovedEnabledFullStayOfferingsAndReturnsChangedLimits() {
+  assertEquals(2,search.occupancy(hotel.getHotelId(),type.getRoomTypeId(),in,out,null).get(0).maxAdults());
+  offer.setMaxAdults(4);offerings.saveAndFlush(offer);
+  assertEquals(4,search.occupancy(hotel.getHotelId(),type.getRoomTypeId(),in,out,null).get(0).maxAdults());
+  contract.setValidTo(out.minusDays(2));contracts.saveAndFlush(contract);
+  assertTrue(search.occupancy(hotel.getHotelId(),type.getRoomTypeId(),in,out,null).isEmpty());
+  contract.setValidTo(out);contract.setStatus(ContractStatus.DRAFT);contracts.saveAndFlush(contract);
+  assertTrue(search.occupancy(hotel.getHotelId(),type.getRoomTypeId(),in,out,null).isEmpty());
+  contract.setStatus(ContractStatus.APPROVED);contracts.saveAndFlush(contract);
+  offer.setStatus(OfferingStatus.SUSPENDED);offerings.saveAndFlush(offer);
+  assertTrue(search.occupancy(hotel.getHotelId(),type.getRoomTypeId(),in,out,null).isEmpty());
  }
  static Stream<Arguments> closures() { return Stream.of(Arguments.of(1,1,false),Arguments.of(3,4,true),Arguments.of(-2,-1,true),Arguments.of(-2,0,false),Arguments.of(-2,null,false),Arguments.of(3,null,true)); }
  @ParameterizedTest @MethodSource("closures") void closureSqlRespectsInclusiveBoundsAndOpenEnd(int start,Integer end,boolean match) {
-  jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)",hotel.getHotelId(),in.plusDays(start),end==null?null:in.plusDays(end),"Search fixture");assertEquals(match,!search.search(request(1)).quotations().isEmpty());
+  jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)",hotel.getHotelId(),in.plusDays(start),end==null?null:in.plusDays(end),"Search fixture");
+  var result=search.search(request(1));assertEquals(match,!result.quotations().isEmpty());
+  assertEquals(match?0:1,result.unavailableOptions().size());
+  if(!match) assertEquals(QuotationSearchResponse.ReasonCode.HOTEL_CLOSED,result.unavailableOptions().get(0).reasons().get(0).code());
+ }
+ @Test void closedAdministrativeExclusionsNeverAppearAsUnavailableInventory() {
+  jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)",hotel.getHotelId(),in,out,"Search fixture");
+  for(ContractStatus status:List.of(ContractStatus.DRAFT,ContractStatus.SUSPENDED,ContractStatus.TERMINATED)) {
+   contract.setStatus(status);contracts.saveAndFlush(contract);var result=search.search(request(1));
+   assertTrue(result.quotations().isEmpty());assertTrue(result.unavailableOptions().isEmpty());
+  }
+  contract.setStatus(ContractStatus.APPROVED);contracts.saveAndFlush(contract);
+  hotel.setStatus(HotelStatus.INACTIVE);hotels.saveAndFlush(hotel);
+  assertTrue(search.search(request(1)).unavailableOptions().isEmpty());
+  hotel.setStatus(HotelStatus.ACTIVE);hotels.saveAndFlush(hotel);
+  offer.setStatus(OfferingStatus.SUSPENDED);offerings.saveAndFlush(offer);
+  assertTrue(search.search(request(1)).unavailableOptions().isEmpty());
  }
  @ParameterizedTest @ValueSource(strings={"PENDING","CANCELLED"}) void nonConfirmedReservationsDoNotConsumeInventory(String status) { booking(offer,status,0,3,3);assertEquals(3,search.search(request(1)).quotations().get(0).rooms().get(0).availableRoomsForStay()); }
  @Test void oneItemIsOneRoomAndPeakNightIsNotSumAcrossNights() {
@@ -79,9 +108,9 @@ class QuotationSearchMySqlIntegrationTest {
   RoomType other=new RoomType();other.setName("Other "+UUID.randomUUID());other=types.saveAndFlush(other);ContractRoomOffering o=newOffering(contract,other,3,2,"150");booking(o,"CONFIRMED",0,3,3);
   var result=search.search(new QuotationSearchRequest(in,out,List.of(new RequestedRoom(2)),null,hotel.getHotelId(),type.getRoomTypeId()));assertEquals(3,result.quotations().get(0).rooms().get(0).availableRoomsForStay());
  }
- @Test void mixedRoomAllocationUsesActualCapacityAndSeasonalPricing() {
-  offer.setContractedRoomCount(1);offerings.saveAndFlush(offer);RoomType other=new RoomType();other.setName("Single "+UUID.randomUUID());other=types.saveAndFlush(other);newOffering(contract,other,1,1,"50");season(in.plusDays(1),in.plusDays(1),"150");
-  var q=search.search(request(2,1)).quotations().get(0);assertEquals(new BigDecimal("977.50"),q.totalPrice());assertEquals(offer.getOfferingId(),q.rooms().get(0).offeringId());assertEquals(other.getRoomTypeId(),q.rooms().get(1).roomTypeId());
+ @Test void explicitMixedRoomSelectionUsesActualCapacityAndSeasonalPricing() {
+  offer.setContractedRoomCount(1);offerings.saveAndFlush(offer);RoomType other=new RoomType();other.setName("Single "+UUID.randomUUID());other=types.saveAndFlush(other);var single=newOffering(contract,other,1,1,"50");season(in.plusDays(1),in.plusDays(1),"150");
+  var q=search.customize(new QuotationSelectionRequest(hotel.getHotelId(),contract.getContractId(),in,out,List.of(new ReservationRequest.Room(offer.getOfferingId(),2),new ReservationRequest.Room(single.getOfferingId(),1))));assertEquals(new BigDecimal("977.50"),q.totalPrice());assertEquals(offer.getOfferingId(),q.rooms().get(0).offeringId());assertEquals(other.getRoomTypeId(),q.rooms().get(1).roomTypeId());
  }
  @Test void cityAndReferenceFiltersUseRealExistingRecords() {
   assertEquals(1,search.search(new QuotationSearchRequest(in,out,List.of(new RequestedRoom(1))," "+city.toLowerCase(Locale.ROOT)+" ",hotel.getHotelId(),type.getRoomTypeId())).quotations().size());

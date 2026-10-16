@@ -19,6 +19,12 @@ public class QuotationSearchRepository {
  private final NamedParameterJdbcTemplate jdbc;
  public QuotationSearchRepository(NamedParameterJdbcTemplate jdbc) { this.jdbc=jdbc; }
  public List<Candidate> candidates(QuotationSearchRequest request) {
+  return candidates(request,false);
+ }
+ public List<Candidate> closedCandidates(QuotationSearchRequest request) {
+  return candidates(request,true);
+ }
+ private List<Candidate> candidates(QuotationSearchRequest request,boolean closed) {
   Map<String,Object> p=new HashMap<>(); p.put("in",request.checkIn()); p.put("out",request.checkOut()); p.put("last",request.checkOut().minusDays(1));
   String sql="""
    select o.offering_id,c.contract_id,h.hotel_id,h.name as hotel_name,h.city,c.contract_code,
@@ -28,7 +34,9 @@ public class QuotationSearchRepository {
    join hotel h on h.hotel_id=c.hotel_id join room_type rt on rt.room_type_id=o.room_type_id
    where h.status='ACTIVE' and c.status='APPROVED' and o.status='ENABLED'
     and c.valid_from<=:in and c.valid_to>=:last and o.contracted_room_count>0
-    and not exists (select 1 from hotel_closure hc where hc.hotel_id=h.hotel_id
+   """;
+  sql+=(closed?" and exists ":" and not exists ")+"""
+    (select 1 from hotel_closure hc where hc.hotel_id=h.hotel_id
      and hc.start_date<:out and (hc.end_date is null or hc.end_date>=:in))
    """;
   if(request.hotelId()!=null) { sql+=" and h.hotel_id=:hotel"; p.put("hotel",request.hotelId()); }

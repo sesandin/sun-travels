@@ -1,3 +1,9 @@
+export interface OfferingOccupancy {
+  offeringId: number;
+  roomTypeId: number;
+  roomTypeName: string;
+  maxAdults: number;
+}
 export interface QuotationRequest {
   checkIn: string;
   checkOut: string;
@@ -9,7 +15,6 @@ export interface QuotationRequest {
 export interface SearchLimits {
   businessDate: string;
   maxRooms: number;
-  maxAdultsPerRoom: number;
   maxNights: number;
   maxAdvanceDays: number;
   maxResults: number;
@@ -23,8 +28,6 @@ export interface NightlyPrice {
   occupiedDate: string;
   source: 'BASE' | 'SEASONAL';
   seasonalRateId: number | null;
-  hotelierRate: number;
-  markupPercentage: number;
   sellingPrice: number;
 }
 export interface QuotedRoom {
@@ -41,6 +44,7 @@ export interface QuotedRoom {
   nightlyPrices: NightlyPrice[];
 }
 export interface AccommodationQuotation {
+  availabilityStatus: 'AVAILABLE';
   hotelId: number;
   hotelName: string;
   city: string | null;
@@ -55,6 +59,7 @@ export interface AccommodationQuotation {
   eligibility: 'INFORMATIONAL';
 }
 export interface QuotationResponse {
+  selectionOfferings?: SelectionOffering[];
   businessDate: string;
   checkIn: string;
   checkOut: string;
@@ -64,4 +69,25 @@ export interface QuotationResponse {
   truncated: boolean;
   allocationPolicy: string;
   notice: string;
+  unavailableOptions: UnavailableAccommodation[];
+  matchingUnavailableOptions: number;
+  unavailableTruncated: boolean;
+}
+export interface UnavailableAccommodation {
+  hotelId: number;
+  hotelName: string;
+  city: string | null;
+  contractId: number;
+  contractCode: string;
+  currencyCode: string;
+  availabilityStatus: 'NOT_AVAILABLE';
+  offerings: { offeringId: number; roomTypeId: number; roomTypeName: string; maxAdults: number; availableRoomsForStay: number }[];
+  reasons: { code: 'INSUFFICIENT_INVENTORY' | 'MAX_ADULT_OCCUPANCY' | 'HOTEL_CLOSED'; message: string }[];
+  indicativeTotalPrice: number | null;
+}
+
+export interface SelectionOffering {
+ hotelId: number; hotelName: string; contractId: number; offeringId: number; roomTypeName: string;
+ maxAdults: number; availableRoomsForStay: number; currencyCode: string; hotelClosed: boolean;
+ rooms: { roomNumber: number; adults: number; totalPrice: number | null }[];
 }

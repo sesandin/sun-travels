@@ -328,7 +328,7 @@ class HotelServiceTest {
         HotelStatusUpdateRequest request = new HotelStatusUpdateRequest();
         request.setStatus(HotelStatus.ACTIVE);
 
-        when(hotelRepository.findById(1))
+        when(hotelRepository.findForUpdate(1))
                 .thenReturn(Optional.of(hotel));
         when(hotelRepository.save(hotel)).thenReturn(hotel);
 
@@ -347,12 +347,15 @@ class HotelServiceTest {
         HotelStatusUpdateRequest request = new HotelStatusUpdateRequest();
         request.setStatus(HotelStatus.INACTIVE);
 
-        when(hotelRepository.findById(1))
+        when(hotelRepository.findForUpdate(1))
                 .thenReturn(Optional.of(hotel));
         when(hotelRepository.save(hotel)).thenReturn(hotel);
 
         HotelResponse response = hotelService.updateHotelStatus(1, request);
 
+        var order = inOrder(hotelRepository);
+        order.verify(hotelRepository).findForUpdate(1);
+        order.verify(hotelRepository).save(same(hotel));
         assertEquals(HotelStatus.INACTIVE, response.getStatus());
         assertEquals("Hilton Colombo", response.getName());
         verify(hotelRepository).save(same(hotel));
@@ -363,7 +366,7 @@ class HotelServiceTest {
         HotelStatusUpdateRequest request = new HotelStatusUpdateRequest();
         request.setStatus(HotelStatus.INACTIVE);
 
-        when(hotelRepository.findById(99999))
+        when(hotelRepository.findForUpdate(99999))
                 .thenReturn(Optional.empty());
 
         assertThrows(

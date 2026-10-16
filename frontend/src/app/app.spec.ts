@@ -28,11 +28,10 @@ describe('App', () => {
       .flush({
         businessDate: '2026-10-15',
         maxRooms: 8,
-        maxAdultsPerRoom: 10,
         maxNights: 31,
         maxAdvanceDays: 730,
         maxResults: 20,
-        allocationPolicy: 'LOWEST_TOTAL_PER_CONTRACT',
+        allocationPolicy: 'INDIVIDUAL_ROOM_TYPES',
       });
     http.expectOne('/api/search/filters').flush({ hotels: [], roomTypes: [] });
     await fixture.whenStable();
@@ -76,7 +75,7 @@ describe('App', () => {
     expect(fixture.nativeElement.textContent).toContain('No room offerings yet');
     http.verify();
   });
-  it('renders branding and clearly marks upcoming modules', async () => {
+  it('renders branding and activates reservation navigation', async () => {
     await TestBed.configureTestingModule({
       imports: [App],
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
@@ -85,7 +84,8 @@ describe('App', () => {
     TestBed.inject(AuthState).setUser(admin);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('Sun Travels');
-    expect(fixture.nativeElement.querySelectorAll('.upcoming').length).toBe(1);
+    expect(fixture.nativeElement.querySelectorAll('.upcoming').length).toBe(0);
+    expect(fixture.nativeElement.querySelector('a[href="/reservations"]')?.textContent).toContain('Reservations');
     expect(fixture.nativeElement.querySelector('a[href="/customers"]')?.textContent).toContain('Customers');
     expect(fixture.nativeElement.querySelector('a[href="/room-types"]')?.textContent).toContain(
       'Room Types',

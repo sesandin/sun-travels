@@ -78,10 +78,10 @@ class AuthenticationSecurityTest {
     }
 
     @Test void bothRolesCanSearchAndAgentCanReadFilterReferences() throws Exception {
-        var limits = new QuotationSearchResponse.Limits(LocalDate.of(2026,10,15),8,10,31,730,20,"LOWEST_TOTAL_PER_CONTRACT");
+        var limits = new QuotationSearchResponse.Limits(LocalDate.of(2026,10,15),8,31,730,20,"INDIVIDUAL_ROOM_TYPES");
         when(search.limits()).thenReturn(limits);
         when(search.filters()).thenReturn(new QuotationSearchFilters(List.of(),List.of()));
-        when(search.search(any())).thenReturn(new QuotationSearchResponse(LocalDate.of(2026,10,15),LocalDate.of(2026,10,24),LocalDate.of(2026,10,25),1,List.of(),0,false,"LOWEST_TOTAL_PER_CONTRACT","Informational"));
+        when(search.search(any())).thenReturn(new QuotationSearchResponse(LocalDate.of(2026,10,15),LocalDate.of(2026,10,24),LocalDate.of(2026,10,25),1,List.of(),0,false,"INDIVIDUAL_ROOM_TYPES","Informational"));
         for (String username : List.of("admin01","agent01")) {
             mvc.perform(get("/api/search/limits").session(login(username))).andExpect(status().isOk()).andExpect(jsonPath("$.maxRooms").value(8));
             mvc.perform(get("/api/search/filters").session(login(username))).andExpect(status().isOk());
@@ -91,6 +91,17 @@ class AuthenticationSecurityTest {
         }
         mvc.perform(get("/api/contracts").session(login("agent01"))).andExpect(status().isForbidden());
         mvc.perform(get("/api/hotels").session(login("agent01"))).andExpect(status().isForbidden());
+    }
+
+    @Test void occupancyIsReadOnlyAndAvailableToAdminAndAgentOnlyWhenAuthenticated() throws Exception {
+        when(search.occupancy(anyInt(),anyInt(),any(),any(),isNull())).thenReturn(List.of(new OfferingOccupancy(8,3,"Garden View",2)));
+        String url="/api/search/occupancy?hotelId=7&roomTypeId=3&checkIn=2026-10-24&checkOut=2026-10-27";
+        mvc.perform(get(url)).andExpect(status().isUnauthorized());
+        for(String username:List.of("admin01","agent01")) {
+            MockHttpSession session=login(username);
+            mvc.perform(get(url).session(session)).andExpect(status().isOk()).andExpect(jsonPath("$[0].maxAdults").value(2));
+            mvc.perform(post(url).session(session)).andExpect(status().isForbidden());
+        }
     }
 
     @Test void bothRolesCanManageCustomersButAnonymousIsRejectedAndWritesNeedCsrf() throws Exception {
@@ -125,4 +136,16 @@ class AuthenticationSecurityTest {
         ReflectionTestUtils.setField(user,"userId",id); return user;
     }
     private ContractResponse contract() { return new ContractResponse(1,"C001",1,"Hotel",LocalDate.of(2026,1,1),LocalDate.of(2026,12,31),new BigDecimal("15.00"),"USD",ContractStatus.APPROVED); }
+
+    @Test void bothRolesCanCustomizeWithCsrf() throws Exception {
+        String selection="""
+          {"hotelId":7,"contractId":4,"checkIn":"2026-10-24","checkOut":"2026-10-27","rooms":[{"offeringId":8,"adults":2}]}
+          """;
+        for(String username:List.of("admin01","agent01")) {
+            var session=login(username);
+            mvc.perform(post("/api/search/selection").session(session).with(csrf()).contentType("application/json").content(selection)).andExpect(status().isOk());
+            mvc.perform(post("/api/search/selection").session(session).contentType("application/json").content(selection)).andExpect(status().isForbidden());
+        }
+        mvc.perform(post("/api/search/selection").with(csrf()).contentType("application/json").content(selection)).andExpect(status().isUnauthorized());
+    }
 }

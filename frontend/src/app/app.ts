@@ -9,7 +9,6 @@ export class App {
   readonly menuOpen = signal(false);
   readonly loggingOut = signal(false);
   readonly router = inject(Router);
-  readonly upcoming = [{ icon: '▣', name: 'Reservations' }];
   logout() {
     if (this.loggingOut()) return;
     this.loggingOut.set(true);

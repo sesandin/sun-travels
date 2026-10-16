@@ -5,6 +5,7 @@ import java.util.List;
 import com.suntravels.dto.HotelStatusUpdateRequest;
 import com.suntravels.repository.HotelRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import com.suntravels.dto.HotelRequest;
 import com.suntravels.dto.HotelResponse;
 import com.suntravels.entity.Hotel;
@@ -92,11 +93,12 @@ public class HotelService {
         return response;
     }
 
+    @Transactional(timeout=20)
     public HotelResponse updateHotelStatus(
             Integer hotelId,
             HotelStatusUpdateRequest request) {
 
-        Hotel hotel = hotelRepository.findById(hotelId)
+        Hotel hotel = hotelRepository.findForUpdate(hotelId)
                                      .orElseThrow(() -> new HotelNotFoundException(hotelId));
 
         hotel.setStatus(request.getStatus());

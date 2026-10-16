@@ -2,6 +2,9 @@ package com.suntravels.controller;
 import com.suntravels.dto.*;
 import com.suntravels.service.QuotationSearchService;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
+import java.util.List;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 @RestController @RequestMapping("/api/search")
 public class QuotationSearchController {
@@ -9,5 +12,13 @@ public class QuotationSearchController {
  public QuotationSearchController(QuotationSearchService service) { this.service=service; }
  @GetMapping("/limits") public QuotationSearchResponse.Limits limits() { return service.limits(); }
  @GetMapping("/filters") public QuotationSearchFilters filters() { return service.filters(); }
+ @GetMapping("/occupancy") public List<OfferingOccupancy> occupancy(
+  @RequestParam Integer hotelId, @RequestParam Integer roomTypeId,
+  @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate checkIn,
+  @RequestParam @DateTimeFormat(iso=DateTimeFormat.ISO.DATE) LocalDate checkOut,
+  @RequestParam(required=false) String city) {
+  return service.occupancy(hotelId,roomTypeId,checkIn,checkOut,city);
+ }
+ @PostMapping("/selection") public QuotationSearchResponse.Quotation selection(@Valid @RequestBody QuotationSelectionRequest request) { return service.customize(request); }
  @PostMapping("/quotations") public QuotationSearchResponse search(@Valid @RequestBody QuotationSearchRequest request) { return service.search(request); }
 }

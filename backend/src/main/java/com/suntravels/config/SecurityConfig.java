@@ -62,6 +62,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").authenticated()
                         .requestMatchers("/api/search/**").hasAnyRole("ADMIN", "AGENT")
                         .requestMatchers("/api/customers/**").hasAnyRole("ADMIN", "AGENT")
+                        .requestMatchers("/api/reservations", "/api/reservations/**").hasAnyRole("ADMIN", "AGENT")
                         .requestMatchers("/api/hotels/**", "/api/room-types/**", "/api/contracts/**", "/api/offerings/**")
                             .hasRole("ADMIN")
                         .requestMatchers("/api/**").denyAll()

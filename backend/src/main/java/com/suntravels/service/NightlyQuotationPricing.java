@@ -35,6 +35,6 @@ public class NightlyQuotationPricing {
   return tariffs.stream().map(t->nightly(t,adults,markup)).reduce(new BigDecimal("0.00"),BigDecimal::add);
  }
  public List<NightlyPrice> breakdown(List<Tariff> tariffs,int adults,BigDecimal markup) {
-  return tariffs.stream().map(t->new NightlyPrice(t.date(),t.seasonId()==null?"BASE":"SEASONAL",t.seasonId(),t.rate(),markup,nightly(t,adults,markup))).toList();
+  return tariffs.stream().map(t->new NightlyPrice(t.date(),t.seasonId()==null?"BASE":"SEASONAL",t.seasonId(),nightly(t,adults,markup))).toList();
  }
 }
