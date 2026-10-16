@@ -214,7 +214,7 @@
     @for (room of booking.rooms; track room.reservationItemId; let i = $index) {
       <article class="modal-room">
         <div>
-          <h4>Room {{ i + 1 }} &Middot; {{ room.roomTypeName }}</h4>
+          <h4>Room {{ i + 1 }} &#183; {{ room.roomTypeName }}</h4>
           <p>
             {{ room.hotelName }} &middot; {{ room.adults }}
             {{ room.adults === 1 ? 'adult' : 'adults' }}
