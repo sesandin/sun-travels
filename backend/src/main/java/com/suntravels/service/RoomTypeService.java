@@ -15,19 +15,23 @@ import org.springframework.transaction.annotation.Transactional;
 public class RoomTypeService {
     private final RoomTypeRepository repository;
 
+    // Initializes the room type service and its required dependencies.
     public RoomTypeService(RoomTypeRepository repository) {
         this.repository = repository;
     }
 
+    // Returns the all room types.
     public List<RoomTypeResponse> getAllRoomTypes() {
         return repository.findAll(Sort.by("name").and(Sort.by("roomTypeId"))).stream().map(
                 this::toResponse).toList();
     }
 
+    // Returns the room type by id.
     public RoomTypeResponse getRoomTypeById(Integer id) {
         return toResponse(find(id));
     }
 
+    // Creates the room type.
     @Transactional
     public RoomTypeResponse createRoomType(RoomTypeRequest request) {
         String name = request.getName().trim();
@@ -38,6 +42,7 @@ public class RoomTypeService {
         return toResponse(repository.save(roomType));
     }
 
+    // Updates the room type.
     @Transactional
     public RoomTypeResponse updateRoomType(Integer id, RoomTypeRequest request) {
         RoomType roomType = find(id);
@@ -48,16 +53,19 @@ public class RoomTypeService {
         return toResponse(repository.save(roomType));
     }
 
+    // Finds a room type or reports that it does not exist.
     private RoomType find(Integer id) {
         return repository.findById(id).orElseThrow(() -> new RoomTypeNotFoundException(id));
     }
 
+    // Trims and copies the editable room-type name and description.
     private void apply(RoomType roomType, RoomTypeRequest request) {
         roomType.setName(request.getName().trim());
         String description = request.getDescription();
         roomType.setDescription(description == null || description.isBlank() ? null : description.trim());
     }
 
+    // Maps the stored record to its API response fields.
     RoomTypeResponse toResponse(RoomType roomType) {
         return new RoomTypeResponse(roomType.getRoomTypeId(), roomType.getName(), roomType.getDescription());
     }

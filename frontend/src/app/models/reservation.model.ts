@@ -32,7 +32,7 @@ export interface ReservationRequest {
 export interface ReservationWarning {
   hotelId: number;
   hotelName: string;
-  code: 'HOTEL_INACTIVE' | 'HOTEL_CLOSURE' | 'CONTRACT_SUSPENDED' | 'OFFERING_SUSPENDED';
+  code: 'HOTEL_INACTIVE' | 'CONTRACT_SUSPENDED' | 'OFFERING_SUSPENDED';
   message: string;
   contractId?: number | null;
   offeringId?: number | null;

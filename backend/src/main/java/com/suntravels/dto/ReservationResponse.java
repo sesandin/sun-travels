@@ -25,6 +25,7 @@ public record ReservationResponse(
         List<Item> rooms,
         List<OperationalWarning> warnings
 ) {
+    // Initializes the reservation response and its required dependencies.
     public ReservationResponse(int reservationId, int customerId, String customerName, String phone,
             String email, LocalDate checkIn, LocalDate checkOut, long nights, String status,
             LocalDateTime createdAt, String currencyCode, BigDecimal totalPrice, List<Item> rooms) {
@@ -34,7 +35,6 @@ public record ReservationResponse(
 
     public enum WarningCode {
         HOTEL_INACTIVE,
-        HOTEL_CLOSURE,
         CONTRACT_SUSPENDED,
         OFFERING_SUSPENDED
     }
@@ -48,6 +48,7 @@ public record ReservationResponse(
             Integer offeringId,
             String roomTypeName
     ) {
+        // Initializes the reservation response and its required dependencies.
         public OperationalWarning(int hotelId, String hotelName, WarningCode code, String message) {
             this(hotelId, hotelName, code, message, null, null, null);
         }

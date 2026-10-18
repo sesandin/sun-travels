@@ -9,6 +9,7 @@ import tools.jackson.databind.DeserializationContext;
 import tools.jackson.databind.ValueDeserializer;
 
 public class StrictSearchDate extends ValueDeserializer<LocalDate> {
+    // Parses a strict ISO calendar date and rejects malformed search values.
     @Override
     public LocalDate deserialize(JsonParser parser, DeserializationContext context) {
         if (parser.hasToken(JsonToken.VALUE_STRING)) {

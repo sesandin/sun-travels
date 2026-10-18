@@ -23,6 +23,7 @@ public class ReservationRepository {
     private final JdbcTemplate jdbc;
     private final Clock clock;
 
+    // Initializes the reservation repository and its required dependencies.
     public ReservationRepository(JdbcTemplate jdbc, Clock clock) {
         this.jdbc = jdbc;
         this.clock = clock;
@@ -32,6 +33,7 @@ public class ReservationRepository {
   select r.*,c.name,c.phone,c.email from reservation r join customer c on c.customer_id=r.customer_id
   """;
 
+    // Inserts a database row and returns its generated ID.
     public int insert(String sql, Object... values) {
         var key = new GeneratedKeyHolder();
         jdbc.update(connection -> {
@@ -45,18 +47,21 @@ public class ReservationRepository {
         return Objects.requireNonNull(key.getKey()).intValue();
     }
 
+    // Stores an occupied night’s agreed rate, markup, and selling price.
     public void night(int item, LocalDate date, BigDecimal rate, BigDecimal markup, BigDecimal selling) {
         jdbc.update(
                 "insert into reservation_item_nightly_rate(reservation_item_id,occupied_date,hotelier_rate,markup_percentage,selling_price) values (?,?,?,?,?)",
                 item, date, rate, markup, selling);
     }
 
+    // Lists the distinct hotels used by a reservation in lock order.
     public List<Integer> hotelIds(int id) {
         return jdbc.queryForList(
                 "select distinct c.hotel_id from reservation_item i join contract_room_offering o on o.offering_id=i.offering_id join contract c on c.contract_id=o.contract_id where i.reservation_id=? order by c.hotel_id",
                 Integer.class, id);
     }
 
+    // Locks a reservation and reads its current status.
     public String lockStatus(int id) {
         var rows = jdbc.queryForList("select status from reservation where reservation_id=? for update",
                 String.class, id);
@@ -66,15 +71,18 @@ public class ReservationRepository {
         return rows.get(0);
     }
 
+    // Marks a confirmed reservation as cancelled without deleting its history.
     public void cancel(int id) {
         jdbc.update("update reservation set status='CANCELLED' where reservation_id=? and status='CONFIRMED'",
                 id);
     }
 
+    // Creates a not-found error for the requested record.
     public static ReservationException missing() {
         return new ReservationException(404, "NOT_FOUND", "Reservation was not found");
     }
 
+    // Loads reservation details, stored nightly prices, and current operational warnings.
     public ReservationResponse detail(int id) {
         var rows = jdbc.query(HEADER + " where r.reservation_id=?", (r, n) -> {
             var in = r.getObject("check_in_date", LocalDate.class);
@@ -89,7 +97,7 @@ public class ReservationRepository {
                     r.getString(STATUS_COLUMN), r.getObject("created_at", LocalDateTime.class),
                     r.getString("currency_code"), total, items,
                     "CONFIRMED".equals(r.getString(STATUS_COLUMN)) && out.isAfter(LocalDate.now(clock)) ?
-                            warnings(id, in, out) : List.of());
+                            warnings(id) : List.of());
         }, id);
         if (rows.isEmpty()) {
             throw missing();
@@ -99,12 +107,10 @@ public class ReservationRepository {
 
     // Current operational state only; never alters booked status, items or rate snapshots.
     // The caller restricts these warnings to confirmed stays whose exclusive checkout is still future.
-    private List<OperationalWarning> warnings(int id, LocalDate in, LocalDate out) {
+    private List<OperationalWarning> warnings(int id) {
         return jdbc.query("""
    select distinct h.hotel_id,h.name,h.status,c.contract_id,c.status as contract_status,
-    o.offering_id,o.status as offering_status,t.name as room_type_name,
-    exists(select 1 from hotel_closure hc where hc.hotel_id=h.hotel_id
-     and hc.start_date<? and (hc.end_date is null or hc.end_date>=?)) as hotel_closed
+    o.offering_id,o.status as offering_status,t.name as room_type_name
    from reservation_item i join contract_room_offering o on o.offering_id=i.offering_id
    join contract c on c.contract_id=o.contract_id join hotel h on h.hotel_id=c.hotel_id
    join room_type t on t.room_type_id=o.room_type_id
@@ -115,11 +121,6 @@ public class ReservationRepository {
                 result.add(new OperationalWarning(r.getInt(HOTEL_ID_COLUMN), r.getString("name"),
                         WarningCode.HOTEL_INACTIVE,
                         "This hotel is currently inactive. Please verify whether this reservation can still be honored."));
-            }
-            if (r.getBoolean("hotel_closed")) {
-                result.add(new OperationalWarning(r.getInt(HOTEL_ID_COLUMN), r.getString("name"),
-                        WarningCode.HOTEL_CLOSURE,
-                        "A hotel closure overlaps this reservation. Please contact the hotel to confirm arrangements."));
             }
             if ("SUSPENDED".equals(r.getString("contract_status"))) {
                 result.add(new OperationalWarning(r.getInt(HOTEL_ID_COLUMN), r.getString("name"),
@@ -135,9 +136,10 @@ public class ReservationRepository {
                         r.getString("room_type_name")));
             }
             return result;
-        }, out, in, id).stream().flatMap(List::stream).distinct().toList();
+        }, id).stream().flatMap(List::stream).distinct().toList();
     }
 
+    // Loads reservation rooms and derives totals only from complete nightly snapshots.
     private List<Item> items(int id, LocalDate in, LocalDate out) {
         return jdbc.query("""
    select i.*,h.hotel_id,h.name as hotel_name,c.contract_id,t.name as room_name
@@ -161,10 +163,12 @@ public class ReservationRepository {
         }, id);
     }
 
+    // Returns filtered reservation details and authoritative pagination totals.
     public Page list(String query, String status, int page, int size) {
         return list(query, status, page, size, null, null);
     }
 
+    // Returns filtered reservation details and authoritative pagination totals.
     public Page list(String query, String status, int page, int size, LocalDate stayFrom, LocalDate stayTo) {
         return list(query, status, page, size, stayFrom, stayTo, "");
     }

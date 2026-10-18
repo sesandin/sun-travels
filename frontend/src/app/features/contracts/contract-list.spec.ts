@@ -32,11 +32,13 @@ describe('Contract management', () => {
     fixture.detectChanges();
   });
   afterEach(() => http.verify());
+  // Completes the pending API request with test fixture data.
   function load(rows: Contract[] = [row]) {
     http.expectOne((r) => r.url === url + '/page').flush(directoryPage(rows));
     http.expectOne(hotelsUrl).flush([{ hotelId: 3, name: 'Ocean Hotel' }]);
     fixture.detectChanges();
   }
+  // Populates the form with valid test input.
   function fill() {
     component.form.setValue({
       hotelId: 3,

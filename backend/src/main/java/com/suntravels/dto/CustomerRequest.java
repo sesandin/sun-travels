@@ -19,31 +19,38 @@ public class CustomerRequest {
     @Email(message = "Provide a valid email address")
     private String email;
 
+    // Checks that at least one customer contact method is supplied.
     @AssertTrue(message = "Provide at least a phone number or email address")
     public boolean isContactProvided() {
         return (phone != null && !phone.isBlank()) || (email != null && !email.isBlank());
     }
 
+    // Returns the name.
     public String getName() {
         return name;
     }
 
+    // Updates the name.
     public void setName(String name) {
         this.name = name;
     }
 
+    // Returns the phone.
     public String getPhone() {
         return phone;
     }
 
+    // Updates the phone.
     public void setPhone(String phone) {
         this.phone = phone;
     }
 
+    // Returns the email.
     public String getEmail() {
         return email;
     }
 
+    // Updates the email.
     public void setEmail(String email) {
         this.email = email;
     }

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
+    // Returns a JSON unauthorized response when authentication is required.
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
             AuthenticationException exception) throws IOException {

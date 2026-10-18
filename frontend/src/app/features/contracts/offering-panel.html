@@ -72,9 +72,11 @@
       </article>
     }
     @if (contract().status === 'DRAFT') {
-      <button class="primary" type="button" (click)="open()" [disabled]="saving()">
-        Add Offering
-      </button>
+      <div class="actions offering-actions">
+        <button class="primary" type="button" (click)="open()" [disabled]="saving()">
+          Add Offering
+        </button>
+      </div>
     }
   }
   @if (!canMaintain()) {

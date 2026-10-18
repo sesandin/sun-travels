@@ -50,6 +50,7 @@ class HotelControllerTest {
 
     private MockMvc mockMvc;
 
+    // Updates the fixture’s up.
     @BeforeEach
     void setUp() {
 
@@ -62,6 +63,7 @@ class HotelControllerTest {
                 new GlobalExceptionHandler()).setValidator(validator).build();
     }
 
+    // Verifies get hotel by id return404 when hotel not found.
     @Test
     void getHotelById_shouldReturn404WhenHotelNotFound() throws Exception {
 
@@ -75,6 +77,7 @@ class HotelControllerTest {
                 jsonPath("$.message").value("Hotel not found with ID: 99999"));
     }
 
+    // Verifies get hotel by id return200 when hotel exists.
     @Test
     void getHotelById_shouldReturn200WhenHotelExists() throws Exception {
 
@@ -105,6 +108,7 @@ class HotelControllerTest {
         verify(hotelService).getHotelById(hotelId);
     }
 
+    // Verifies update hotel return200 when hotel exists.
     @Test
     void updateHotel_shouldReturn200WhenHotelExists() throws Exception {
 
@@ -146,6 +150,7 @@ class HotelControllerTest {
         verify(hotelService).updateHotel(eq(hotelId), any(HotelUpdateRequest.class));
     }
 
+    // Verifies update hotel return404 when hotel does not exist.
     @Test
     void updateHotel_shouldReturn404WhenHotelDoesNotExist() throws Exception {
 
@@ -171,6 +176,7 @@ class HotelControllerTest {
                 jsonPath("$.message").value("Hotel not found with ID: 99999"));
     }
 
+    // Verifies update hotel return400 when request is invalid.
     @Test
     void updateHotel_shouldReturn400WhenRequestIsInvalid() throws Exception {
 
@@ -193,6 +199,7 @@ class HotelControllerTest {
         verifyNoInteractions(hotelService);
     }
 
+    // Verifies update hotel status return200.
     @Test
     void updateHotelStatus_shouldReturn200() throws Exception {
         HotelResponse response = new HotelResponse();
@@ -208,6 +215,7 @@ class HotelControllerTest {
                 jsonPath("$.status").value("INACTIVE"));
     }
 
+    // Verifies update hotel status return400 for missing status.
     @Test
     void updateHotelStatus_shouldReturn400ForMissingStatus() throws Exception {
         mockMvc.perform(

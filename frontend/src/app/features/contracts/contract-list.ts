@@ -27,8 +27,10 @@ import { ContractService } from '../../services/contract.service';
 import { HotelService } from '../../services/hotel.service';
 import { OfferingPanel } from './offering-panel';
 import { apiError } from '../../services/api-error';
+// Validates the allowed decimal precision for contract markup.
 const decimal: ValidatorFn = (c) =>
   /^\d{1,3}(\.\d{1,2})?$/.test(String(c.value)) ? null : { decimal: true };
+// Checks that the contract end date is not before its start date.
 const dateRange: ValidatorFn = (group) => {
   const from = group.get('validFrom')?.value,
     to = group.get('validTo')?.value;
@@ -98,6 +100,7 @@ export class ContractList implements OnInit {
   readonly markupForm = new FormGroup({
     markupPercentage: new FormControl<number | null>(0, [Validators.required, decimal]),
   });
+  // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.loadContracts();
     this.loadHotels();
@@ -105,9 +108,11 @@ export class ContractList implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => this.openLink(params));
   }
+  // Loads the contracts.
   loadContracts(page = this.directory.page()) {
     this.directory.load(page);
   }
+  // Loads the hotels.
   loadHotels() {
     if (this.hotelsLoading()) return;
     this.hotelsLoading.set(true);
@@ -126,6 +131,7 @@ export class ContractList implements OnInit {
         },
       });
   }
+  // Opens contract creation, draft editing, or approved markup maintenance.
   openEditor(row: Contract | null = null) {
     if (this.saving() || this.detailsLoading()) return;
     if (row && row.status !== 'DRAFT' && row.status !== 'APPROVED') return;
@@ -144,14 +150,17 @@ export class ContractList implements OnInit {
     this.markupForm.reset({ markupPercentage: row?.markupPercentage ?? 0 });
     this.focusEditor();
   }
+  // Loads and displays the selected contract and its offerings.
   showDetails(row: Contract) {
     if (this.saving() || this.detailsLoading()) return;
     this.linkedOffering.set(null);
     this.linkError.set('');
     this.fetchDetails(row.contractId, row);
   }
+  // Reads linked contract and offering references from route parameters.
   private openLink(params: ParamMap) {
     if (!params.has('contractId') && !params.has('offeringId')) return;
+    // Parses a valid positive record ID from a route value.
     const parseId = (value: string | null) =>
       value && /^[1-9]\d*$/.test(value) && Number(value) <= 2147483647 ? Number(value) : null;
     const contractId = parseId(params.get('contractId')),
@@ -170,6 +179,7 @@ export class ContractList implements OnInit {
     this.linkedOffering.set(offeringId);
     this.fetchDetails(contractId);
   }
+  // Loads the selected contract details while preventing stale responses.
   private fetchDetails(id: number, row: Contract | null = null) {
     this.detailRequest?.unsubscribe();
     this.selected.set(row);
@@ -191,9 +201,11 @@ export class ContractList implements OnInit {
         },
       });
   }
+  // Closes the editor and clears its selection when no save is pending.
   closeEditor() {
     if (!this.saving() && !this.detailsLoading()) this.mode.set(null);
   }
+  // Opens confirmation for the selected contract lifecycle action.
   confirmAction(row: Contract, action: 'approve' | 'reapprove' | 'suspend' | 'terminate') {
     if (this.saving() || this.detailsLoading()) return;
     if (
@@ -208,9 +220,11 @@ export class ContractList implements OnInit {
     this.notice.set('');
     this.focusEditor();
   }
+  // Moves keyboard focus to the editor after it is rendered.
   private focusEditor() {
     afterNextRender(() => this.editor()?.nativeElement.focus(), { injector: this.injector });
   }
+  // Submits validated contract changes or the selected lifecycle action.
   save() {
     if (this.saving() || this.detailsLoading()) return;
     const mode = this.mode(),
@@ -256,6 +270,7 @@ export class ContractList implements OnInit {
     });
   }
 
+  // Selects the API request for the requested contract lifecycle action.
   private lifecycleRequest(mode: ReturnType<ContractList['mode']>, row: Contract | null) {
     if (mode === 'approve' && row?.status === 'DRAFT')
       return this.service.approveContract(row.contractId);

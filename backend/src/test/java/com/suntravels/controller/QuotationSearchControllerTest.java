@@ -30,6 +30,7 @@ class QuotationSearchControllerTest {
  {"checkIn":"2026-10-24","checkOut":"2026-10-27","rooms":[{"adults":2},{"adults":1}],"city":"Colombo","hotelId":null,"roomTypeId":null}
  """;
 
+    // Configures the component and its test dependencies.
     @BeforeEach
     void setup() {
         validator = new LocalValidatorFactoryBean();
@@ -38,11 +39,13 @@ class QuotationSearchControllerTest {
                 new QuotationSearchExceptionHandler()).setValidator(validator).build();
     }
 
+    // Releases resources created for the test.
     @AfterEach
     void close() {
         validator.close();
     }
 
+    // Verifies accepts structured rooms and returns successful empty envelope.
     @Test
     void acceptsStructuredRoomsAndReturnsSuccessfulEmptyEnvelope() throws Exception {
         when(service.search(any())).thenReturn(
@@ -58,6 +61,7 @@ class QuotationSearchControllerTest {
                 capture.getValue().rooms().stream().map(r -> r.adults()).toList());
     }
 
+    // Verifies publishes server business date and limits.
     @Test
     void publishesServerBusinessDateAndLimits() throws Exception {
         when(service.limits()).thenReturn(
@@ -67,6 +71,7 @@ class QuotationSearchControllerTest {
                 jsonPath("$.businessDate").value("2026-10-15")).andExpect(jsonPath("$.maxRooms").value(8));
     }
 
+    // Verifies occupancy exposes only safe identity and adult limits.
     @Test
     void occupancyExposesOnlySafeIdentityAndAdultLimits() throws Exception {
         when(service.occupancy(7, 3, LocalDate.of(2026, 10, 24), LocalDate.of(2026, 10, 27),
@@ -82,6 +87,7 @@ class QuotationSearchControllerTest {
                 jsonPath("$[0].length()").value(4));
     }
 
+    // Verifies occupancy requires specific filters and iso dates.
     @Test
     void occupancyRequiresSpecificFiltersAndIsoDates() throws Exception {
         mvc.perform(get("/api/search/occupancy")).andExpect(status().isBadRequest());
@@ -91,6 +97,7 @@ class QuotationSearchControllerTest {
         verifyNoInteractions(service);
     }
 
+    // Verifies publishes least privilege search filter options.
     @Test
     void publishesLeastPrivilegeSearchFilterOptions() throws Exception {
         when(service.filters()).thenReturn(new QuotationSearchFilters(
@@ -102,6 +109,7 @@ class QuotationSearchControllerTest {
                 jsonPath("$.hotels[0].phone").doesNotExist());
     }
 
+    // Verifies serializes explicit availability and selling prices without internal rates.
     @Test
     void serializesExplicitAvailabilityAndSellingPricesWithoutInternalRates() throws Exception {
         var in = LocalDate.of(2026, 10, 24);
@@ -112,12 +120,12 @@ class QuotationSearchControllerTest {
                 new java.math.BigDecimal("230.00"), List.of(night));
         var quote = new QuotationSearchResponse.Quotation(7, "Ocean", "Colombo", 4, "C004", "USD", in, out, 1,
                 List.of(room), room.totalPrice(), "INFORMATIONAL");
-        var unavailable = new QuotationSearchResponse.UnavailableOption(9, "Closed Hotel", "Colombo", 5,
+        var unavailable = new QuotationSearchResponse.UnavailableOption(9, "Full Hotel", "Colombo", 5,
                 "C005", "USD", QuotationSearchResponse.AvailabilityStatus.NOT_AVAILABLE,
-                List.of(new QuotationSearchResponse.UnavailableOffering(10, 3, "Garden View", 2, 3)),
+                List.of(new QuotationSearchResponse.UnavailableOffering(10, 3, "Garden View", 2, 0)),
                 List.of(new QuotationSearchResponse.UnavailabilityReason(
-                        QuotationSearchResponse.ReasonCode.HOTEL_CLOSED,
-                        "Hotel is closed during the requested stay.")), room.totalPrice());
+                        QuotationSearchResponse.ReasonCode.INSUFFICIENT_INVENTORY,
+                        "Only 0 rooms available; 1 requested.")), room.totalPrice());
         when(service.search(any())).thenReturn(
                 new QuotationSearchResponse(in, in, out, 1, List.of(quote), 1, false, "INDIVIDUAL_ROOM_TYPES",
                         "Informational", List.of(unavailable), 1, false));
@@ -125,12 +133,13 @@ class QuotationSearchControllerTest {
                 status().isOk()).andExpect(
                 jsonPath("$.quotations[0].availabilityStatus").value("AVAILABLE")).andExpect(
                 jsonPath("$.unavailableOptions[0].availabilityStatus").value("NOT_AVAILABLE")).andExpect(
-                jsonPath("$.unavailableOptions[0].reasons[0].code").value("HOTEL_CLOSED")).andExpect(
+                jsonPath("$.unavailableOptions[0].reasons[0].code").value("INSUFFICIENT_INVENTORY")).andExpect(
                 jsonPath("$.quotations[0].rooms[0].nightlyPrices[0].sellingPrice").value(230)).andExpect(
                 jsonPath("$.quotations[0].rooms[0].nightlyPrices[0].hotelierRate").doesNotExist()).andExpect(
                 jsonPath("$.quotations[0].rooms[0].nightlyPrices[0].markupPercentage").doesNotExist());
     }
 
+    // Verifies validates required and nested room fields.
     @Test
     void validatesRequiredAndNestedRoomFields() throws Exception {
         for (String body : List.of("{}", json.replace("2}", "0}"), json.replace("2}", "-1}"),
@@ -143,6 +152,7 @@ class QuotationSearchControllerTest {
         verifyNoInteractions(service);
     }
 
+    // Verifies rejects fractional and string adults and malformed calendar dates.
     @Test
     void rejectsFractionalAndStringAdultsAndMalformedCalendarDates() throws Exception {
         for (String body : List.of(json.replace("2}", "2.5}"), json.replace("2}", "\"2\"}"),
@@ -154,6 +164,7 @@ class QuotationSearchControllerTest {
         verifyNoInteractions(service);
     }
 
+    // Verifies returns business validation not found and safe consistency messages.
     @Test
     void returnsBusinessValidationNotFoundAndSafeConsistencyMessages() throws Exception {
         when(service.search(any())).thenThrow(QuotationSearchException.invalid("Checkout must be later"),
@@ -167,6 +178,7 @@ class QuotationSearchControllerTest {
                 status().isConflict());
     }
 
+    // Verifies database errors do not leak sql.
     @Test
     void databaseErrorsDoNotLeakSql() throws Exception {
         when(service.search(any())).thenThrow(new DataAccessResourceFailureException("secret SQL"));
@@ -175,11 +187,13 @@ class QuotationSearchControllerTest {
                 "Accommodation search is temporarily unavailable. Please retry."));
     }
 
+    // Verifies does not expose booking or confirmation endpoint.
     @Test
     void doesNotExposeBookingOrConfirmationEndpoint() throws Exception {
         mvc.perform(post("/api/search/confirm")).andExpect(status().isNotFound());
     }
 
+    // Verifies preserves exact selection payload.
     @Test
     void preservesExactSelectionPayload() throws Exception {
         mvc.perform(post("/api/search/selection").contentType("application/json").content("""
@@ -193,6 +207,7 @@ class QuotationSearchControllerTest {
                 capture.getValue().rooms().stream().map(ReservationRequest.Room::adults).toList());
     }
 
+    // Verifies accepts above ten but rejects non integer and overflow adults across quotation apis.
     @Test
     void acceptsAboveTenButRejectsNonIntegerAndOverflowAdultsAcrossQuotationApis() throws Exception {
         mvc.perform(post("/api/search/quotations").contentType("application/json").content(

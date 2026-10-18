@@ -28,6 +28,7 @@ export class Login {
       validators: [Validators.required, Validators.maxLength(200)],
     }),
   });
+  // Validates credentials, signs in staff, and opens the requested page.
   submit() {
     if (this.form.invalid || this.submitting()) {
       this.form.markAllAsTouched();

@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class ReservationExceptionTest {
+    // Verifies serialization retains the price change quotation and nightly prices.
     @Test
     void serializationRetainsThePriceChangeQuotationAndNightlyPrices() throws IOException, ClassNotFoundException {
         LocalDate checkIn = LocalDate.of(2026, 10, 16);

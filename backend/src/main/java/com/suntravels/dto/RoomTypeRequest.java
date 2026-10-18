@@ -9,18 +9,22 @@ public class RoomTypeRequest {
     @Size(max = 255, message = "Description must be at most 255 characters")
     private String description;
 
+    // Returns the name.
     public String getName() {
         return name;
     }
 
+    // Updates the name.
     public void setName(String name) {
         this.name = name;
     }
 
+    // Returns the description.
     public String getDescription() {
         return description;
     }
 
+    // Updates the description.
     public void setDescription(String description) {
         this.description = description;
     }

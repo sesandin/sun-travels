@@ -28,10 +28,12 @@ public class CustomerService {
 
     private final CustomerRepository repository;
 
+    // Initializes the customer service and its required dependencies.
     public CustomerService(CustomerRepository repository) {
         this.repository = repository;
     }
 
+    // Finds customer records matching the agent’s booking search.
     public CustomerPageResponse searchCustomers(String rawQuery, int page, int size) {
         if (page < 0) throw new InvalidCustomerException("Page must be zero or greater");
         if (size < 1 || size > MAX_PAGE_SIZE) {
@@ -55,10 +57,12 @@ public class CustomerService {
                 result.getNumber(), result.getSize(), result.getTotalElements(), result.getTotalPages());
     }
 
+    // Returns the customer.
     public CustomerResponse getCustomer(Integer id) {
         return toResponse(find(id));
     }
 
+    // Creates the customer.
     @Transactional
     public CustomerResponse createCustomer(CustomerRequest request) {
         Customer customer = new Customer();
@@ -66,6 +70,7 @@ public class CustomerService {
         return toResponse(repository.save(customer));
     }
 
+    // Updates the customer.
     @Transactional
     public CustomerResponse updateCustomer(Integer id, CustomerRequest request) {
         Customer customer = find(id);
@@ -73,10 +78,12 @@ public class CustomerService {
         return toResponse(repository.save(customer));
     }
 
+    // Finds a customer or reports that the requested record does not exist.
     private Customer find(Integer id) {
         return repository.findById(id).orElseThrow(() -> new CustomerNotFoundException(id));
     }
 
+    // Validates and normalizes customer identity and contact fields.
     private void apply(Customer customer, CustomerRequest request) {
         if (request == null) throw new InvalidCustomerException("Customer details are required");
         String name = normalize(request.getName());
@@ -99,10 +106,12 @@ public class CustomerService {
         customer.setEmail(email);
     }
 
+    // Trims text and converts missing or blank values to null.
     private String normalize(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
+    // Parses a positive numeric reference without accepting invalid values.
     private Integer parsePositiveInteger(String value) {
         if (value == null || !value.matches("[1-9]\\d*")) return null;
         try {
@@ -112,6 +121,7 @@ public class CustomerService {
         }
     }
 
+    // Builds customer matching rules for text fields and an optional exact ID.
     private Specification<Customer> searchSpecification(String query, Integer exactId) {
         String pattern = "%" + escapeLike(query.toLowerCase(Locale.ROOT)) + "%";
         return (root, criteria, builder) -> {
@@ -124,10 +134,12 @@ public class CustomerService {
         };
     }
 
+    // Escapes wildcard characters so search text is matched literally.
     private String escapeLike(String value) {
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
+    // Maps the stored record to its API response fields.
     private CustomerResponse toResponse(Customer c) {
         return new CustomerResponse(c.getCustomerId(), c.getName(), c.getPhone(), c.getEmail());
     }

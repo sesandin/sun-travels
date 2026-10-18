@@ -47,10 +47,12 @@ class OfferingMySqlIntegrationTest {
     Integer hotelId, roomId, contractId, offeringId, customerId, reservationId, itemId;
     final LocalDate from = LocalDate.of(2026, 1, 1), to = LocalDate.of(2026, 12, 31);
 
+    // Creates the transaction helper used by integration tests.
     TransactionTemplate tx() {
         return new TransactionTemplate(manager);
     }
 
+    // Creates isolated database fixtures for the test.
     @BeforeEach
     void seed() {
         assertTrue(jdbc.queryForObject("select version()", String.class).startsWith("8."),
@@ -77,6 +79,7 @@ class OfferingMySqlIntegrationTest {
         });
     }
 
+    // Removes the database records created by the test.
     @AfterEach
     void cleanup() {
         tx().executeWithoutResult(t -> {
@@ -99,6 +102,7 @@ class OfferingMySqlIntegrationTest {
         });
     }
 
+    // Verifies directory executes fetch and aggregate queries for historical offerings.
     @Test
     void directoryExecutesFetchAndAggregateQueriesForHistoricalOfferings() {
         service.createSeason(offeringId, new SeasonalRateRequest(from, to, BigDecimal.TEN));
@@ -119,6 +123,7 @@ class OfferingMySqlIntegrationTest {
         assertEquals("USD", row.currencyCode());
     }
 
+    // Verifies concurrent inclusive overlap has one committed winner.
     @Test
     void concurrentInclusiveOverlapHasOneCommittedWinner() throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(2);
@@ -161,6 +166,7 @@ class OfferingMySqlIntegrationTest {
         }
     }
 
+    // Verifies approved maintenance preserves confirmed snapshots.
     @Test
     void approvedMaintenancePreservesConfirmedSnapshots() {
         // APPROVED is fixture state only; production approval remains unavailable.
@@ -203,6 +209,7 @@ class OfferingMySqlIntegrationTest {
                         itemId));
     }
 
+    // Verifies real query permits adjacent periods excludes self and scopes offering.
     @Test
     void realQueryPermitsAdjacentPeriodsExcludesSelfAndScopesOffering() {
         var first = service.createSeason(offeringId,
@@ -239,6 +246,7 @@ class OfferingMySqlIntegrationTest {
         }
     }
 
+    // Verifies directory filters and counts are applied before ten row pages in my sql.
     @Test
     void directoryFiltersAndCountsAreAppliedBeforeTenRowPagesInMySql() {
         String prefix = "Page_%" + UUID.randomUUID();

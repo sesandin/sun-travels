@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ReservationStayPeriodMySqlIntegrationTest {
     @TestConfiguration
     static class FixedDate {
+        // Provides a fixed business clock for stay-period boundary tests.
         @Bean
         @Primary
         Clock stayPeriodClock() {
@@ -45,6 +46,7 @@ class ReservationStayPeriodMySqlIntegrationTest {
     String customerName;
     int customer, octoberUpcoming, ongoing, checkoutToday, november, cancelledUpcoming;
 
+    // Creates isolated reservation fixtures for the test.
     @BeforeEach
     void fixtures() {
         assertTrue(Objects.requireNonNull(jdbc.queryForObject("select database()", String.class)).endsWith(
@@ -63,6 +65,7 @@ class ReservationStayPeriodMySqlIntegrationTest {
         for (int i = 0; i < 20; i++) add("CONFIRMED", today.minusDays(4), today.minusDays(2));
     }
 
+    // Creates a reservation fixture for the selected status and stay dates.
     int add(String status, LocalDate in, LocalDate out) {
         int id = repository.insert(
                 "insert into reservation(customer_id,check_in_date,check_out_date,status,currency_code) values (?,?,?,?,?)",
@@ -71,14 +74,17 @@ class ReservationStayPeriodMySqlIntegrationTest {
         return id;
     }
 
+    // Loads a reservation page using the fixture customer and supplied filters.
     ReservationResponse.Page list(String status, int page, LocalDate from, LocalDate to, String period) {
         return service.list(customerName, status, page, 10, from, to, period);
     }
 
+    // Extracts reservation IDs returned by the tested directory query.
     Set<Integer> returned(ReservationResponse.Page page) {
         return new HashSet<>(page.reservations().stream().map(ReservationResponse::reservationId).toList());
     }
 
+    // Verifies exact october sixteenth boundaries are applied by sql.
     @Test
     void exactOctoberSixteenthBoundariesAreAppliedBySql() {
         var upcoming = list("", 0, null, null, "UPCOMING");
@@ -92,6 +98,7 @@ class ReservationStayPeriodMySqlIntegrationTest {
         assertTrue(returned(list("", 2, null, null, "PAST")).contains(checkoutToday));
     }
 
+    // Verifies count and rows share status search period and range filters.
     @Test
     void countAndRowsShareStatusSearchPeriodAndRangeFilters() {
         assertEquals(2, list("CONFIRMED", 0, null, null, "UPCOMING").totalElements());
@@ -106,6 +113,7 @@ class ReservationStayPeriodMySqlIntegrationTest {
         assertTrue(absent.reservations().isEmpty());
     }
 
+    // Verifies all stays pages are ten ten five and newest first.
     @Test
     void allStaysPagesAreTenTenFiveAndNewestFirst() {
         assertEquals(25, list("", 0, null, null, "ALL").totalElements());

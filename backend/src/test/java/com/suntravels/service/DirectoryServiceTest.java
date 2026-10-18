@@ -22,6 +22,7 @@ class DirectoryServiceTest {
     private final DirectoryService service = new DirectoryService(hotels, rooms, contracts, offerings,
             hotelService, mock(RoomTypeService.class), mock(ContractService.class), mock(EntityManager.class));
 
+    // Verifies returns ten rows and matching totals with stable sorting.
     @Test
     void returnsTenRowsAndMatchingTotalsWithStableSorting() {
         List<Hotel> rows = java.util.stream.IntStream.range(0, 10).mapToObj(i -> new Hotel()).toList();
@@ -37,6 +38,7 @@ class DirectoryServiceTest {
                 eq(PageRequest.of(0, 10, Sort.by("hotelId"))));
     }
 
+    // Verifies reconciles an empty last page after filtered records change.
     @Test
     void reconcilesAnEmptyLastPageAfterFilteredRecordsChange() {
         when(hotels.findAll(org.mockito.ArgumentMatchers.<Specification<Hotel>>any(), any(Pageable.class)))
@@ -51,6 +53,7 @@ class DirectoryServiceTest {
                 eq(PageRequest.of(1, 10, Sort.by("hotelId"))));
     }
 
+    // Verifies rejects negative and overflowing pages.
     @Test
     void rejectsNegativeAndOverflowingPages() {
         assertThrows(ResponseStatusException.class, () -> service.hotels("", "", -1));

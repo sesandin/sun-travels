@@ -27,10 +27,12 @@ export class App {
   private readonly navigation = viewChild<ElementRef<HTMLElement>>('navigation');
   private readonly navigationToggle = viewChild<ElementRef<HTMLButtonElement>>('navigationToggle');
 
+  // Creates an empty object for fields to be populated after construction.
   constructor() {
     afterNextRender(() => {
       if (typeof window.matchMedia !== 'function') return;
       const viewport = window.matchMedia('(max-width: 760px)');
+      // Updates navigation state when the viewport changes.
       const updateViewport = () => {
         this.mobileNavigation.set(viewport.matches);
         if (!viewport.matches) this.menuOpen.set(false);
@@ -41,6 +43,7 @@ export class App {
     });
   }
 
+  // Returns the page title for the current route.
   pageTitle(): string {
     const path = this.router.url.split('?')[0];
     if (path === '/reservations/new') return 'Review and confirm';
@@ -56,6 +59,7 @@ export class App {
     return titles[path] ?? 'Workspace';
   }
 
+  // Opens or closes the mobile navigation menu.
   toggleNavigation() {
     if (this.menuOpen()) {
       this.closeNavigation(true);
@@ -67,6 +71,7 @@ export class App {
     );
   }
 
+  // Closes mobile navigation and restores focus when requested.
   closeNavigation(restoreFocus = false) {
     if (!this.menuOpen()) return;
     this.menuOpen.set(false);
@@ -75,6 +80,7 @@ export class App {
       queueMicrotask(() => document.getElementById('main-content')?.focus());
   }
 
+  // Signs out staff and returns to the sign-in page.
   logout() {
     if (this.loggingOut()) return;
     this.loggingOut.set(true);

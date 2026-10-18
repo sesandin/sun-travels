@@ -44,6 +44,7 @@ export class ReservationDirectory implements OnInit {
     {
       validators: (group) => {
         const { stayFrom, stayTo } = group.getRawValue();
+        // Checks whether an optional reservation filter is a valid calendar date.
         const validDate = (v: string) =>
           !v ||
           (/^\d{4}-\d{2}-\d{2}$/.test(v) &&
@@ -59,13 +60,16 @@ export class ReservationDirectory implements OnInit {
   );
   readonly selected = signal<Reservation | null>(null);
   readonly detailsDialog = viewChild.required<ElementRef<HTMLDialogElement>>('detailsDialog');
+  // Opens the selected reservation in the details dialog.
   openDetails(reservation: Reservation) {
     this.selected.set(reservation);
     this.detailsDialog().nativeElement.showModal();
   }
+  // Retries the failed reservation directory request.
   retry() {
     this.load(this.requestedPage);
   }
+  // Closes the reservation details dialog.
   closeDetails() {
     this.detailsDialog().nativeElement.close();
   }
@@ -77,10 +81,12 @@ export class ReservationDirectory implements OnInit {
   private appliedPeriod: StayPeriod = '';
   private appliedFilters = '';
   private requestedPage = 0;
+  // Calculates the number of reservation directory pages.
   totalPages() {
     const r = this.result();
     return r ? Math.max(1, Math.ceil(r.totalElements / r.size)) : 1;
   }
+  // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.filters.valueChanges
       .pipe(
@@ -102,6 +108,7 @@ export class ReservationDirectory implements OnInit {
       });
     this.search();
   }
+  // Applies reservation filters and loads the first matching page.
   search() {
     this.listRequest?.unsubscribe();
     this.loading.set(false);
@@ -115,6 +122,7 @@ export class ReservationDirectory implements OnInit {
     this.appliedFilters = JSON.stringify(this.filters.getRawValue());
     this.load(0);
   }
+  // Loads the selected reservation page using all active filters.
   load(page = 0) {
     if (this.loading()) return;
     this.requestedPage = page;

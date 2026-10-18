@@ -70,6 +70,12 @@ fieldset {
 .editor .actions {
   margin-top: 20px;
 }
+.editor .details-actions {
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
 dt {
   font-weight: 600;
   margin-top: 12px;

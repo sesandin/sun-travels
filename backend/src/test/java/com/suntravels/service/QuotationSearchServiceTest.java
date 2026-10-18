@@ -37,6 +37,7 @@ class QuotationSearchServiceTest {
     QuotationSearchService service;
     final LocalDate today = LocalDate.of(2026, 10, 15), in = LocalDate.of(2026, 10, 24), out = in.plusDays(3);
 
+    // Configures the component and its test dependencies.
     @BeforeEach
     void setup() {
         factory = Validation.buildDefaultValidatorFactory();
@@ -45,16 +46,19 @@ class QuotationSearchServiceTest {
                 new NightlyQuotationPricing(), new StayAvailability());
     }
 
+    // Releases resources created for the test.
     @AfterEach
     void close() {
         factory.close();
     }
 
+    // Builds a valid request fixture for the tested operation.
     QuotationSearchRequest request(int... adults) {
         return new QuotationSearchRequest(in, out,
                 Arrays.stream(adults).mapToObj(RequestedRoom::new).toList(), null, null, null);
     }
 
+    // Creates an eligible offering fixture for quotation tests.
     Candidate candidate(int id, int contract, int hotel, int capacity, int rooms, String rate,
             String currency) {
         return new Candidate(id, contract, hotel, "Hotel " + hotel, "Colombo", "C" + contract, currency,
@@ -62,25 +66,30 @@ class QuotationSearchServiceTest {
                 capacity);
     }
 
+    // Creates an eligible offering fixture for quotation tests.
     Candidate candidate() {
         return candidate(7, 4, 1, 2, 3, "100", "USD");
     }
 
+    // Configures candidate offerings returned by the mocked search repository.
     void candidates(Candidate... values) {
         when(data.candidates(any())).thenReturn(Arrays.asList(values));
     }
 
+    // Asserts that the operation returns the expected business error.
     void error(int status, QuotationSearchRequest r) {
         assertEquals(status,
                 assertThrows(QuotationSearchException.class, () -> service.search(r)).getStatus());
     }
 
+    // Verifies business clock and limits come from colombo.
     @Test
     void businessClockAndLimitsComeFromColombo() {
         assertEquals(today, service.limits().businessDate());
         assertEquals(8, service.limits().maxRooms());
     }
 
+    // Verifies occupancy returns every eligible limit without loading prices or inventory.
     @Test
     void occupancyReturnsEveryEligibleLimitWithoutLoadingPricesOrInventory() {
         when(hotels.existsById(1)).thenReturn(true);
@@ -99,6 +108,7 @@ class QuotationSearchServiceTest {
         verify(data, never()).bookedRooms(any(), any(), any());
     }
 
+    // Verifies occupancy validates dates and references before querying and allows no matches.
     @Test
     void occupancyValidatesDatesAndReferencesBeforeQueryingAndAllowsNoMatches() {
         assertEquals(400, assertThrows(QuotationSearchException.class,
@@ -115,6 +125,7 @@ class QuotationSearchServiceTest {
         assertTrue(service.occupancy(1, 7, in, out, null).isEmpty());
     }
 
+    // Verifies search filters expose only active hotel identity and generic room names.
     @Test
     void searchFiltersExposeOnlyActiveHotelIdentityAndGenericRoomNames() {
         Hotel active = new Hotel();
@@ -137,6 +148,7 @@ class QuotationSearchServiceTest {
         assertEquals("Double", filters.roomTypes().get(0).name());
     }
 
+    // Verifies rejects past or same day checkout.
     @ParameterizedTest
     @ValueSource(ints = {-1, 0})
     void rejectsPastOrSameDayCheckout(int offset) {
@@ -145,6 +157,7 @@ class QuotationSearchServiceTest {
         verifyNoInteractions(data);
     }
 
+    // Verifies past check in is rejected even with valid checkout.
     @Test
     void pastCheckInIsRejectedEvenWithValidCheckout() {
         error(400,
@@ -152,6 +165,7 @@ class QuotationSearchServiceTest {
                         null));
     }
 
+    // Verifies rejects reversed and excessive date ranges.
     @Test
     void rejectsReversedAndExcessiveDateRanges() {
         error(400, new QuotationSearchRequest(in, in.minusDays(1), List.of(new RequestedRoom(1)), null, null,
@@ -162,6 +176,7 @@ class QuotationSearchServiceTest {
                 List.of(new RequestedRoom(1)), null, null, null));
     }
 
+    // Verifies rejects invalid adult counts.
     @ParameterizedTest
     @ValueSource(ints = {0, -1})
     void rejectsInvalidAdultCounts(int count) {
@@ -169,6 +184,7 @@ class QuotationSearchServiceTest {
         verifyNoInteractions(data);
     }
 
+    // Verifies rejects null and empty room structures.
     @Test
     void rejectsNullAndEmptyRoomStructures() {
         error(400, null);
@@ -180,6 +196,7 @@ class QuotationSearchServiceTest {
         error(400, request(1, 1, 1, 1, 1, 1, 1, 1, 1));
     }
 
+    // Verifies selected reference must exist and bad ids are invalid.
     @Test
     void selectedReferenceMustExistAndBadIdsAreInvalid() {
         error(404, new QuotationSearchRequest(in, out, List.of(new RequestedRoom(1)), null, 99, null));
@@ -190,12 +207,14 @@ class QuotationSearchServiceTest {
         verifyNoInteractions(data);
     }
 
+    // Verifies no matches is successful empty search.
     @Test
     void noMatchesIsSuccessfulEmptySearch() {
         assertTrue(service.search(request(2)).quotations().isEmpty());
         verify(data, never()).seasons(any());
     }
 
+    // Verifies mixed adults share inventory and displayed nights sum exactly.
     @Test
     void mixedAdultsShareInventoryAndDisplayedNightsSumExactly() {
         candidates(candidate());
@@ -216,6 +235,7 @@ class QuotationSearchServiceTest {
         assertTrue(result.unavailableOptions().isEmpty());
     }
 
+    // Verifies unavailable inventory counts all requested rooms against the same pool.
     @Test
     void unavailableInventoryCountsAllRequestedRoomsAgainstTheSamePool() {
         candidates(candidate(7, 4, 1, 2, 2, "100", "USD"));
@@ -231,6 +251,7 @@ class QuotationSearchServiceTest {
         assertEquals(new BigDecimal("1035.00"), option.indicativeTotalPrice());
     }
 
+    // Verifies occupancy failure has no misleading selling price.
     @Test
     void occupancyFailureHasNoMisleadingSellingPrice() {
         candidates(candidate());
@@ -242,17 +263,7 @@ class QuotationSearchServiceTest {
         assertNull(option.indicativeTotalPrice());
     }
 
-    @Test
-    void closedEligibleHotelIsDiagnosticOnlyAndCanHaveSeasonalIndicativePrice() {
-        when(data.closedCandidates(any())).thenReturn(List.of(candidate()));
-        when(data.seasons(Set.of(7))).thenReturn(
-                List.of(new Season(1, 7, in.plusDays(1), in.plusDays(1), new BigDecimal("150"))));
-        var result = service.search(request(2));
-        assertTrue(result.quotations().isEmpty());
-        assertEquals(ReasonCode.HOTEL_CLOSED, result.unavailableOptions().get(0).reasons().get(0).code());
-        assertEquals(new BigDecimal("805.00"), result.unavailableOptions().get(0).indicativeTotalPrice());
-    }
-
+    // Verifies available options remain separate and sorted and cannot be displaced by unavailable results.
     @Test
     void availableOptionsRemainSeparateAndSortedAndCannotBeDisplacedByUnavailableResults() {
         List<Candidate> all = new ArrayList<>();
@@ -268,6 +279,7 @@ class QuotationSearchServiceTest {
         assertFalse(result.truncated());
     }
 
+    // Verifies mixed types satisfy different room specific occupancy.
     @Test
     void mixedTypesSatisfyDifferentRoomSpecificOccupancy() {
         when(hotels.existsById(1)).thenReturn(true);
@@ -279,6 +291,7 @@ class QuotationSearchServiceTest {
         assertEquals(new BigDecimal("862.50"), q.totalPrice());
     }
 
+    // Verifies full combination is required not partial per offering matches.
     @Test
     void fullCombinationIsRequiredNotPartialPerOfferingMatches() {
         candidates(candidate(7, 4, 1, 2, 1, "100", "USD"));
@@ -286,12 +299,14 @@ class QuotationSearchServiceTest {
         assertTrue(service.search(request(3)).quotations().isEmpty());
     }
 
+    // Verifies cannot combine contracts or hotels.
     @Test
     void cannotCombineContractsOrHotels() {
         candidates(candidate(7, 4, 1, 2, 1, "100", "USD"), candidate(8, 5, 2, 1, 1, "50", "USD"));
         assertTrue(service.search(request(2, 1)).quotations().isEmpty());
     }
 
+    // Verifies peak night availability allows turnover not false sold out.
     @Test
     void peakNightAvailabilityAllowsTurnoverNotFalseSoldOut() {
         candidates(candidate(7, 4, 1, 2, 2, "100", "USD"));
@@ -302,6 +317,7 @@ class QuotationSearchServiceTest {
                 service.search(request(2)).quotations().get(0).rooms().get(0).availableRoomsForStay());
     }
 
+    // Verifies fully booked offering does not produce a quote.
     @Test
     void fullyBookedOfferingDoesNotProduceAQuote() {
         candidates(candidate(7, 4, 1, 2, 1, "100", "USD"));
@@ -309,6 +325,7 @@ class QuotationSearchServiceTest {
         assertTrue(service.search(request(1)).quotations().isEmpty());
     }
 
+    // Verifies seasonal rates are bulk loaded and override only applicable night.
     @Test
     void seasonalRatesAreBulkLoadedAndOverrideOnlyApplicableNight() {
         candidates(candidate());
@@ -321,20 +338,23 @@ class QuotationSearchServiceTest {
         verify(data, times(1)).seasons(Set.of(7));
     }
 
+    // Verifies unsafe replacement or approval state fails closed.
     @Test
     void unsafeReplacementOrApprovalStateFailsClosed() {
         candidates(candidate());
-        when(data.inconsistent(Set.of(7), Set.of(4), Set.of(1), today)).thenReturn(true);
+        when(data.inconsistent(Set.of(7), Set.of(4), today)).thenReturn(true);
         error(409, request(1));
         verify(data, never()).bookedRooms(any(), any(), any());
     }
 
+    // Verifies excessive processing limits never return an incomplete search.
     @Test
     void excessiveProcessingLimitsNeverReturnAnIncompleteSearch() {
         when(data.candidates(any())).thenReturn(Collections.nCopies(501, candidate()));
         error(409, request(1));
     }
 
+    // Verifies invalid stored rate and currency are not quoted.
     @Test
     void invalidStoredRateAndCurrencyAreNotQuoted() {
         candidates(candidate(7, 4, 1, 2, 2, "0", "USD"));
@@ -343,6 +363,7 @@ class QuotationSearchServiceTest {
         error(409, request(1));
     }
 
+    // Verifies currency groups and totals are deterministic and do not convert.
     @Test
     void currencyGroupsAndTotalsAreDeterministicAndDoNotConvert() {
         candidates(candidate(7, 4, 1, 2, 3, "100", "USD"), candidate(8, 5, 2, 2, 3, "200", "EUR"),
@@ -352,6 +373,7 @@ class QuotationSearchServiceTest {
         assertEquals(new BigDecimal("172.50"), q.get(1).totalPrice());
     }
 
+    // Verifies results are capped explicitly without losing allocation correctness.
     @Test
     void resultsAreCappedExplicitlyWithoutLosingAllocationCorrectness() {
         List<Candidate> all = new ArrayList<>();
@@ -364,6 +386,7 @@ class QuotationSearchServiceTest {
         assertEquals("INDIVIDUAL_ROOM_TYPES", result.allocationPolicy());
     }
 
+    // Verifies individual types use complete request with assignment markup.
     @Test
     void individualTypesUseCompleteRequestWithAssignmentMarkup() {
         candidates(candidate(7, 4, 1, 2, 15, "35", "USD"), candidate(8, 4, 1, 3, 8, "55", "USD"));
@@ -375,6 +398,7 @@ class QuotationSearchServiceTest {
         assertEquals(2, result.selectionOfferings().size());
     }
 
+    // Verifies individual failures still allow explicit mixed selection.
     @Test
     void individualFailuresStillAllowExplicitMixedSelection() {
         candidates(candidate(7, 4, 1, 2, 1, "35", "USD"), candidate(8, 4, 1, 3, 1, "55", "USD"));
@@ -388,11 +412,13 @@ class QuotationSearchServiceTest {
         assertEquals(new BigDecimal("431.25"), q.totalPrice());
     }
 
+    // Builds an exact room-selection fixture for quotation tests.
     QuotationSelectionRequest selection(int contract, int... ids) {
         return new QuotationSelectionRequest(1, contract, in, out,
                 Arrays.stream(ids).mapToObj(id -> new ReservationRequest.Room(id, 1)).toList());
     }
 
+    // Verifies customized selection preserves more expensive choice and adult order.
     @Test
     void customizedSelectionPreservesMoreExpensiveChoiceAndAdultOrder() {
         when(hotels.existsById(1)).thenReturn(true);
@@ -404,6 +430,7 @@ class QuotationSearchServiceTest {
         assertEquals(new BigDecimal("431.25"), q.totalPrice());
     }
 
+    // Verifies customized repeated offerings share inventory and reject foreign references.
     @Test
     void customizedRepeatedOfferingsShareInventoryAndRejectForeignReferences() {
         when(hotels.existsById(1)).thenReturn(true);
@@ -416,6 +443,7 @@ class QuotationSearchServiceTest {
         assertThrows(QuotationSearchException.class, () -> service.customize(selectedRoomsForAssertion3));
     }
 
+    // Verifies customized cross contract and cross hotel references are rejected independently.
     @Test
     void customizedCrossContractAndCrossHotelReferencesAreRejectedIndependently() {
         when(hotels.existsById(1)).thenReturn(true);
@@ -427,6 +455,7 @@ class QuotationSearchServiceTest {
         assertThrows(QuotationSearchException.class, () -> service.customize(selectedRoomsForAssertion5));
     }
 
+    // Verifies contractual capacity determines availability without room type filter.
     @ParameterizedTest
     @CsvSource({"1,2,true", "2,2,true", "3,2,false", "3,3,true", "5,6,true", "7,6,false", "12,12,true",
             "13,12,false"})
@@ -441,6 +470,7 @@ class QuotationSearchServiceTest {
                 result.unavailableOptions().get(0).reasons().get(0).code());
     }
 
+    // Verifies different capacities are evaluated independently for the complete request.
     @Test
     void differentCapacitiesAreEvaluatedIndependentlyForTheCompleteRequest() {
         candidates(candidate(7, 4, 1, 2, 8, "35", "USD"), candidate(8, 4, 1, 3, 8, "55", "USD"));
@@ -449,6 +479,7 @@ class QuotationSearchServiceTest {
         assertEquals(7, result.unavailableOptions().get(0).offerings().get(0).offeringId());
     }
 
+    // Verifies large representable adults fail by offering capacity without overflow.
     @Test
     void largeRepresentableAdultsFailByOfferingCapacityWithoutOverflow() {
         candidates(candidate());
@@ -459,6 +490,7 @@ class QuotationSearchServiceTest {
                 result.unavailableOptions().get(0).reasons().get(0).code());
     }
 
+    // Verifies customized rooms use their own limits including above ten.
     @Test
     void customizedRoomsUseTheirOwnLimitsIncludingAboveTen() {
         when(hotels.existsById(1)).thenReturn(true);
@@ -473,6 +505,7 @@ class QuotationSearchServiceTest {
         assertThrows(QuotationSearchException.class, () -> service.customize(requestForAssertion1));
     }
 
+    // Verifies eight rooms remain allowed without a total adult ceiling.
     @Test
     void eightRoomsRemainAllowedWithoutATotalAdultCeiling() {
         candidates(candidate(7, 4, 1, 12, 8, "100", "USD"));

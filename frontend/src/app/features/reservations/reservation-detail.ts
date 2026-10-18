@@ -23,6 +23,7 @@ export class ReservationDetail implements OnInit {
   private readonly service = inject(ReservationService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  // Returns to the reservation directory.
   back() {
     if (!this.cancelling()) void this.router.navigate(['/reservations']);
   }
@@ -33,9 +34,11 @@ export class ReservationDetail implements OnInit {
   readonly error = signal('');
   readonly notice = signal(history.state?.confirmed ? 'Reservation confirmed successfully.' : '');
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('cancelDialog');
+  // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.load();
   }
+  // Loads the selected reservation’s details and handles read failures.
   load() {
     if (this.loading()) return;
     this.loading.set(true);
@@ -54,12 +57,15 @@ export class ReservationDetail implements OnInit {
         },
       });
   }
+  // Opens the explicit reservation cancellation confirmation.
   openCancel() {
     this.dialog().nativeElement.showModal();
   }
+  // Closes the reservation cancellation dialog.
   closeCancel() {
     if (!this.cancelling()) this.dialog().nativeElement.close();
   }
+  // Submits explicit cancellation and refreshes the displayed reservation.
   cancel() {
     const r = this.reservation();
     if (!r || this.cancelling() || r.status !== 'CONFIRMED') return;

@@ -20,6 +20,7 @@ import {
 import { RoomType } from '../../models/room-type.model';
 import { RoomTypeService } from '../../services/room-type.service';
 import { apiError } from '../../services/api-error';
+// Rejects values containing only whitespace.
 const notBlank: ValidatorFn = (control) => (!control.value?.trim() ? { required: true } : null);
 @Component({
   selector: 'app-room-type-list',
@@ -56,12 +57,15 @@ export class RoomTypeList implements OnInit {
       validators: [Validators.maxLength(255)],
     }),
   });
+  // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.loadRoomTypes();
   }
+  // Loads the room types.
   loadRoomTypes(page = this.directory.page()) {
     this.directory.load(page);
   }
+  // Opens room-type creation or editing with the selected values.
   openEditor(row: RoomType | null = null) {
     this.selected.set(row);
     this.submissionError.set('');
@@ -69,9 +73,11 @@ export class RoomTypeList implements OnInit {
     this.form.reset({ name: row?.name ?? '', description: row?.description ?? '' });
     this.editor().nativeElement.showModal();
   }
+  // Closes the editor and clears its selection when no save is pending.
   closeEditor() {
     if (!this.saving()) this.editor().nativeElement.close();
   }
+  // Returns a readable validation message for the selected form control.
   validationMessage(key: 'name' | 'description') {
     const control = this.form.controls[key];
     if (!control.touched || !control.errors) return '';
@@ -79,6 +85,7 @@ export class RoomTypeList implements OnInit {
     const maximumLength = key === 'name' ? 100 : 255;
     return 'Use at most ' + maximumLength + ' characters.';
   }
+  // Validates and saves a room type, then refreshes the directory.
   save() {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.saving()) return;
@@ -115,6 +122,7 @@ export class RoomTypeList implements OnInit {
       },
     });
   }
+  // Converts a room-type request failure into readable feedback.
   private message(error: unknown) {
     return apiError(error).replace(/hotel/gi, 'room type');
   }

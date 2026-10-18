@@ -45,6 +45,7 @@ class HotelServiceTest {
     @InjectMocks
     private HotelService hotelService;
 
+    // Verifies create hotel return saved hotel.
     @Test
     void createHotel_shouldReturnSavedHotel() {
 
@@ -88,6 +89,7 @@ class HotelServiceTest {
         assertEquals(HotelStatus.ACTIVE, capturedHotel.getStatus());
     }
 
+    // Verifies create hotel return generated hotel id.
     @Test
     void createHotel_shouldReturnGeneratedHotelId() {
 
@@ -112,6 +114,7 @@ class HotelServiceTest {
         verify(hotelRepository).save(any(Hotel.class));
     }
 
+    // Verifies get all hotels return hotel responses.
     @Test
     void getAllHotels_shouldReturnHotelResponses() {
 
@@ -152,6 +155,7 @@ class HotelServiceTest {
         verify(hotelRepository).findAll();
     }
 
+    // Verifies get all hotels return empty list when no hotels exist.
     @Test
     void getAllHotels_shouldReturnEmptyListWhenNoHotelsExist() {
 
@@ -168,6 +172,7 @@ class HotelServiceTest {
         verify(hotelRepository).findAll();
     }
 
+    // Verifies get hotel by id return hotel when found.
     @Test
     void getHotelById_shouldReturnHotelWhenFound() {
 
@@ -203,6 +208,7 @@ class HotelServiceTest {
         verify(hotelRepository).findById(hotelId);
     }
 
+    // Verifies get hotel by id throw exception when not found.
     @Test
     void getHotelById_shouldThrowExceptionWhenNotFound() {
 
@@ -220,6 +226,7 @@ class HotelServiceTest {
         verify(hotelRepository).findById(hotelId);
     }
 
+    // Verifies update hotel update details but preserve id and status.
     @Test
     void updateHotel_shouldUpdateDetailsButPreserveIdAndStatus() {
 
@@ -270,6 +277,7 @@ class HotelServiceTest {
         verify(hotelRepository, times(1)).save(any(Hotel.class));
     }
 
+    // Verifies update hotel throw exception when hotel does not exist.
     @Test
     void updateHotel_shouldThrowExceptionWhenHotelDoesNotExist() {
 
@@ -291,6 +299,7 @@ class HotelServiceTest {
         verify(hotelRepository, never()).save(any(Hotel.class));
     }
 
+    // Verifies update hotel status activate inactive hotel.
     @Test
     void updateHotelStatus_shouldActivateInactiveHotel() {
         Hotel hotel = new Hotel();
@@ -308,6 +317,7 @@ class HotelServiceTest {
         verify(hotelRepository).save(same(hotel));
     }
 
+    // Verifies update hotel status deactivate active hotel.
     @Test
     void updateHotelStatus_shouldDeactivateActiveHotel() {
         Hotel hotel = new Hotel();
@@ -330,6 +340,7 @@ class HotelServiceTest {
         verify(hotelRepository).save(same(hotel));
     }
 
+    // Verifies update hotel status throw when hotel not found.
     @Test
     void updateHotelStatus_shouldThrowWhenHotelNotFound() {
         HotelStatusUpdateRequest request = new HotelStatusUpdateRequest();

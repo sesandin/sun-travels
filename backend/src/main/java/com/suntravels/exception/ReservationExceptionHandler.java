@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 public class ReservationExceptionHandler {
     private static final String MESSAGE = "message";
 
+    // Maps a business exception to its HTTP error response.
     @ExceptionHandler(ReservationException.class)
     public ResponseEntity<Map<String, Object>> business(ReservationException ex) {
         Map<String, Object> result = new LinkedHashMap<>();
@@ -27,12 +28,14 @@ public class ReservationExceptionHandler {
         return ResponseEntity.status(ex.getStatus()).body(result);
     }
 
+    // Returns a safe error when stored data cannot be processed consistently.
     @ExceptionHandler(QuotationSearchException.class)
     public ResponseEntity<Map<String, String>> inconsistent(QuotationSearchException ex) {
         return ResponseEntity.status(ex.getStatus()).body(
                 Map.of("code", "UNAVAILABLE", MESSAGE, ex.getMessage()));
     }
 
+    // Creates or returns a validation error for invalid input.
     @ExceptionHandler({MethodArgumentNotValidException.class, HttpMessageNotReadableException.class,
             MethodArgumentTypeMismatchException.class})
     public ResponseEntity<Map<String, String>> invalid(Exception ex) {
@@ -40,6 +43,7 @@ public class ReservationExceptionHandler {
                 "Check customer, ISO dates, whole-number room counts and accepted selling quotation"));
     }
 
+    // Returns a safe error when the operation cannot be completed.
     @ExceptionHandler({DataAccessException.class, TransactionException.class})
     public ResponseEntity<Map<String, String>> unavailable(Exception ex) {
         return ResponseEntity.status(503).body(Map.of("code", "TEMPORARILY_UNAVAILABLE", MESSAGE,

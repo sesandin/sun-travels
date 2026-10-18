@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Read-only data access: no reservation entities or booking CRUD.
  * Caller holds HOTEL -> CONTRACT -> OFFERING locks. Future confirmations,
- * date/status/item changes and hotel closures must acquire the same HOTEL lock.
+ * date/status/item changes must acquire the same HOTEL lock.
  * FOR UPDATE provides a fresh MySQL current read rather than an earlier snapshot.
  * Candidate room IDs come from freshly locked offerings, not a snapshot subquery.
  * The joins may return an ID more than once; any matching commitment blocks.
@@ -32,11 +32,13 @@ public class ReservationCommitmentRepository {
             join contract c on c.contract_id = o.contract_id
             """;
 
+    // Initializes the reservation commitment repository and its required dependencies.
     public ReservationCommitmentRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
         this.named = new NamedParameterJdbcTemplate(jdbc);
     }
 
+    // Finds and locks confirmed reservations with ongoing or future stays.
     public List<Integer> outstanding(Integer contractId, LocalDate today) {
         // Keep a current locking join read: scalar lookups before the hotel lock may have opened a snapshot.
         return jdbc.queryForList(SELECT + """
@@ -46,6 +48,7 @@ public class ReservationCommitmentRepository {
                 """, Integer.class, contractId, today).stream().distinct().toList();
     }
 
+    // Finds confirmed contract reservations with invalid dates or adult counts.
     public List<Integer> invalidForContract(Integer contractId) {
         return jdbc.queryForList(SELECT + """
                 where c.contract_id = ? and r.status = 'CONFIRMED'
@@ -54,6 +57,7 @@ public class ReservationCommitmentRepository {
                 """, Integer.class, contractId);
     }
 
+    // Finds confirmed stays that conflict with replacing a contract for the same room types.
     public List<Integer> replacementConflicts(Integer hotelId, Integer candidateId, LocalDate from,
             LocalDate to, LocalDate today, Set<Integer> roomIds) {
         return named.queryForList(SELECT + """
@@ -67,6 +71,7 @@ public class ReservationCommitmentRepository {
                         "rooms", roomIds), Integer.class);
     }
 
+    // Finds malformed confirmed stays that prevent safe contract replacement.
     public List<Integer> invalidForReplacement(Integer hotelId, Integer candidateId, Set<Integer> roomIds) {
         return named.queryForList(SELECT + """
                 where c.hotel_id = :hotel and c.contract_id <> :candidate

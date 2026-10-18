@@ -54,10 +54,12 @@ class ContractMySqlIntegrationTest {
     Integer hotelId, roomId, candidateId, candidateOffering;
     LocalDate today;
 
+    // Creates the transaction helper used by integration tests.
     TransactionTemplate tx() {
         return new TransactionTemplate(manager);
     }
 
+    // Creates an isolated hotel fixture.
     Integer hotel() {
         Integer id = tx().execute(t -> {
             Hotel h = new Hotel();
@@ -69,6 +71,7 @@ class ContractMySqlIntegrationTest {
         return id;
     }
 
+    // Creates an isolated room-type fixture.
     Integer room() {
         Integer id = tx().execute(t -> {
             RoomType r = new RoomType();
@@ -79,15 +82,18 @@ class ContractMySqlIntegrationTest {
         return id;
     }
 
+    // Builds the contract fixture used by this test suite.
     Integer contract(Integer h, LocalDate from, LocalDate to) {
         return service.createContract(new ContractRequest(h, from, to, BigDecimal.TEN, "USD")).contractId();
     }
 
+    // Builds the room-offering fixture used by this test suite.
     Integer offering(Integer c, Integer room) {
         return offeringService.create(c,
                 new OfferingRequest(room, BigDecimal.TEN, 10, 2, OfferingStatus.ENABLED)).offeringId();
     }
 
+    // Sets the fixture’s contract or offering status for the scenario.
     void fixtureStatus(Integer id, ContractStatus status) {
         // Imported/historical state setup only; no production approval shortcut.
         tx().executeWithoutResult(t -> {
@@ -97,6 +103,7 @@ class ContractMySqlIntegrationTest {
         });
     }
 
+    // Creates a reservation fixture with the requested stay and status.
     Integer reservation(Integer offer, String status, LocalDate checkIn, LocalDate checkOut) {
         return tx().execute(t -> {
             jdbc.update("insert into customer(name) values (?)", "Contract test " + UUID.randomUUID());
@@ -117,6 +124,7 @@ class ContractMySqlIntegrationTest {
         });
     }
 
+    // Creates isolated database fixtures for the test.
     @BeforeEach
     void seed() {
         assertTrue(jdbc.queryForObject("select version()", String.class).startsWith("8."));
@@ -127,6 +135,7 @@ class ContractMySqlIntegrationTest {
         candidateOffering = offering(candidateId, roomId);
     }
 
+    // Removes the database records created by the test.
     @AfterEach
     void cleanup() {
         tx().executeWithoutResult(t -> {
@@ -154,6 +163,7 @@ class ContractMySqlIntegrationTest {
         });
     }
 
+    // Verifies concurrent creation returns only distinct final codes.
     @Test
     void concurrentCreationReturnsOnlyDistinctFinalCodes() throws Exception {
         ExecutorService pool = Executors.newFixedThreadPool(2);
@@ -180,6 +190,7 @@ class ContractMySqlIntegrationTest {
         }
     }
 
+    // Verifies code collision rolls back temporary insert and preserves legacy row.
     @Test
     void codeCollisionRollsBackTemporaryInsertAndPreservesLegacyRow() {
         assertEquals(1, jdbc.queryForObject("select @@auto_increment_increment", Integer.class),
@@ -213,6 +224,7 @@ class ContractMySqlIntegrationTest {
                 Integer.class, hotelId));
     }
 
+    // Verifies concurrent same hotel approval has one winner and never suspends other.
     @Test
     void concurrentSameHotelApprovalHasOneWinnerAndNeverSuspendsOther() throws Exception {
         Integer secondId = contract(hotelId, today, today.plusDays(30));
@@ -255,6 +267,7 @@ class ContractMySqlIntegrationTest {
         }
     }
 
+    // Verifies failed outer transaction rolls back approval status.
     @Test
     void failedOuterTransactionRollsBackApprovalStatus() {
         TransactionTemplate transaction = tx();
@@ -266,6 +279,7 @@ class ContractMySqlIntegrationTest {
         assertEquals(ContractStatus.DRAFT, service.getContractById(candidateId).status());
     }
 
+    // Verifies inclusive contract boundary conflicts but next day and future approval succeed.
     @Test
     void inclusiveContractBoundaryConflictsButNextDayAndFutureApprovalSucceed() {
         service.approveContract(candidateId);
@@ -278,6 +292,7 @@ class ContractMySqlIntegrationTest {
         assertEquals(ContractStatus.APPROVED, service.approveContract(adjacent).status());
     }
 
+    // Supplies contract-replacement status and stay-boundary scenarios.
     static Stream<Arguments> replacementCases() {
         return Stream.of(Arguments.of("APPROVED", "CONFIRMED", -2, 1, true, true, true),
                 Arguments.of("SUSPENDED", "CONFIRMED", -2, 1, true, true, true),
@@ -291,6 +306,7 @@ class ContractMySqlIntegrationTest {
                 Arguments.of("SUSPENDED", "CONFIRMED", 0, 2, true, false, false));
     }
 
+    // Verifies replacement uses actual nights hotel room and outstanding status.
     @ParameterizedTest
     @MethodSource("replacementCases")
     void replacementUsesActualNightsHotelRoomAndOutstandingStatus(String oldStatus, String reservationStatus,
@@ -306,6 +322,7 @@ class ContractMySqlIntegrationTest {
         } else assertEquals(ContractStatus.APPROVED, service.approveContract(candidateId).status());
     }
 
+    // Verifies exclusive checkout at future candidate start does not block.
     @Test
     void exclusiveCheckoutAtFutureCandidateStartDoesNotBlock() {
         service.updateContract(candidateId,
@@ -317,12 +334,14 @@ class ContractMySqlIntegrationTest {
         assertEquals(ContractStatus.APPROVED, service.approveContract(candidateId).status());
     }
 
+    // Supplies contract-termination status and stay-boundary scenarios.
     static Stream<Arguments> terminationCases() {
         return Stream.of(Arguments.of("CONFIRMED", -1, 1, true), Arguments.of("CONFIRMED", 1, 2, true),
                 Arguments.of("CONFIRMED", -2, 0, false), Arguments.of("CONFIRMED", -3, -1, false),
                 Arguments.of("PENDING", 1, 2, false), Arguments.of("CANCELLED", 1, 2, false));
     }
 
+    // Verifies termination uses business date exclusive checkout and status.
     @ParameterizedTest
     @MethodSource("terminationCases")
     void terminationUsesBusinessDateExclusiveCheckoutAndStatus(String status, int in, int out,
@@ -336,6 +355,7 @@ class ContractMySqlIntegrationTest {
         } else assertEquals(ContractStatus.TERMINATED, service.terminateContract(candidateId).status());
     }
 
+    // Verifies suspension reapproval and markup preserve confirmed snapshots and hotel state.
     @Test
     void suspensionReapprovalAndMarkupPreserveConfirmedSnapshotsAndHotelState() {
         service.approveContract(candidateId);
@@ -360,6 +380,7 @@ class ContractMySqlIntegrationTest {
                 jdbc.queryForObject("select status from hotel where hotel_id=?", String.class, hotelId));
     }
 
+    // Verifies coordinated pending to confirmed write cannot race termination guard.
     @Test
     void coordinatedPendingToConfirmedWriteCannotRaceTerminationGuard() throws Exception {
         service.approveContract(candidateId);
@@ -406,6 +427,7 @@ class ContractMySqlIntegrationTest {
         }
     }
 
+    // Verifies malformed confirmed stay fails closed.
     @Test
     void malformedConfirmedStayFailsClosed() {
         reservation(candidateOffering, "CONFIRMED", today, today);

@@ -43,6 +43,7 @@ describe('Contract offerings', () => {
     fixture.detectChanges();
   });
   afterEach(() => http.verify());
+  // Completes the pending API request with test fixture data.
   function load(rows: Offering[] = []) {
     http.expectOne(api + '/contracts/7/offerings').flush(rows);
     fixture.detectChanges();
@@ -50,12 +51,14 @@ describe('Contract offerings', () => {
       http.expectOne(api + '/offerings/' + row.offeringId + '/seasonal-rates').flush([]);
     fixture.detectChanges();
   }
+  // Opens the offering editor and supplies room-type choices.
   function open() {
     c.open();
     http
       .expectOne(api + '/room-types')
       .flush([{ roomTypeId: 3, name: 'Double', description: null }]);
   }
+  // Populates the form with valid test input.
   function fill() {
     c.form.setValue({
       roomTypeId: 3,

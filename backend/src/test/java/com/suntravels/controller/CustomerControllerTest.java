@@ -25,6 +25,7 @@ class CustomerControllerTest {
     @MockitoBean
     CustomerService service;
 
+    // Verifies lists gets creates and updates customers.
     @Test
     void listsGetsCreatesAndUpdatesCustomers() throws Exception {
         CustomerResponse customer = new CustomerResponse(3, "Alice", "+94771234567", "alice@example.com");
@@ -44,6 +45,7 @@ class CustomerControllerTest {
                 status().isOk());
     }
 
+    // Verifies validates name contact email phone and lengths.
     @Test
     void validatesNameContactEmailPhoneAndLengths() throws Exception {
         for (String body : List.of("{\"name\":\" \",\"phone\":\"+94771234567\"}",
@@ -56,6 +58,7 @@ class CustomerControllerTest {
         verify(service, never()).createCustomer(any());
     }
 
+    // Verifies unknown and malformed identifiers have safe errors.
     @Test
     void unknownAndMalformedIdentifiersHaveSafeErrors() throws Exception {
         when(service.getCustomer(99)).thenThrow(new CustomerNotFoundException(99));

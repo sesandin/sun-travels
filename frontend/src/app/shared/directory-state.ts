@@ -23,6 +23,7 @@ export class DirectoryState<T> {
   private request?: Subscription;
   private key = '';
 
+  // Initializes the directory-state and its required dependencies.
   constructor(
     private readonly fetch: (page: number) => Observable<DirectoryPage<T>>,
     destroy: DestroyRef,
@@ -31,6 +32,7 @@ export class DirectoryState<T> {
     destroy.onDestroy(() => this.request?.unsubscribe());
   }
 
+  // Cancels stale reads and loads one page using the current filter criteria.
   load(page = this.page(), force = false) {
     const key = JSON.stringify([page, this.criteria()]);
     if (!force && this.loading() && this.key === key) return;

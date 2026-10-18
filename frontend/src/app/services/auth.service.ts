@@ -10,6 +10,7 @@ export class AuthService {
   readonly state = inject(AuthState);
   private restorePromise?: Promise<void>;
 
+  // Restores the current staff session once and marks authentication state ready.
   restore(): Promise<void> {
     if (this.restorePromise) return this.restorePromise;
     this.restorePromise = firstValueFrom(
@@ -29,6 +30,7 @@ export class AuthService {
     return this.restorePromise;
   }
 
+  // Signs in staff with CSRF protection and updates the authenticated profile.
   login(request: LoginRequest) {
     return this.csrf().pipe(
       switchMap(() => this.http.post<AuthenticatedUser>('/api/auth/login', request)),
@@ -38,6 +40,7 @@ export class AuthService {
       }),
     );
   }
+  // Signs out the current staff session and clears local authentication state.
   logout() {
     return this.http.post<void>('/api/auth/logout', {}).pipe(
       tap(() => {
@@ -46,6 +49,7 @@ export class AuthService {
       }),
     );
   }
+  // Requests a fresh CSRF token for protected API writes.
   private csrf() {
     return this.http.get<{ headerName: string; token: string }>('/api/auth/csrf');
   }

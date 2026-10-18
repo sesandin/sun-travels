@@ -38,13 +38,13 @@ public class QuotationSearchService {
     private record SelectionContext(
             QuotationSearchRequest request,
             QuotationSelectionRequest selection,
-            Set<Integer> closedOfferingIds,
             Map<Integer, Integer> available,
             Map<Integer, List<NightlyQuotationPricing.Tariff>> tariffs,
             int nights
     ) {
     }
 
+    // Initializes the quotation search service and its required dependencies.
     public QuotationSearchService(QuotationSearchRepository data, HotelRepository hotels,
             RoomTypeRepository rooms, Validator validator, Clock clock, NightlyQuotationPricing pricing,
             StayAvailability inventory) {
@@ -57,11 +57,13 @@ public class QuotationSearchService {
         this.inventory = inventory;
     }
 
+    // Returns the current business date and supported search limits.
     public Limits limits() {
         return new Limits(LocalDate.now(clock), MAX_ROOMS, MAX_NIGHTS, MAX_ADVANCE_DAYS, MAX_RESULTS,
                 INDIVIDUAL_ROOM_TYPES);
     }
 
+    // Returns active hotel and room-type options for quotation search.
     public QuotationSearchFilters filters() {
         var hotelOptions = hotels.findAll(
                 Sort.by(Sort.Order.asc("name"), Sort.Order.asc("hotelId"))).stream().filter(
@@ -74,6 +76,7 @@ public class QuotationSearchService {
         return new QuotationSearchFilters(hotelOptions, roomOptions);
     }
 
+    // Returns adult limits for eligible offerings without calculating prices.
     public List<OfferingOccupancy> occupancy(Integer hotelId, Integer roomTypeId, LocalDate checkIn,
             LocalDate checkOut, String city) {
         if (hotelId == null || roomTypeId == null) {
@@ -130,15 +133,12 @@ public class QuotationSearchService {
         return result.quotations().get(0);
     }
 
+    // Evaluates stay eligibility, occupancy, inventory, and prices for search or selection.
     private QuotationSearchResponse evaluate(QuotationSearchRequest request,
             QuotationSelectionRequest selection) {
         LocalDate today = LocalDate.now(clock);
         validate(request, today);
-        List<Candidate> closed = data.closedCandidates(request);
-        Set<Integer> closedOfferingIds = closed.stream().map(Candidate::offeringId).collect(
-                Collectors.toSet());
         List<Candidate> candidates = new ArrayList<>(data.candidates(request));
-        candidates.addAll(closed);
         if (selection != null) {
             candidates.removeIf(offering -> offering.contractId() != selection.contractId());
         }
@@ -151,8 +151,7 @@ public class QuotationSearchService {
         }
         Set<Integer> ids = candidates.stream().map(Candidate::offeringId).collect(Collectors.toSet());
         Set<Integer> contracts = candidates.stream().map(Candidate::contractId).collect(Collectors.toSet());
-        Set<Integer> hotelIds = candidates.stream().map(Candidate::hotelId).collect(Collectors.toSet());
-        if (data.inconsistent(ids, contracts, hotelIds, today)) {
+        if (data.inconsistent(ids, contracts, today)) {
             throw QuotationSearchException.inconsistent();
         }
         List<Season> seasons = data.seasons(ids);
@@ -180,11 +179,11 @@ public class QuotationSearchService {
         List<Quotation> results = new ArrayList<>();
         List<UnavailableOption> unavailable = new ArrayList<>();
         List<SelectionOffering> choices = selectionOfferings(request, candidates, available,
-                closedOfferingIds, tariffs);
+                tariffs);
         Map<Integer, List<Candidate>> groups = candidates.stream().collect(Collectors.groupingBy(
                 offering -> selection != null ? offering.contractId() : offering.offeringId(), TreeMap::new,
                 Collectors.toList()));
-        var context = new SelectionContext(request, selection, closedOfferingIds, available, tariffs, nights);
+        var context = new SelectionContext(request, selection, available, tariffs, nights);
         for (List<Candidate> group : groups.values()) {
             addSelectionResult(context, group, results, unavailable);
         }
@@ -201,14 +200,14 @@ public class QuotationSearchService {
                 result.unavailableTruncated(), choices);
     }
 
+    // Builds offering choices with per-room selling prices and stay-wide inventory.
     private List<SelectionOffering> selectionOfferings(QuotationSearchRequest request,
-            List<Candidate> candidates, Map<Integer, Integer> available, Set<Integer> closedOfferingIds,
+            List<Candidate> candidates, Map<Integer, Integer> available,
             Map<Integer, List<NightlyQuotationPricing.Tariff>> tariffs) {
         return candidates.stream().map(
                 offering -> new SelectionOffering(offering.hotelId(), offering.hotelName(),
                         offering.contractId(), offering.offeringId(), offering.roomTypeName(),
                         offering.maxAdults(), available.get(offering.offeringId()), offering.currency(),
-                        closedOfferingIds.contains(offering.offeringId()),
                         java.util.stream.IntStream.range(0, request.rooms().size()).mapToObj(
                                 r -> new SelectionRoom(r + 1, request.rooms().get(r).adults(),
                                         request.rooms().get(r).adults() <= offering.maxAdults() ?
@@ -217,6 +216,7 @@ public class QuotationSearchService {
                                                 null)).toList())).toList();
     }
 
+    // Rejects stored offering or contract data that cannot be safely quoted.
     private void validateCandidate(Candidate offering, QuotationSearchRequest request) {
         if (offering.offeringId() <= 0 || offering.contractId() <= 0 || offering.contractCode() == null ||
                 offering.contractCode().isBlank() || offering.contractCode().length() > 45 ||
@@ -232,6 +232,7 @@ public class QuotationSearchService {
         }
     }
 
+    // Checks that grouped offerings belong to consistent hotel and commercial terms.
     private void validateGroup(List<Candidate> group, Candidate parent) {
         if (group.stream().anyMatch(offering -> offering.hotelId() != parent.hotelId() ||
                 !offering.currency().equals(parent.currency()) ||
@@ -240,11 +241,11 @@ public class QuotationSearchService {
         }
     }
 
+    // Adds a complete quotation or an explanation of why the selected rooms are unavailable.
     private void addSelectionResult(SelectionContext context, List<Candidate> group, List<Quotation> results,
             List<UnavailableOption> unavailable) {
         var request = context.request();
         var selection = context.selection();
-        var closedOfferingIds = context.closedOfferingIds();
         var available = context.available();
         var tariffs = context.tariffs();
         int nights = context.nights();
@@ -272,7 +273,7 @@ public class QuotationSearchService {
                         " requests " + adults + " adults; maximum is " + offering.maxAdults() + ".");
             }
         }
-        List<UnavailabilityReason> reasons = unavailabilityReasons(selected, group, closedOfferingIds,
+        List<UnavailabilityReason> reasons = unavailabilityReasons(group,
                 occupancyErrors, demand, available);
         // Pricing always follows the same explicit offerings, including any non-bookable indicative total.
         List<BigDecimal> roomPrices = new ArrayList<>();
@@ -312,14 +313,11 @@ public class QuotationSearchService {
                 List.copyOf(allocated), total, "INFORMATIONAL"));
     }
 
-    private List<UnavailabilityReason> unavailabilityReasons(List<Candidate> selected, List<Candidate> group,
-            Set<Integer> closedOfferingIds, List<String> occupancyErrors, Map<Integer, Integer> demand,
+    // Explains occupancy or shared-inventory shortages for the requested rooms.
+    private List<UnavailabilityReason> unavailabilityReasons(List<Candidate> group,
+            List<String> occupancyErrors, Map<Integer, Integer> demand,
             Map<Integer, Integer> available) {
         List<UnavailabilityReason> reasons = new ArrayList<>();
-        if (selected.stream().anyMatch(offering -> closedOfferingIds.contains(offering.offeringId()))) {
-            reasons.add(new UnavailabilityReason(ReasonCode.HOTEL_CLOSED,
-                    "Hotel is closed during the requested stay."));
-        }
         if (!occupancyErrors.isEmpty()) {
             reasons.add(new UnavailabilityReason(ReasonCode.MAX_ADULT_OCCUPANCY,
                     String.join(" ", occupancyErrors)));
@@ -336,6 +334,7 @@ public class QuotationSearchService {
         return reasons;
     }
 
+    // Builds the bounded quotation response with totals and truncation indicators.
     private QuotationSearchResponse response(QuotationSearchRequest r, LocalDate today, int nights,
             List<Quotation> quotes, List<UnavailableOption> unavailable) {
         return new QuotationSearchResponse(today, r.checkIn(), r.checkOut(), nights,
@@ -346,6 +345,7 @@ public class QuotationSearchService {
                 unavailable.size(), unavailable.size() > MAX_RESULTS);
     }
 
+    // Validates stay dates, requested rooms, and optional search references.
     private void validate(QuotationSearchRequest r, LocalDate today) {
         if (r == null) {
             throw QuotationSearchException.invalid("Search details are required");

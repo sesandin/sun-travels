@@ -22,6 +22,7 @@ public class OfferingService {
     private final SeasonalRateRepository seasons;
     private final Validator validator;
 
+    // Initializes the offering service and its required dependencies.
     public OfferingService(ContractRepository contracts, OfferingRepository offerings,
             RoomTypeRepository rooms, SeasonalRateRepository seasons, Validator validator) {
         this.contracts = contracts;
@@ -55,6 +56,7 @@ public class OfferingService {
         }).toList();
     }
 
+    // Lists room offering records matching the supplied filters.
     public List<OfferingResponse> list(Integer contractId) {
         contracts.findById(contractId).orElseThrow(
                 () -> OfferingException.missing(CONTRACT_LABEL, contractId));
@@ -62,10 +64,12 @@ public class OfferingService {
                 this::response).toList();
     }
 
+    // Retrieves the requested room offering details.
     public OfferingResponse get(Integer id) {
         return response(find(id));
     }
 
+    // Lists seasonal rate periods for the selected offering.
     public List<SeasonalRateResponse> seasonalRates(Integer id) {
         find(id);
         return seasons.findByOfferingOfferingIdOrderByValidFrom(id).stream().map(this::response).toList();
@@ -88,6 +92,7 @@ public class OfferingService {
                 matches.get(0).getRatePerPersonPerNight();
     }
 
+    // Creates a room offering from the validated request.
     @Transactional
     public OfferingResponse create(Integer contractId, OfferingRequest request) {
         Contract contract = contracts.findForUpdate(contractId).orElseThrow(
@@ -102,6 +107,7 @@ public class OfferingService {
         return response(offerings.saveAndFlush(offering));
     }
 
+    // Updates the editable fields of the selected room offering.
     @Transactional
     public OfferingResponse update(Integer id, OfferingRequest request) {
         ContractRoomOffering offering = locked(id);
@@ -113,6 +119,7 @@ public class OfferingService {
         return response(offerings.saveAndFlush(offering));
     }
 
+    // Updates the selected offering’s base nightly rate.
     @Transactional
     public OfferingResponse rate(Integer id, OfferingRateRequest request) {
         ContractRoomOffering offering = locked(id);
@@ -138,16 +145,19 @@ public class OfferingService {
         return response(offerings.saveAndFlush(offering));
     }
 
+    // Creates a seasonal rate period for the selected offering.
     @Transactional
     public SeasonalRateResponse createSeason(Integer id, SeasonalRateRequest request) {
         return saveSeason(id, null, request);
     }
 
+    // Updates an existing seasonal rate period.
     @Transactional
     public SeasonalRateResponse updateSeason(Integer id, Integer rateId, SeasonalRateRequest request) {
         return saveSeason(id, rateId, request);
     }
 
+    // Validates and saves a seasonal rate within its owning offering and contract.
     private SeasonalRateResponse saveSeason(Integer id, Integer rateId, SeasonalRateRequest request) {
         ContractRoomOffering offering = locked(id);
         maintainable(offering.getContract());
@@ -184,14 +194,17 @@ public class OfferingService {
         return offerings.findForUpdate(id).orElseThrow(() -> OfferingException.missing(OFFERING_LABEL, id));
     }
 
+    // Finds an offering or reports that it does not exist.
     private ContractRoomOffering find(Integer id) {
         return offerings.findById(id).orElseThrow(() -> OfferingException.missing(OFFERING_LABEL, id));
     }
 
+    // Finds the room type referenced by an offering request.
     private RoomType room(Integer id) {
         return rooms.findById(id).orElseThrow(() -> OfferingException.missing("Room type", id));
     }
 
+    // Rejects duplicate room-type offerings within the same contract.
     private void duplicate(Integer contractId, Integer roomId, Integer excluded) {
         if (offerings.existsByContractContractIdAndRoomTypeRoomTypeIdAndOfferingIdNot(contractId, roomId,
                 excluded)) {
@@ -199,12 +212,14 @@ public class OfferingService {
         }
     }
 
+    // Rejects an operation unless the contract has the required status.
     private void require(Contract contract, ContractStatus status) {
         if (contract.getStatus() != status) {
             throw OfferingException.conflict("This operation requires a " + status + " contract");
         }
     }
 
+    // Restricts offering and seasonal maintenance to supported contract statuses.
     private void maintainable(Contract contract) {
         if (contract.getStatus() != ContractStatus.DRAFT && contract.getStatus() != ContractStatus.APPROVED) {
             throw OfferingException.conflict(
@@ -212,6 +227,7 @@ public class OfferingService {
         }
     }
 
+    // Validates offering or seasonal input before maintenance.
     private void validate(Object request) {
         if (request == null) {
             throw OfferingException.invalid("Details are required");
@@ -224,6 +240,7 @@ public class OfferingService {
         }
     }
 
+    // Copies editable room type, rate, allocation, adult capacity, and status fields.
     private void apply(ContractRoomOffering offering, OfferingRequest r, RoomType room) {
         offering.setRoomType(room);
         offering.setRatePerPersonPerNight(r.ratePerPersonPerNight());
@@ -232,6 +249,7 @@ public class OfferingService {
         offering.setStatus(r.status());
     }
 
+    // Maps an offering or seasonal rate entity to its API response.
     private OfferingResponse response(ContractRoomOffering offering) {
         return new OfferingResponse(offering.getOfferingId(), offering.getContract().getContractId(),
                 offering.getRoomType().getRoomTypeId(), offering.getRoomType().getName(),
@@ -239,6 +257,7 @@ public class OfferingService {
                 offering.getMaxAdults(), offering.getStatus(), offering.getContract().getCurrencyCode());
     }
 
+    // Maps an offering or seasonal rate entity to its API response.
     private SeasonalRateResponse response(OfferingSeasonalRate season) {
         return new SeasonalRateResponse(season.getSeasonalRateId(), season.getOffering().getOfferingId(),
                 season.getValidFrom(), season.getValidTo(), season.getRatePerPersonPerNight());

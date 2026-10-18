@@ -29,6 +29,7 @@ public class DirectoryService {
     private final ContractService contractService;
     private final EntityManager entityManager;
 
+    // Initializes the directory service and its required dependencies.
     public DirectoryService(HotelRepository hotels, RoomTypeRepository rooms, ContractRepository contracts,
             OfferingRepository offerings, HotelService hotelService, RoomTypeService roomService,
             ContractService contractService, EntityManager entityManager) {
@@ -42,6 +43,7 @@ public class DirectoryService {
         this.entityManager = entityManager;
     }
 
+    // Returns filtered hotel rows, totals, and status summary.
     public DirectoryPage<HotelResponse> hotels(String query, String status, int page) {
         var spec = DirectoryService.<Hotel>search(query, "name", "city", "country")
                 .and(equal("status", status));
@@ -49,17 +51,20 @@ public class DirectoryService {
                 Map.of("totalRecords", hotels.count(), "activeRecords", hotels.count(equal("status", "ACTIVE"))));
     }
 
+    // Returns filtered room types and pagination metadata.
     public DirectoryPage<RoomTypeResponse> rooms(String query, int page) {
         return result(rooms, search(query, "name", "description"), Sort.by("name", "roomTypeId"),
                 page, roomService::toResponse, Map.of("totalRecords", rooms.count()));
     }
 
+    // Returns filtered contracts and directory summary data.
     public DirectoryPage<ContractResponse> contracts(String query, String status, int page) {
         return result(contracts, DirectoryService.<Contract>search(query, "contractCode", "hotel.name", "currencyCode")
                         .and(equal("status", status)), Sort.by("contractId").descending(),
                 page, contractService::response, Map.of("totalRecords", contracts.count()));
     }
 
+    // Returns filtered offering rows with directory summary and lookup options.
     public DirectoryPage<OfferingDirectoryResponse> offerings(Map<String, String> filters, int page) {
         Specification<ContractRoomOffering> spec = search(filters.get("search"), "contract.hotel.name", "contract.contractCode", "roomType.name");
         spec = spec.and(equal("contract.hotel.hotelId", filters.get("hotelId")))
@@ -98,16 +103,19 @@ public class DirectoryService {
                 "roomTypes", lookups("select distinct o.roomType.roomTypeId, o.roomType.name from ContractRoomOffering o order by o.roomType.name")));
     }
 
+    // Maps lookup query results to safe ID-and-name options.
     private List<Map<String, Object>> lookups(String query) {
         return entityManager.createQuery(query, Object[].class).getResultList().stream()
                 .map(row -> Map.<String, Object>of("id", row[0], "name", row[1])).toList();
     }
 
+    // Loads a filtered directory page and maps its rows and summary.
     private <T, R> DirectoryPage<R> result(JpaSpecificationExecutor<T> repository, Specification<T> spec,
             Sort sort, int number, Function<T, R> mapper, Map<String, Object> summary) {
         return response(page(repository, spec, sort, number), mapper, summary);
     }
 
+    // Loads a bounded directory page and recovers the last valid page after row changes.
     private <T> Page<T> page(JpaSpecificationExecutor<T> repository, Specification<T> spec, Sort sort, int number) {
         if (number < 0 || number > Integer.MAX_VALUE / SIZE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid page number");
@@ -120,16 +128,19 @@ public class DirectoryService {
         return result;
     }
 
+    // Maps a database page to directory rows and pagination metadata.
     private <T, R> DirectoryPage<R> response(Page<T> page, Function<T, R> mapper, Map<String, Object> summary) {
         return new DirectoryPage<>(page.getContent().stream().map(mapper).toList(), page.getNumber(), SIZE,
                 page.getTotalElements(), page.getTotalPages(), summary);
     }
 
+    // Resolves a dotted field name to its nested database query path.
     private static Path<?> path(Path<?> root, String name) {
         for (String segment : name.split("[.]")) root = root.get(segment);
         return root;
     }
 
+    // Builds an optional exact-match filter with enum and numeric validation.
     private static <T> Specification<T> equal(String field, String value) {
         return (root, query, cb) -> {
             if (value == null || value.isBlank()) return cb.conjunction();
@@ -151,6 +162,7 @@ public class DirectoryService {
         };
     }
 
+    // Builds optional case-insensitive text matching across directory fields.
     private static <T> Specification<T> search(String raw, String... fields) {
         String text = raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT);
         // Escape LIKE metacharacters so directory search remains a literal substring search.

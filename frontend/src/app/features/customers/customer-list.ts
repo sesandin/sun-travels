@@ -22,7 +22,9 @@ import { Customer } from '../../models/customer.model';
 import { apiError } from '../../services/api-error';
 import { CustomerService } from '../../services/customer.service';
 import { debounceTime, distinctUntilChanged } from 'rxjs';
+// Rejects values containing only whitespace.
 const notBlank: ValidatorFn = (control) => (!control.value?.trim() ? { required: true } : null);
+// Requires at least one customer phone number or email address.
 const contactRequired = (group: AbstractControl): ValidationErrors | null =>
   group.get('phone')?.value?.trim() || group.get('email')?.value?.trim()
     ? null
@@ -71,6 +73,7 @@ export class CustomerList implements OnInit {
     },
     { validators: contactRequired },
   );
+  // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.searchControl.valueChanges
       .pipe(debounceTime(350), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef))
@@ -80,6 +83,7 @@ export class CustomerList implements OnInit {
       });
     this.load();
   }
+  // Loads a customer directory page with the current search.
   load(page = this.page()) {
     if (this.loading()) {
       this.pendingPage.set(page);
@@ -107,6 +111,7 @@ export class CustomerList implements OnInit {
         },
       });
   }
+  // Updates customer results and paging state after a successful response.
   private finishLoad() {
     this.loading.set(false);
     const pending = this.pendingPage();
@@ -115,6 +120,7 @@ export class CustomerList implements OnInit {
       this.load(pending);
     }
   }
+  // Applies customer search text and resets pagination.
   search() {
     const value = this.searchControl.value.trim();
     this.query.set(value);
@@ -123,6 +129,7 @@ export class CustomerList implements OnInit {
     this.page.set(0);
     this.load(0);
   }
+  // Clears the customer search and reloads the first page.
   clearSearch() {
     this.searchControl.setValue('', { emitEvent: false });
     this.query.set('');
@@ -130,6 +137,7 @@ export class CustomerList implements OnInit {
     this.page.set(0);
     this.load(0);
   }
+  // Opens the customer form for creation or editing.
   openEditor(customer: Customer | null = null) {
     this.selected.set(customer);
     this.submissionError.set('');
@@ -141,9 +149,11 @@ export class CustomerList implements OnInit {
     });
     this.editor().nativeElement.showModal();
   }
+  // Closes the editor and clears its selection when no save is pending.
   closeEditor() {
     if (!this.saving()) this.editor().nativeElement.close();
   }
+  // Returns a readable validation message for the selected form control.
   validationMessage(field: 'name' | 'phone' | 'email') {
     const c = this.form.controls[field];
     if (!c.touched || !c.errors) return '';
@@ -156,12 +166,14 @@ export class CustomerList implements OnInit {
       ? 'Use 5 to 20 international phone characters and include a digit.'
       : 'Provide a valid email address.';
   }
+  // Explains the customer contact details required by the form.
   contactMessage() {
     return this.form.hasError('contactRequired') &&
       (this.form.controls.phone.touched || this.form.controls.email.touched)
       ? 'Provide at least a phone number or email address.'
       : '';
   }
+  // Validates and saves customer details, then refreshes the directory.
   save() {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.saving()) return;

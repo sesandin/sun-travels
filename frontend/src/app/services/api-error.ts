@@ -1,5 +1,6 @@
 ﻿import { HttpErrorResponse } from '@angular/common/http';
 
+// Converts an API failure into a safe, readable message.
 export function apiError(error: unknown): string {
   if (!(error instanceof HttpErrorResponse)) return 'Something went wrong. Please try again.';
   if (error.status === 0)
@@ -32,6 +33,7 @@ export function apiError(error: unknown): string {
   }
 }
 
+// Collects validation messages supplied by an API error response.
 function validationMessages(errors: unknown): string[] {
   const messages: string[] = [];
   if (Array.isArray(errors)) {
@@ -47,6 +49,7 @@ function validationMessages(errors: unknown): string[] {
   return messages;
 }
 
+// Extracts a readable field error from a string or structured validation result.
 function validationMessage(item: unknown): string | null {
   if (typeof item === 'string') return item;
   const error = item as { field?: unknown; defaultMessage?: unknown; message?: unknown } | null;

@@ -57,24 +57,17 @@ public class QuotationSearchRepository {
 
     private final NamedParameterJdbcTemplate jdbc;
 
+    // Initializes the quotation search repository and its required dependencies.
     public QuotationSearchRepository(NamedParameterJdbcTemplate jdbc) {
         this.jdbc = jdbc;
     }
 
+    // Loads active-hotel offerings with approved contracts covering the requested stay.
     public List<Candidate> candidates(QuotationSearchRequest request) {
-        return candidates(request, false);
-    }
-
-    public List<Candidate> closedCandidates(QuotationSearchRequest request) {
-        return candidates(request, true);
-    }
-
-    private List<Candidate> candidates(QuotationSearchRequest request, boolean closed) {
         // Only fixed SQL fragments and internal numeric bounds are concatenated below.
         // Request dates, IDs and city remain named parameters, never executable SQL text.
         Map<String, Object> p = new HashMap<>();
         p.put("in", request.checkIn());
-        p.put("out", request.checkOut());
         p.put("last", request.checkOut().minusDays(1));
         String sql = """
    select o.offering_id,c.contract_id,h.hotel_id,h.name as hotel_name,h.city,c.contract_code,
@@ -84,10 +77,6 @@ public class QuotationSearchRepository {
    join hotel h on h.hotel_id=c.hotel_id join room_type rt on rt.room_type_id=o.room_type_id
    where h.status='ACTIVE' and c.status='APPROVED' and o.status='ENABLED'
     and c.valid_from<=:in and c.valid_to>=:last and o.contracted_room_count>0
-   """;
-        sql += (closed ? " and exists " : " and not exists ") + """
-    (select 1 from hotel_closure hc where hc.hotel_id=h.hotel_id
-     and hc.start_date<:out and (hc.end_date is null or hc.end_date>=:in))
    """;
         if (request.hotelId() != null) {
             sql += " and h.hotel_id=:hotel";
@@ -111,6 +100,7 @@ public class QuotationSearchRepository {
                 r.getInt("contracted_room_count"), r.getInt("max_adults")));
     }
 
+    // Loads the seasonal periods for all candidate offerings.
     public List<Season> seasons(Set<Integer> ids) {
         return jdbc.query(
                 "select seasonal_rate_id,offering_id,valid_from,valid_to,rate_per_person_per_night from offering_seasonal_rate where offering_id in (:ids) order by offering_id,valid_from,seasonal_rate_id limit " +
@@ -119,6 +109,7 @@ public class QuotationSearchRepository {
                         r.getObject(4, LocalDate.class), r.getBigDecimal(5)));
     }
 
+    // Loads confirmed room commitments that affect the requested stay.
     public List<BookedRoom> bookedRooms(Set<Integer> ids, LocalDate in, LocalDate out) {
         return jdbc.query("""
    select ri.reservation_item_id,ri.offering_id,r.check_in_date,r.check_out_date,ri.number_of_adults
@@ -131,7 +122,8 @@ public class QuotationSearchRepository {
                         r.getObject(4, LocalDate.class), r.getInt(5)));
     }
 
-    public boolean inconsistent(Set<Integer> offeringIds, Set<Integer> contractIds, Set<Integer> hotelIds,
+    // Detects conflicting approvals or invalid confirmed commitments before quoting.
+    public boolean inconsistent(Set<Integer> offeringIds, Set<Integer> contractIds,
             LocalDate today) {
         // Enforce the existing approval invariant over entire candidate validity, not just the requested stay.
         if (!jdbc.queryForList("""
@@ -139,10 +131,6 @@ public class QuotationSearchRepository {
    where c.contract_id in (:contracts) and other.contract_id<>c.contract_id and other.status='APPROVED'
     and other.valid_from<=c.valid_to and other.valid_to>=c.valid_from limit 1
    """, Map.of("contracts", contractIds), Integer.class).isEmpty()) return true;
-        if (!jdbc.queryForList("""
-   select hc.closure_id from hotel_closure hc where hc.hotel_id in (:hotels)
-    and hc.end_date is not null and hc.end_date<hc.start_date limit 1
-   """, Map.of("hotels", hotelIds), Integer.class).isEmpty()) return true;
         return !jdbc.queryForList("""
    select ri.reservation_item_id from contract_room_offering candidate
    join contract cc on cc.contract_id=candidate.contract_id

@@ -17,10 +17,12 @@ public class HotelService {
 
     private final HotelRepository hotelRepository;
 
+    // Initializes the hotel service and its required dependencies.
     public HotelService(HotelRepository hotelRepository) {
         this.hotelRepository = hotelRepository;
     }
 
+    // Creates the hotel.
     public HotelResponse createHotel(HotelRequest request) {
 
         Hotel hotel = new Hotel();
@@ -39,6 +41,7 @@ public class HotelService {
         return toResponse(savedHotel);
     }
 
+    // Returns the all hotels.
     public List<HotelResponse> getAllHotels() {
 
         List<Hotel> hotels = hotelRepository.findAll();
@@ -46,6 +49,7 @@ public class HotelService {
         return hotels.stream().map(this::toResponse).toList();
     }
 
+    // Returns the hotel by id.
     public HotelResponse getHotelById(Integer hotelId) {
 
         Hotel hotel = hotelRepository.findById(hotelId).orElseThrow(
@@ -54,6 +58,7 @@ public class HotelService {
         return toResponse(hotel);
     }
 
+    // Updates the hotel.
     public HotelResponse updateHotel(Integer hotelId, HotelUpdateRequest request) {
 
         Hotel hotel = hotelRepository.findById(hotelId).orElseThrow(
@@ -72,6 +77,7 @@ public class HotelService {
         return toResponse(updatedHotel);
     }
 
+    // Maps the stored record to its API response fields.
     HotelResponse toResponse(Hotel hotel) {
 
         HotelResponse response = new HotelResponse();

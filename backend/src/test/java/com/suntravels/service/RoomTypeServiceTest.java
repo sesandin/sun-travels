@@ -23,6 +23,7 @@ class RoomTypeServiceTest {
     @InjectMocks
     RoomTypeService service;
 
+    // Builds a valid request fixture for the tested operation.
     RoomTypeRequest request(String name, String description) {
         RoomTypeRequest r = new RoomTypeRequest();
         r.setName(name);
@@ -30,6 +31,7 @@ class RoomTypeServiceTest {
         return r;
     }
 
+    // Verifies creates normalized reference data.
     @Test
     void createsNormalizedReferenceData() {
         when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
@@ -39,6 +41,7 @@ class RoomTypeServiceTest {
         verify(repository).existsByNameIgnoreCase("Deluxe");
     }
 
+    // Verifies rejects duplicate create without saving.
     @Test
     void rejectsDuplicateCreateWithoutSaving() {
         when(repository.existsByNameIgnoreCase("Deluxe")).thenReturn(true);
@@ -48,6 +51,7 @@ class RoomTypeServiceTest {
         verify(repository, never()).save(any());
     }
 
+    // Verifies updates existing type and allows its own name.
     @Test
     void updatesExistingTypeAndAllowsItsOwnName() {
         RoomType room = new RoomType();
@@ -59,6 +63,7 @@ class RoomTypeServiceTest {
         verify(repository).existsByNameIgnoreCaseAndRoomTypeIdNot("Deluxe", 3);
     }
 
+    // Verifies duplicate update preserves existing data.
     @Test
     void duplicateUpdatePreservesExistingData() {
         RoomType room = new RoomType();
@@ -72,6 +77,7 @@ class RoomTypeServiceTest {
         verify(repository, never()).save(any());
     }
 
+    // Verifies missing read and update are not found.
     @Test
     void missingReadAndUpdateAreNotFound() {
         assertThrows(RoomTypeNotFoundException.class, () -> service.getRoomTypeById(9));
@@ -80,6 +86,7 @@ class RoomTypeServiceTest {
         assertThrows(RoomTypeNotFoundException.class, () -> service.updateRoomType(9, requestForAssertion3));
     }
 
+    // Verifies lists response dtos.
     @Test
     void listsResponseDtos() {
         RoomType room = new RoomType();

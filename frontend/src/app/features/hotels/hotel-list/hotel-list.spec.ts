@@ -35,6 +35,7 @@ describe('Hotel management API workflows', () => {
     component.confirmation().nativeElement.close = vi.fn();
   });
   afterEach(() => http.verify());
+  // Completes the pending API request with test fixture data.
   function load() {
     http.expectOne((r) => r.url === url + '/page').flush(directoryPage([hotel]));
     fixture.detectChanges();

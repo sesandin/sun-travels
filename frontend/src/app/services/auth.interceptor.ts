@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { AuthState } from './auth-state';
 
+// Handles expired API sessions and redirects staff to sign in again.
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const state = inject(AuthState);
   const router = inject(Router);

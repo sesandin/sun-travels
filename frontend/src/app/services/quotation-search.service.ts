@@ -13,12 +13,15 @@ import {
 export class QuotationSearchService {
   private readonly http = inject(HttpClient);
   private readonly url = '/api/search';
+  // Retrieves business dates and supported quotation-search limits.
   limits() {
     return this.http.get<SearchLimits>(this.url + '/limits');
   }
+  // Retrieves the available hotel and room-type search filters.
   filters() {
     return this.http.get<QuotationSearchFilters>(this.url + '/filters');
   }
+  // Retrieves adult-capacity guidance for eligible room offerings.
   occupancy(request: {
     hotelId: number;
     roomTypeId: number;
@@ -30,6 +33,7 @@ export class QuotationSearchService {
       params: new HttpParams({ fromObject: request }),
     });
   }
+  // Requests a quotation for the exact selected room offerings.
   customize(request: {
     hotelId: number;
     contractId: number;
@@ -39,6 +43,7 @@ export class QuotationSearchService {
   }) {
     return this.http.post<AccommodationQuotation>(this.url + '/selection', request);
   }
+  // Requests stay quotations and availability explanations from the API.
   search(request: QuotationRequest) {
     return this.http.post<QuotationResponse>(this.url + '/quotations', request).pipe(
       map((response) => ({

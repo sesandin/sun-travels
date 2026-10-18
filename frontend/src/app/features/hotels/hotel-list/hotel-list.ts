@@ -48,12 +48,15 @@ export class HotelList implements OnInit {
   readonly activeCount = computed(() => Number(this.directory.summary()['activeRecords'] ?? 0));
   readonly filtered = this.hotels;
 
+  // Loads the initial data and subscriptions needed by this component.
   ngOnInit(): void {
     this.loadHotels();
   }
+  // Loads the hotels.
   loadHotels(page = this.directory.page()) {
     this.directory.load(page);
   }
+  // Opens the hotel form for creation or editing.
   openEditor(hotel: Hotel | null = null): void {
     this.selected.set(hotel);
     this.submissionError.set('');
@@ -61,9 +64,11 @@ export class HotelList implements OnInit {
     this.form().reset(hotel);
     this.editor().nativeElement.showModal();
   }
+  // Closes the editor and clears its selection when no save is pending.
   closeEditor(): void {
     if (!this.saving()) this.editor().nativeElement.close();
   }
+  // Saves hotel details and refreshes the hotel directory.
   save(details: HotelUpdateRequest & { status?: HotelStatus }): void {
     if (this.saving()) return;
     this.saving.set(true);
@@ -88,6 +93,7 @@ export class HotelList implements OnInit {
       },
     });
   }
+  // Opens confirmation for changing the selected hotel’s active status.
   requestStatus(hotel: Hotel): void {
     if (this.statusBusy()) return;
     this.statusTarget.set(hotel);
@@ -95,9 +101,11 @@ export class HotelList implements OnInit {
     this.notice.set('');
     this.confirmation().nativeElement.showModal();
   }
+  // Closes the hotel status confirmation when no change is pending.
   closeStatus(): void {
     if (!this.statusBusy()) this.confirmation().nativeElement.close();
   }
+  // Submits the confirmed hotel status change and refreshes the directory.
   changeStatus(): void {
     const hotel = this.statusTarget();
     if (!hotel || this.statusBusy()) return;

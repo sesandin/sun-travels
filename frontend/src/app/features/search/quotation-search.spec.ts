@@ -117,6 +117,7 @@ describe('Search and nightly quotations', () => {
     fixture.detectChanges();
   });
   afterEach(() => http.verify());
+  // Configures the component and its test dependencies.
   function setup() {
     http.expectOne(api + '/search/limits').flush(limits);
     http.expectOne(api + '/search/filters').flush({
@@ -125,6 +126,7 @@ describe('Search and nightly quotations', () => {
     });
     fixture.detectChanges();
   }
+  // Populates the form with valid test input.
   function fill() {
     c.form.patchValue({ checkIn: '2026-10-24', nights: 3 });
     c.rooms.at(0).controls.adults.setValue(2);
@@ -449,6 +451,7 @@ describe('Search and nightly quotations', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.unavailable-option button').disabled).toBe(true);
   });
+  // Supplies occupancy reference responses for the selected search filters.
   function occupancySelection() {
     setup();
     fill();
@@ -633,7 +636,6 @@ describe('Search and nightly quotations', () => {
       maxAdults: 2,
       availableRoomsForStay: 1,
       currencyCode: 'USD',
-      hotelClosed: false,
       rooms: [
         { roomNumber: 1, adults: 2, totalPrice: i ? 379.5 : 241.5 },
         { roomNumber: 2, adults: 1, totalPrice: i ? 189.75 : 120.75 },
@@ -702,7 +704,6 @@ describe('Search and nightly quotations', () => {
       maxAdults: 2,
       availableRoomsForStay: 2,
       currencyCode: 'USD',
-      hotelClosed: false,
       rooms: [
         { roomNumber: 1, adults: 2, totalPrice: 805 },
         { roomNumber: 2, adults: 1, totalPrice: 402.5 },
@@ -728,6 +729,7 @@ describe('Search and nightly quotations', () => {
     expect(c.selectionLoading()).toBe(false);
   });
 
+  // Builds a quotation response fixture for the requested number of rooms.
   function resultWithRooms(count: number): QuotationResponse {
     const q = response.quotations[0],
       room = q.rooms[0];
@@ -753,7 +755,6 @@ describe('Search and nightly quotations', () => {
       maxAdults: 2,
       availableRoomsForStay: 3,
       currencyCode: 'USD',
-      hotelClosed: false,
       rooms: quoted.map((r) => ({
         roomNumber: r.roomNumber,
         adults: r.adults,
@@ -772,6 +773,7 @@ describe('Search and nightly quotations', () => {
       ],
     };
   }
+  // Executes a room search and supplies its quotation response fixture.
   function searchRooms(count: number) {
     setup();
     fill();
@@ -895,7 +897,6 @@ describe('Search and nightly quotations', () => {
           ],
         },
         { ...base, offeringId: 11, availableRoomsForStay: 0 },
-        { ...base, offeringId: 12, hotelClosed: true },
       ],
     });
     c.customize(base);
@@ -962,7 +963,6 @@ describe('Search and nightly quotations', () => {
     expect(
       c.optionReason({ ...option, availableRoomsForStay: undefined as unknown as number }, 0),
     ).toContain('Inventory is unavailable');
-    expect(c.optionReason({ ...option, hotelClosed: true }, 0)).toContain('Hotel unavailable');
   });
 
   it('allows adults above ten without filters and protects the integer representation boundary', () => {

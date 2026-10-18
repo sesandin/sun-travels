@@ -25,6 +25,7 @@ class RoomTypeControllerTest {
     MockMvc mvc;
     LocalValidatorFactoryBean validator;
 
+    // Configures the component and its test dependencies.
     @BeforeEach
     void setup() {
         validator = new LocalValidatorFactoryBean();
@@ -33,11 +34,13 @@ class RoomTypeControllerTest {
                 new RoomTypeExceptionHandler()).setValidator(validator).build();
     }
 
+    // Releases resources created for the test.
     @AfterEach
     void close() {
         validator.close();
     }
 
+    // Verifies lists and reads dtos.
     @Test
     void listsAndReadsDtos() throws Exception {
         var response = new RoomTypeResponse(1, "Deluxe", null);
@@ -49,6 +52,7 @@ class RoomTypeControllerTest {
                 jsonPath("$.name").value("Deluxe"));
     }
 
+    // Verifies creates and updates.
     @Test
     void createsAndUpdates() throws Exception {
         var response = new RoomTypeResponse(1, "Deluxe", null);
@@ -60,6 +64,7 @@ class RoomTypeControllerTest {
                 "{\"name\":\"Deluxe\"}")).andExpect(status().isOk());
     }
 
+    // Verifies validates both write operations.
     @Test
     void validatesBothWriteOperations() throws Exception {
         for (String json : List.of("{}", "{\"name\":\"   \"}", "{\"name\":\"" + "a".repeat(101) + "\"}",
@@ -72,6 +77,7 @@ class RoomTypeControllerTest {
         verifyNoInteractions(service);
     }
 
+    // Verifies accepts maximum lengths.
     @Test
     void acceptsMaximumLengths() throws Exception {
         mvc.perform(post("/api/room-types").contentType("application/json").content(
@@ -80,6 +86,7 @@ class RoomTypeControllerTest {
         verify(service).createRoomType(any());
     }
 
+    // Verifies returns meaningful missing and conflict responses.
     @Test
     void returnsMeaningfulMissingAndConflictResponses() throws Exception {
         when(service.getRoomTypeById(9)).thenThrow(new RoomTypeNotFoundException(9));
@@ -96,6 +103,7 @@ class RoomTypeControllerTest {
                 "{\"name\":\"Deluxe\"}")).andExpect(status().isConflict());
     }
 
+    // Verifies rejects malformed requests and does not expose deletion.
     @Test
     void rejectsMalformedRequestsAndDoesNotExposeDeletion() throws Exception {
         mvc.perform(get("/api/room-types/abc")).andExpect(status().isBadRequest());

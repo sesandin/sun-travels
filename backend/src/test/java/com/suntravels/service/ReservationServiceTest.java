@@ -38,6 +38,7 @@ class ReservationServiceTest {
     final LocalDate today = LocalDate.of(2026, 10, 15), in = today.plusDays(10), out = in.plusDays(3);
     final BigDecimal markup = new BigDecimal("15.00");
 
+    // Configures the component and its test dependencies.
     @BeforeEach
     void setup() {
         factory = Validation.buildDefaultValidatorFactory();
@@ -57,22 +58,26 @@ class ReservationServiceTest {
         lenient().when(reservations.insert(anyString(), any(Object[].class))).thenReturn(101, 201, 202);
     }
 
+    // Releases resources created for the test.
     @AfterEach
     void close() {
         factory.close();
     }
 
+    // Creates an eligible offering fixture for quotation tests.
     Candidate candidate(int max, int inventory) {
         return new Candidate(7, 4, 1, "Ocean", "Colombo", "C004", "USD", markup, in.minusDays(1),
                 out.plusDays(30), 3, "Double", new BigDecimal("100.00"), inventory, max);
     }
 
+    // Builds a valid request fixture for the tested operation.
     ReservationRequest request(String price, int... adults) {
         return new ReservationRequest(9, 1, 4, in, out,
                 Arrays.stream(adults).mapToObj(a -> new ReservationRequest.Room(7, a)).toList(),
                 new BigDecimal(price), "USD");
     }
 
+    // Verifies one room stores three exact nightly snapshots after hotel lock.
     @Test
     void oneRoomStoresThreeExactNightlySnapshotsAfterHotelLock() {
         service.confirm(request("690", 2));
@@ -88,6 +93,7 @@ class ReservationServiceTest {
                 new BigDecimal("230.00"));
     }
 
+    // Verifies multiple rooms of same offering each have own snapshots.
     @Test
     void multipleRoomsOfSameOfferingEachHaveOwnSnapshots() {
         service.confirm(request("1035", 2, 1));
@@ -95,6 +101,7 @@ class ReservationServiceTest {
         verify(reservations).night(202, in, new BigDecimal("100.00"), markup, new BigDecimal("115.00"));
     }
 
+    // Verifies per room adult capacity cannot use combined occupancy.
     @Test
     void perRoomAdultCapacityCannotUseCombinedOccupancy() {
         var requestForAssertion1 = request("1035", 3);
@@ -104,6 +111,7 @@ class ReservationServiceTest {
         noWrites();
     }
 
+    // Verifies invalid dates and customer are rejected before writes.
     @Test
     void invalidDatesAndCustomerAreRejectedBeforeWrites() {
         var r = request("690", 2);
@@ -120,6 +128,7 @@ class ReservationServiceTest {
         noWrites();
     }
 
+    // Verifies empty or modified selections cannot be confirmed.
     @Test
     void emptyOrModifiedSelectionsCannotBeConfirmed() {
         var requestForAssertion2 = request("0");
@@ -131,6 +140,7 @@ class ReservationServiceTest {
         noWrites();
     }
 
+    // Verifies ineligible selection is rejected when search no longer returns it.
     @Test
     void ineligibleSelectionIsRejectedWhenSearchNoLongerReturnsIt() {
         when(data.candidates(any())).thenReturn(List.of());
@@ -139,6 +149,7 @@ class ReservationServiceTest {
         noWrites();
     }
 
+    // Verifies price change returns selling quote and no partial header.
     @Test
     void priceChangeReturnsSellingQuoteAndNoPartialHeader() {
         var requestForAssertion4 = request("500", 2);
@@ -150,6 +161,7 @@ class ReservationServiceTest {
         noWrites();
     }
 
+    // Verifies updated amount must match again and currency must also match.
     @Test
     void updatedAmountMustMatchAgainAndCurrencyMustAlsoMatch() {
         var requestForAssertion5 = request("500", 2);
@@ -164,6 +176,7 @@ class ReservationServiceTest {
                 () -> service.confirm(requestForAssertion6)).getCode());
     }
 
+    // Verifies seasonal mixed rate leaves single night fields null.
     @Test
     void seasonalMixedRateLeavesSingleNightFieldsNull() {
         when(data.seasons(Set.of(7))).thenReturn(
@@ -175,6 +188,7 @@ class ReservationServiceTest {
                 new BigDecimal("345.00"));
     }
 
+    // Verifies full inventory and partial stay inventory reject grouped room demand.
     @Test
     void fullInventoryAndPartialStayInventoryRejectGroupedRoomDemand() {
         when(data.candidates(any())).thenReturn(List.of(candidate(2, 2)));
@@ -191,6 +205,7 @@ class ReservationServiceTest {
         noWrites();
     }
 
+    // Verifies recent identical retry returns existing booking without new inventory consumption.
     @Test
     void recentIdenticalRetryReturnsExistingBookingWithoutNewInventoryConsumption() {
         var saved = new ReservationResponse(101, 9, "Customer", null, null, in, out, 3, "CONFIRMED",
@@ -201,6 +216,7 @@ class ReservationServiceTest {
         noWrites();
     }
 
+    // Verifies cancellation uses ascending hotel locks and is repeatable.
     @Test
     void cancellationUsesAscendingHotelLocksAndIsRepeatable() {
         when(reservations.hotelIds(101)).thenReturn(List.of(1));
@@ -216,6 +232,7 @@ class ReservationServiceTest {
         verify(reservations, never()).night(anyInt(), any(), any(), any(), any());
     }
 
+    // Verifies explicit expensive mixed selection is never reallocated at confirmation.
     @Test
     void explicitExpensiveMixedSelectionIsNeverReallocatedAtConfirmation() {
         var expensive = new Candidate(8, 4, 1, "Ocean", "Colombo", "C004", "USD", markup, in.minusDays(1),
@@ -231,11 +248,13 @@ class ReservationServiceTest {
                 eq(new BigDecimal("100.00")), eq(markup), eq(new BigDecimal("230.00")));
     }
 
+    // Verifies that validation failures did not write reservation records.
     private void noWrites() {
         verify(reservations, never()).insert(anyString(), any(Object[].class));
         verify(reservations, never()).night(anyInt(), any(), any(), any(), any());
     }
 
+    // Verifies confirms above ten only when the selected offering allows it.
     @Test
     void confirmsAboveTenOnlyWhenTheSelectedOfferingAllowsIt() {
         when(data.candidates(any())).thenReturn(List.of(candidate(12, 3)));
@@ -246,6 +265,7 @@ class ReservationServiceTest {
                 eq(new BigDecimal("1380.00")));
     }
 
+    // Verifies decreased contractual occupancy rejects confirmation before any write.
     @Test
     void decreasedContractualOccupancyRejectsConfirmationBeforeAnyWrite() {
         when(data.candidates(any())).thenReturn(List.of(candidate(6, 3)));

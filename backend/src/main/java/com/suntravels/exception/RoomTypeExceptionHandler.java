@@ -13,16 +13,19 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public class RoomTypeExceptionHandler {
     private static final String MESSAGE = "message";
 
+    // Returns a not-found response for the requested record.
     @ExceptionHandler(RoomTypeNotFoundException.class)
     public ResponseEntity<Map<String, String>> notFound(RoomTypeNotFoundException ex) {
         return ResponseEntity.status(404).body(Map.of(MESSAGE, ex.getMessage()));
     }
 
+    // Creates or returns a conflict error for the requested operation.
     @ExceptionHandler(DuplicateRoomTypeException.class)
     public ResponseEntity<Map<String, String>> conflict(DuplicateRoomTypeException ex) {
         return ResponseEntity.status(409).body(Map.of(MESSAGE, ex.getMessage()));
     }
 
+    // Returns readable field-validation errors.
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> validation(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new LinkedHashMap<>();
@@ -32,6 +35,7 @@ public class RoomTypeExceptionHandler {
                 Map.of(MESSAGE, "Check the room type details", "fieldErrors", errors));
     }
 
+    // Returns a safe response for invalid request data.
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
     public ResponseEntity<Map<String, String>> invalidRequest(Exception ex) {
         return ResponseEntity.badRequest().body(

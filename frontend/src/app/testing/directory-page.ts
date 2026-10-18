@@ -1,5 +1,6 @@
 import { DirectoryPage } from '../shared/directory-state';
 
+// Builds a paginated directory response fixture for frontend tests.
 export function directoryPage<T>(
   items: T[],
   page = 0,

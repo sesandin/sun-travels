@@ -28,11 +28,13 @@ public class SecurityConfig {
     private static final String ADMIN = "ADMIN";
     private static final String AGENT = "AGENT";
 
+    // Provides the password encoder used to hash and verify staff passwords.
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // Provides the authentication manager for staff sign-in.
     @Bean
     AuthenticationManager authenticationManager(DatabaseUserDetailsService users, PasswordEncoder encoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(users);
@@ -40,16 +42,19 @@ public class SecurityConfig {
         return new ProviderManager(provider);
     }
 
+    // Stores authenticated security contexts in HTTP sessions.
     @Bean
     SecurityContextRepository securityContextRepository() {
         return new HttpSessionSecurityContextRepository();
     }
 
+    // Configures session handling after successful authentication.
     @Bean
     SessionAuthenticationStrategy sessionAuthenticationStrategy() {
         return new ChangeSessionIdAuthenticationStrategy();
     }
 
+    // Provides storage for tokens that protect state-changing requests.
     @Bean
     CookieCsrfTokenRepository csrfTokenRepository() {
         // Angular reads XSRF-TOKEN and echoes it in its X-XSRF-TOKEN request header.
@@ -60,6 +65,7 @@ public class SecurityConfig {
         return repository;
     }
 
+    // Configures API authentication, role access, sessions, and CSRF protection.
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
             JsonAuthenticationEntryPoint authenticationEntryPoint,

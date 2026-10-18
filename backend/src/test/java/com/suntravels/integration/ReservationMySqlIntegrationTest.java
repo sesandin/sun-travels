@@ -65,6 +65,7 @@ class ReservationMySqlIntegrationTest {
     LocalDate in, out;
     TransactionTemplate tx;
 
+    // Creates isolated reservation fixtures for the test.
     @BeforeEach
     void fixtures() {
         assertTrue(Objects.requireNonNull(jdbc.queryForObject("select database()", String.class)).endsWith(
@@ -110,6 +111,7 @@ class ReservationMySqlIntegrationTest {
         });
     }
 
+    // Removes the database records created by the test.
     @AfterEach
     void cleanup() {
         if (customer == 0) return;
@@ -128,33 +130,37 @@ class ReservationMySqlIntegrationTest {
             jdbc.update("delete from offering_seasonal_rate where offering_id=?", offering);
             jdbc.update("delete from contract_room_offering where offering_id=?", offering);
             jdbc.update("delete from contract where contract_id=?", contract);
-            jdbc.update("delete from hotel_closure where hotel_id=?", hotel);
             jdbc.update("delete from hotel where hotel_id=?", hotel);
             jdbc.update("delete from room_type where room_type_id=?", type);
         });
     }
 
+    // Builds a valid request fixture for the tested operation.
     ReservationRequest request(String accepted, int... adults) {
         return request(in, out, accepted, adults);
     }
 
+    // Builds a valid request fixture for the tested operation.
     ReservationRequest request(LocalDate start, LocalDate end, String accepted, int... adults) {
         return new ReservationRequest(customer, hotel, contract, start, end,
                 Arrays.stream(adults).mapToObj(a -> new ReservationRequest.Room(offering, a)).toList(),
                 new BigDecimal(accepted), "USD");
     }
 
+    // Builds a quotation search request using the fixture stay.
     QuotationSearchRequest searchRequest(int... adults) {
         return new QuotationSearchRequest(in, out,
                 Arrays.stream(adults).mapToObj(QuotationSearchRequest.RequestedRoom::new).toList(), null,
                 hotel, null);
     }
 
+    // Counts the reservation records created by the fixture.
     long bookingCount() {
         return jdbc.queryForObject("select count(*) from reservation where customer_id=?", Long.class,
                 customer);
     }
 
+    // Verifies successful single room uses only confirmed status and historical nightly total.
     @Test
     void successfulSingleRoomUsesOnlyConfirmedStatusAndHistoricalNightlyTotal() {
         var booked = service.confirm(request("690", 2));
@@ -165,6 +171,7 @@ class ReservationMySqlIntegrationTest {
         assertEquals(1, bookingCount());
     }
 
+    // Verifies unavailable search diagnostics cannot bypass direct confirmation revalidation.
     @Test
     void unavailableSearchDiagnosticsCannotBypassDirectConfirmationRevalidation() {
         var occupancy = search.search(searchRequest(3));
@@ -183,18 +190,10 @@ class ReservationMySqlIntegrationTest {
         var requestForAssertion2 = request("1035", 2, 1);
 
         assertThrows(ReservationException.class, () -> service.confirm(requestForAssertion2));
-        jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)", hotel,
-                in.plusDays(1), in.plusDays(1), "Reservation fixture");
-        var closure = search.search(searchRequest(2));
-        assertTrue(closure.quotations().isEmpty());
-        assertEquals(QuotationSearchResponse.ReasonCode.HOTEL_CLOSED,
-                closure.unavailableOptions().get(0).reasons().get(0).code());
-        var requestForAssertion3 = request("690", 2);
-
-        assertThrows(ReservationException.class, () -> service.confirm(requestForAssertion3));
         assertEquals(0, bookingCount());
     }
 
+    // Verifies one and multiple rooms persist nightly snapshots and directory totals.
     @Test
     void oneAndMultipleRoomsPersistNightlySnapshotsAndDirectoryTotals() {
         var r = service.confirm(request("1035", 2, 1));
@@ -210,6 +209,7 @@ class ReservationMySqlIntegrationTest {
         assertEquals(r, service.detail(r.reservationId()));
     }
 
+    // Verifies fresh eligibility rejects inactive hotel unapproved contract and disabled offering.
     @ParameterizedTest
     @CsvSource({"INACTIVE,APPROVED,ENABLED", "ACTIVE,DRAFT,ENABLED", "ACTIVE,SUSPENDED,ENABLED",
             "ACTIVE,TERMINATED,ENABLED", "ACTIVE,APPROVED,SUSPENDED"})
@@ -224,8 +224,9 @@ class ReservationMySqlIntegrationTest {
         assertEquals(0, bookingCount());
     }
 
+    // Verifies validity capacity and customer are validated.
     @Test
-    void validityClosureCapacityAndCustomerAreValidated() {
+    void validityCapacityAndCustomerAreValidated() {
         var requestForAssertion5 = request("1035", 3);
 
         assertThrows(ReservationException.class, () -> service.confirm(requestForAssertion5));
@@ -236,13 +237,10 @@ class ReservationMySqlIntegrationTest {
                 assertThrows(ReservationException.class, () -> service.confirm(invalidCustomer)).getCode());
         jdbc.update("update contract set valid_to=? where contract_id=?", out.minusDays(2), contract);
         assertThrows(ReservationException.class, () -> service.confirm(r));
-        jdbc.update("update contract set valid_to=? where contract_id=?", out.minusDays(1), contract);
-        jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)", hotel,
-                in.plusDays(1), in.plusDays(1), "Reservation fixture");
-        assertThrows(ReservationException.class, () -> service.confirm(r));
         assertEquals(0, bookingCount());
     }
 
+    // Verifies seasonal change requires acknowledgment and snapshots survive maintenance and cancellation.
     @Test
     void seasonalChangeRequiresAcknowledgmentAndSnapshotsSurviveMaintenanceAndCancellation() {
         var initial = search.search(searchRequest(2)).quotations().get(0);
@@ -288,6 +286,7 @@ class ReservationMySqlIntegrationTest {
         assertEquals(new BigDecimal("840.00"), service.detail(booked.reservationId()).totalPrice());
     }
 
+    // Verifies partial stay overbooking is rejected and cancellation immediately releases inventory.
     @Test
     void partialStayOverbookingIsRejectedAndCancellationImmediatelyReleasesInventory() {
         jdbc.update("update contract_room_offering set contracted_room_count=1 where offering_id=?",
@@ -304,6 +303,7 @@ class ReservationMySqlIntegrationTest {
         assertEquals("CONFIRMED", service.confirm(request("690", 2)).status());
     }
 
+    // Verifies identical rapid retries return one stored reservation.
     @Test
     void identicalRapidRetriesReturnOneStoredReservation() {
         var first = service.confirm(request("690", 2));
@@ -312,6 +312,7 @@ class ReservationMySqlIntegrationTest {
         assertEquals(1, bookingCount());
     }
 
+    // Verifies failure after item insertion rolls back header items and snapshots.
     @Test
     void failureAfterItemInsertionRollsBackHeaderItemsAndSnapshots() {
         var writes = new java.util.concurrent.atomic.AtomicInteger();
@@ -329,6 +330,7 @@ class ReservationMySqlIntegrationTest {
                 Integer.class, offering));
     }
 
+    // Verifies checkout exclusive allows adjacent reservations on the same offering.
     @Test
     void checkoutExclusiveAllowsAdjacentReservationsOnTheSameOffering() {
         jdbc.update("update contract_room_offering set contracted_room_count=1 where offering_id=?",
@@ -339,6 +341,7 @@ class ReservationMySqlIntegrationTest {
         assertEquals(2, bookingCount());
     }
 
+    // Verifies old incomplete snapshots remain viewable and cancellable without inventing prices.
     @Test
     void oldIncompleteSnapshotsRemainViewableAndCancellableWithoutInventingPrices() {
         var booked = service.confirm(request("690", 2));
@@ -349,6 +352,7 @@ class ReservationMySqlIntegrationTest {
         assertEquals("CANCELLED", service.cancel(booked.reservationId()).status());
     }
 
+    // Verifies confirmation waiting for hotel mutex rechecks the committed markup.
     @Test
     void confirmationWaitingForHotelMutexRechecksTheCommittedMarkup() throws Exception {
         var locked = new CountDownLatch(1);
@@ -382,6 +386,7 @@ class ReservationMySqlIntegrationTest {
         }
     }
 
+    // Verifies two real competing transactions cannot consume one room twice.
     @Test
     void twoRealCompetingTransactionsCannotConsumeOneRoomTwice() throws Exception {
         jdbc.update("update contract_room_offering set contracted_room_count=1 where offering_id=?",
@@ -419,6 +424,7 @@ class ReservationMySqlIntegrationTest {
         }
     }
 
+    // Verifies customized mixed quotation confirms exact types and cancellation restores both pools.
     @Test
     void customizedMixedQuotationConfirmsExactTypesAndCancellationRestoresBothPools() {
         tx.executeWithoutResult(s -> {
@@ -447,6 +453,7 @@ class ReservationMySqlIntegrationTest {
                 Integer.class, booked.reservationId()));
     }
 
+    // Verifies occupancy above ten uses contractual limit and rechecks changed capacity.
     @Test
     void occupancyAboveTenUsesContractualLimitAndRechecksChangedCapacity() {
         // Only this test's disposable fixture is changed; the application needs no schema/data migration.
@@ -467,27 +474,32 @@ class ReservationMySqlIntegrationTest {
         assertEquals(new BigDecimal("4140.00"), booked.totalPrice());
     }
 
+    // Changes the fixture hotel’s status through the hotel service.
     void hotelStatus(HotelStatus status) {
         var request = new HotelStatusUpdateRequest();
         request.setStatus(status);
         hotelService.updateHotelStatus(hotel, request);
     }
 
+    // Extracts operational warning codes for assertions.
     List<ReservationResponse.WarningCode> warningCodes(ReservationResponse r) {
         return r.warnings().stream().map(ReservationResponse.OperationalWarning::code).toList();
     }
 
+    // Reads stored reservation items to verify history is unchanged.
     List<Map<String, Object>> storedItems(int id) {
         return jdbc.queryForList(
                 "select * from reservation_item where reservation_id=? order by reservation_item_id", id);
     }
 
+    // Reads stored nightly prices to verify history is unchanged.
     List<Map<String, Object>> storedNights(int id) {
         return jdbc.queryForList(
                 "select n.* from reservation_item_nightly_rate n join reservation_item i on i.reservation_item_id=n.reservation_item_id where i.reservation_id=? order by n.reservation_item_id,n.occupied_date",
                 id);
     }
 
+    // Verifies inactive hotel preserves confirmed booking and snapshots but blocks new bookings.
     @Test
     void inactiveHotelPreservesConfirmedBookingAndSnapshotsButBlocksNewBookings() {
         var booked = service.confirm(request("690", 2));
@@ -514,28 +526,19 @@ class ReservationMySqlIntegrationTest {
         assertTrue(service.detail(booked.reservationId()).warnings().isEmpty());
     }
 
+    // Verifies independent warnings disappear only when their own condition clears and cancellation is explicit.
     @Test
     void independentWarningsDisappearOnlyWhenTheirOwnConditionClearsAndCancellationIsExplicit() {
         var booked = service.confirm(request("690", 2));
         var itemsBefore = storedItems(booked.reservationId());
         var nightsBefore = storedNights(booked.reservationId());
         hotelStatus(HotelStatus.INACTIVE);
-        jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)", hotel,
-                in.plusDays(1), out.minusDays(1), "Test closure");
         var affected = service.detail(booked.reservationId());
         assertEquals("CONFIRMED", affected.status());
-        assertEquals(List.of(ReservationResponse.WarningCode.HOTEL_INACTIVE,
-                ReservationResponse.WarningCode.HOTEL_CLOSURE), warningCodes(affected));
+        assertEquals(List.of(ReservationResponse.WarningCode.HOTEL_INACTIVE), warningCodes(affected));
         hotelStatus(HotelStatus.ACTIVE);
-        assertEquals(List.of(ReservationResponse.WarningCode.HOTEL_CLOSURE),
-                warningCodes(service.detail(booked.reservationId())));
-        var result = search.search(searchRequest(1));
-        assertTrue(result.quotations().isEmpty());
-        assertEquals(QuotationSearchResponse.ReasonCode.HOTEL_CLOSED,
-                result.unavailableOptions().get(0).reasons().get(0).code());
-        var requestForAssertion12 = request("345", 1);
-
-        assertThrows(ReservationException.class, () -> service.confirm(requestForAssertion12));
+        assertTrue(service.detail(booked.reservationId()).warnings().isEmpty());
+        assertEquals(1, search.search(searchRequest(1)).quotations().size());
         assertEquals(itemsBefore, storedItems(booked.reservationId()));
         assertEquals(nightsBefore, storedNights(booked.reservationId()));
         var cancelled = service.cancel(booked.reservationId());
@@ -546,25 +549,11 @@ class ReservationMySqlIntegrationTest {
         hotelStatus(HotelStatus.INACTIVE);
         assertTrue(service.detail(booked.reservationId()).warnings().isEmpty());
         hotelStatus(HotelStatus.ACTIVE);
-        jdbc.update("delete from hotel_closure where hotel_id=?", hotel);
         assertEquals(3,
                 search.search(searchRequest(1)).quotations().get(0).rooms().get(0).availableRoomsForStay());
     }
 
-    @ParameterizedTest
-    @CsvSource(value = {"-2,-1,false", "3,3,false", "0,0,true", "-1,0,true", "2,2,true",
-            "1,NULL,true"}, nullValues = "NULL")
-    void closureWarningsUseTheExistingCheckoutExclusiveOverlap(int start, Integer end, boolean overlap) {
-        var booked = service.confirm(request("690", 2));
-        jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)", hotel,
-                in.plusDays(start), end == null ? null : in.plusDays(end), "Boundary fixture");
-        var detail = service.detail(booked.reservationId());
-        assertEquals("CONFIRMED", detail.status());
-        assertEquals(overlap, warningCodes(detail).contains(ReservationResponse.WarningCode.HOTEL_CLOSURE));
-        assertEquals(booked.totalPrice(), detail.totalPrice());
-        assertEquals(booked.rooms(), detail.rooms());
-    }
-
+    // Verifies stay date filters match occupied dates and preserve paging counts.
     @Test
     void stayDateFiltersMatchOccupiedDatesAndPreservePagingCounts() {
         var booked = service.confirm(request("690", 2));
@@ -584,6 +573,7 @@ class ReservationMySqlIntegrationTest {
                 () -> service.list(reference, "", 0, 20, out, in)).getStatus());
     }
 
+    // Verifies suspended contract preserves commitments and reports distinct termination blockers.
     @Test
     void suspendedContractPreservesCommitmentsAndReportsDistinctTerminationBlockers() {
         var first = service.confirm(request("1035", 2, 1));
@@ -611,6 +601,7 @@ class ReservationMySqlIntegrationTest {
         assertEquals("CONFIRMED", service.detail(second.reservationId()).status());
     }
 
+    // Creates an additional offering for mixed-room reservation tests.
     void additionalOffering() {
         tx.executeWithoutResult(s -> {
             otherType = repository.insert("insert into room_type(name) values (?)",
@@ -621,6 +612,7 @@ class ReservationMySqlIntegrationTest {
         });
     }
 
+    // Verifies suspended offering preserves mixed booking and leaves other offerings bookable.
     @Test
     void suspendedOfferingPreservesMixedBookingAndLeavesOtherOfferingsBookable() {
         additionalOffering();
@@ -668,27 +660,24 @@ class ReservationMySqlIntegrationTest {
         assertEquals(2, search.search(searchRequest(1)).quotations().size());
     }
 
+    // Verifies remaining warnings are independent deduplicated and disappear when conditions clear.
     @Test
-    void allFourWarningsAreIndependentDeduplicatedAndDisappearWhenConditionsClear() {
+    void remainingWarningsAreIndependentDeduplicatedAndDisappearWhenConditionsClear() {
         var booked = service.confirm(request("1035", 2, 1));
         var nightsBefore = storedNights(booked.reservationId());
         contractService.suspendContract(contract);
         offeringService.status(offering, new OfferingStatusRequest(OfferingStatus.SUSPENDED));
         hotelStatus(HotelStatus.INACTIVE);
-        jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)", hotel,
-                in, out, "Combined warning fixture");
         var warnings = service.detail(booked.reservationId()).warnings();
-        assertEquals(4, warnings.size());
+        assertEquals(3, warnings.size());
         assertEquals(Set.of(ReservationResponse.WarningCode.HOTEL_INACTIVE,
-                        ReservationResponse.WarningCode.HOTEL_CLOSURE,
                         ReservationResponse.WarningCode.CONTRACT_SUSPENDED,
                         ReservationResponse.WarningCode.OFFERING_SUSPENDED),
                 new HashSet<>(warningCodes(service.detail(booked.reservationId()))));
         offeringService.status(offering, new OfferingStatusRequest(OfferingStatus.ENABLED));
-        assertEquals(3, service.detail(booked.reservationId()).warnings().size());
-        hotelStatus(HotelStatus.ACTIVE);
         assertEquals(2, service.detail(booked.reservationId()).warnings().size());
-        jdbc.update("delete from hotel_closure where hotel_id=?", hotel);
+        hotelStatus(HotelStatus.ACTIVE);
+        assertEquals(1, service.detail(booked.reservationId()).warnings().size());
         assertEquals(List.of(ReservationResponse.WarningCode.CONTRACT_SUSPENDED),
                 warningCodes(service.detail(booked.reservationId())));
         contractService.reapproveContract(contract);
@@ -700,6 +689,7 @@ class ReservationMySqlIntegrationTest {
         assertEquals("CANCELLED", cancelled.status());
     }
 
+    // Verifies completed confirmed stay has no operational warnings even when every current status is suspended.
     @Test
     void completedConfirmedStayHasNoOperationalWarningsEvenWhenEveryCurrentStatusIsSuspended() {
         var booked = service.confirm(request("690", 2));
@@ -714,12 +704,11 @@ class ReservationMySqlIntegrationTest {
         contractService.suspendContract(contract);
         offeringService.status(offering, new OfferingStatusRequest(OfferingStatus.SUSPENDED));
         hotelStatus(HotelStatus.INACTIVE);
-        jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)", hotel,
-                today.minusDays(3), today, "Past fixture closure");
         assertEquals("CONFIRMED", service.detail(booked.reservationId()).status());
         assertTrue(service.detail(booked.reservationId()).warnings().isEmpty());
     }
 
+    // Verifies actual confirmation and termination serialize on the hotel mutex.
     @Test
     void actualConfirmationAndTerminationSerializeOnTheHotelMutex() throws Exception {
         var written = new CountDownLatch(1);
@@ -759,6 +748,7 @@ class ReservationMySqlIntegrationTest {
         }
     }
 
+    // Verifies termination winning the mutex prevents a new confirmation.
     @Test
     void terminationWinningTheMutexPreventsANewConfirmation() throws Exception {
         var terminated = new CountDownLatch(1);
@@ -792,6 +782,7 @@ class ReservationMySqlIntegrationTest {
         }
     }
 
+    // Verifies stay periods compose with status search and ten record paging before pagination.
     @Test
     void stayPeriodsComposeWithStatusSearchAndTenRecordPagingBeforePagination() {
         var today = LocalDate.now(clock);
@@ -840,6 +831,7 @@ class ReservationMySqlIntegrationTest {
                 () -> service.list(name, "", 0, 10, null, null, "COMPLETED")).getStatus());
     }
 
+    // Verifies stay period filtering does not change operational warnings.
     @Test
     void stayPeriodFilteringDoesNotChangeOperationalWarnings() {
         var booked = service.confirm(request("690", 2));

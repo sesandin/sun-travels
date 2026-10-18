@@ -2,6 +2,7 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthState } from './services/auth-state';
 
+// Allows signed-in staff to enter protected routes.
 export const authenticatedGuard: CanActivateFn = (_route, state) => {
   const auth = inject(AuthState),
     router = inject(Router);
@@ -9,6 +10,7 @@ export const authenticatedGuard: CanActivateFn = (_route, state) => {
     ? true
     : router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
 };
+// Restricts administration routes to signed-in administrators.
 export const adminGuard: CanActivateFn = () => {
   const auth = inject(AuthState),
     router = inject(Router);
@@ -17,6 +19,7 @@ export const adminGuard: CanActivateFn = () => {
     ? true
     : router.createUrlTree(['/search'], { queryParams: { forbidden: 1 } });
 };
+// Redirects signed-in staff away from the sign-in page.
 export const loginGuard: CanActivateFn = () => {
   const auth = inject(AuthState),
     router = inject(Router);

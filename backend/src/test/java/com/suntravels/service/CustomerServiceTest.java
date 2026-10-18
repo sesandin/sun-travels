@@ -26,6 +26,7 @@ class CustomerServiceTest {
     @Mock
     CustomerRepository repository;
 
+    // Verifies email validation preserves existing interior dot semantics.
     @Test
     void emailValidationPreservesExistingInteriorDotSemantics() {
         CustomerService service = serviceWithSavingIds();
@@ -34,6 +35,7 @@ class CustomerServiceTest {
         }
     }
 
+    // Verifies email validation rejects missing interior dots and whitespace.
     @Test
     void emailValidationRejectsMissingInteriorDotsAndWhitespace() {
         CustomerService service = new CustomerService(repository);
@@ -44,6 +46,7 @@ class CustomerServiceTest {
         verifyNoInteractions(repository);
     }
 
+    // Verifies creates phone only email only and both while normalizing.
     @Test
     void createsPhoneOnlyEmailOnlyAndBothWhileNormalizing() {
         CustomerService service = serviceWithSavingIds();
@@ -59,6 +62,7 @@ class CustomerServiceTest {
         verify(repository, times(3)).save(any(Customer.class));
     }
 
+    // Verifies rejects invalid business fields even outside mvc validation.
     @Test
     void rejectsInvalidBusinessFieldsEvenOutsideMvcValidation() {
         CustomerService service = new CustomerService(repository);
@@ -83,6 +87,7 @@ class CustomerServiceTest {
         verifyNoInteractions(repository);
     }
 
+    // Verifies retrieves updates and keeps customer id.
     @Test
     void retrievesUpdatesAndKeepsCustomerId() {
         Customer existing = customer(7, "Old", "+94111234567", null);
@@ -97,6 +102,7 @@ class CustomerServiceTest {
         verify(repository).save(existing);
     }
 
+    // Verifies unknown customer fails without insert.
     @Test
     void unknownCustomerFailsWithoutInsert() {
         when(repository.findById(99)).thenReturn(Optional.empty());
@@ -108,6 +114,7 @@ class CustomerServiceTest {
         verify(repository, never()).save(any());
     }
 
+    // Verifies searches text and exact numeric id with bounded paging.
     @Test
     void searchesTextAndExactNumericIdWithBoundedPaging() {
         Customer row = customer(42, "Alice", "+94771234567", "alice@example.com");
@@ -128,6 +135,7 @@ class CustomerServiceTest {
         assertThrows(InvalidCustomerException.class, () -> service.searchCustomers(tooLong, 0, 20));
     }
 
+    // Verifies blank search uses unfiltered paging and special characters remain literal.
     @Test
     void blankSearchUsesUnfilteredPagingAndSpecialCharactersRemainLiteral() {
         Customer row = customer(1, "100% Travel_Name", "+94771234567", null);
@@ -143,6 +151,7 @@ class CustomerServiceTest {
         verify(repository).findAll(any(Specification.class), any(Pageable.class));
     }
 
+    // Creates a customer service whose save mock assigns fixture IDs.
     private CustomerService serviceWithSavingIds() {
         when(repository.save(any(Customer.class))).thenAnswer(invocation -> {
             Customer c = invocation.getArgument(0);
@@ -152,6 +161,7 @@ class CustomerServiceTest {
         return new CustomerService(repository);
     }
 
+    // Builds a valid request fixture for the tested operation.
     private CustomerRequest request(String name, String phone, String email) {
         CustomerRequest r = new CustomerRequest();
         r.setName(name);
@@ -160,6 +170,7 @@ class CustomerServiceTest {
         return r;
     }
 
+    // Builds a customer fixture with the requested identity and contact data.
     private Customer customer(int id, String name, String phone, String email) {
         Customer c = new Customer();
         ReflectionTestUtils.setField(c, "customerId", id);
@@ -169,6 +180,7 @@ class CustomerServiceTest {
         return c;
     }
 
+    // Verifies returns last valid ten record page after an edit removes the last match.
     @Test
     void returnsLastValidTenRecordPageAfterAnEditRemovesTheLastMatch() {
         Customer row = customer(42, "Alice", "+94771234567", "alice@example.com");

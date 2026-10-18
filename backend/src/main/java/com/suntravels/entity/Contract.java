@@ -40,66 +40,82 @@ public class Contract {
     @JoinColumn(name = "hotel_id", nullable = false)
     private Hotel hotel;
 
+    // Creates an empty object for fields to be populated after construction.
     public Contract() {
         // Required by persistence or JSON binding; fields are populated after construction.
     }
 
+    // Returns the contract id.
     public Integer getContractId() {
         return contractId;
     }
 
+    // Returns the contract code.
     public String getContractCode() {
         return contractCode;
     }
 
+    // Updates the contract code.
     public void setContractCode(String contractCode) {
         this.contractCode = contractCode;
     }
 
+    // Returns the valid from.
     public LocalDate getValidFrom() {
         return validFrom;
     }
 
+    // Updates the valid from.
     public void setValidFrom(LocalDate validFrom) {
         this.validFrom = validFrom;
     }
 
+    // Returns the valid to.
     public LocalDate getValidTo() {
         return validTo;
     }
 
+    // Updates the valid to.
     public void setValidTo(LocalDate validTo) {
         this.validTo = validTo;
     }
 
+    // Returns the markup percentage.
     public BigDecimal getMarkupPercentage() {
         return markupPercentage;
     }
 
+    // Updates the markup percentage.
     public void setMarkupPercentage(BigDecimal markupPercentage) {
         this.markupPercentage = markupPercentage;
     }
 
+    // Returns the currency code.
     public String getCurrencyCode() {
         return currencyCode;
     }
 
+    // Updates the currency code.
     public void setCurrencyCode(String currencyCode) {
         this.currencyCode = currencyCode;
     }
 
+    // Returns the status.
     public ContractStatus getStatus() {
         return status;
     }
 
+    // Updates the status.
     public void setStatus(ContractStatus status) {
         this.status = status;
     }
 
+    // Returns the hotel.
     public Hotel getHotel() {
         return hotel;
     }
 
+    // Updates the hotel.
     public void setHotel(Hotel hotel) {
         this.hotel = hotel;
     }

@@ -26,9 +26,11 @@ public class User {
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    // Initializes the user and its required dependencies.
     protected User() {
     }
 
+    // Initializes the user and its required dependencies.
     public User(String username, String passwordHash, String fullName, UserRole role, UserStatus status) {
         this.username = username;
         this.passwordHash = passwordHash;
@@ -37,30 +39,37 @@ public class User {
         this.status = status;
     }
 
+    // Returns the user id.
     public Integer getUserId() {
         return userId;
     }
 
+    // Returns the username.
     public String getUsername() {
         return username;
     }
 
+    // Returns the password hash.
     public String getPasswordHash() {
         return passwordHash;
     }
 
+    // Returns the full name.
     public String getFullName() {
         return fullName;
     }
 
+    // Returns the role.
     public UserRole getRole() {
         return role;
     }
 
+    // Returns the status.
     public UserStatus getStatus() {
         return status;
     }
 
+    // Returns the created at.
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }

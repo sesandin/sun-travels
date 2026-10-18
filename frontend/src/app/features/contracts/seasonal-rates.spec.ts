@@ -52,10 +52,12 @@ describe('Seasonal rate management', () => {
   });
   afterEach(() => http.verify());
   const url = api + '/offerings/8/seasonal-rates';
+  // Completes the pending API request with test fixture data.
   function load(rows = [seasonal]) {
     http.expectOne(url).flush(rows);
     fixture.detectChanges();
   }
+  // Populates the form with valid test input.
   function fill() {
     c.form.setValue({
       validFrom: seasonal.validFrom,

@@ -50,6 +50,7 @@ describe('Contract offering directory links', () => {
     http.expectOne(api + '/hotels').flush([]);
   });
   afterEach(() => http.verify());
+  // Opens linked contract details and supplies their API response.
   function open(status: Contract['status'] = 'DRAFT', offeringId = '8') {
     params.next(convertToParamMap({ contractId: '4', offeringId }));
     http.expectOne(api + '/contracts/4').flush({ ...contract, status });

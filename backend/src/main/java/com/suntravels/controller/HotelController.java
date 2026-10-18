@@ -25,10 +25,12 @@ public class HotelController {
 
     private final HotelService hotelService;
 
+    // Initializes the hotel controller and its required dependencies.
     public HotelController(HotelService hotelService) {
         this.hotelService = hotelService;
     }
 
+    // Creates the hotel.
     @PostMapping
     public ResponseEntity<HotelResponse> createHotel(@Valid @RequestBody HotelRequest request) {
 
@@ -37,6 +39,7 @@ public class HotelController {
         return ResponseEntity.status(201).body(response);
     }
 
+    // Returns the all hotels.
     @GetMapping
     public ResponseEntity<List<HotelResponse>> getAllHotels() {
 
@@ -45,6 +48,7 @@ public class HotelController {
         return ResponseEntity.ok(hotels);
     }
 
+    // Returns the hotel by id.
     @GetMapping("/{id}")
     public ResponseEntity<HotelResponse> getHotelById(@PathVariable("id") Integer hotelId) {
 
@@ -53,6 +57,7 @@ public class HotelController {
         return ResponseEntity.ok(response);
     }
 
+    // Updates the hotel.
     @PutMapping("/{id}")
     public ResponseEntity<HotelResponse> updateHotel(@PathVariable("id") Integer hotelId,
             @Valid @RequestBody HotelUpdateRequest request) {
@@ -62,6 +67,7 @@ public class HotelController {
         return ResponseEntity.ok(response);
     }
 
+    // Updates the hotel status.
     @PatchMapping("/{id}/status")
     public ResponseEntity<HotelResponse> updateHotelStatus(@PathVariable("id") Integer hotelId,
             @Valid @RequestBody HotelStatusUpdateRequest request) {

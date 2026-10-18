@@ -10,6 +10,7 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    // Returns a not-found response for the requested hotel.
     @ExceptionHandler(HotelNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleHotelNotFound(HotelNotFoundException exception) {
 

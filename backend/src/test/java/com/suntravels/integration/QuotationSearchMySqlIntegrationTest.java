@@ -10,7 +10,6 @@ import com.suntravels.service.QuotationSearchService;
 import java.math.BigDecimal;
 import java.time.*;
 import java.util.*;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -53,6 +52,7 @@ class QuotationSearchMySqlIntegrationTest {
     LocalDate in, out;
     String city;
 
+    // Creates isolated database fixtures for the test.
     @BeforeEach
     void seed() {
         assertTrue(jdbc.queryForObject("select database()", String.class).endsWith("_test"),
@@ -73,6 +73,7 @@ class QuotationSearchMySqlIntegrationTest {
         offer = newOffering(contract, type, 3, 2, "100");
     }
 
+    // Creates a contract fixture with the requested status and validity.
     Contract newContract(ContractStatus status, LocalDate from, LocalDate to) {
         Contract c = new Contract();
         c.setHotel(hotel);
@@ -85,6 +86,7 @@ class QuotationSearchMySqlIntegrationTest {
         return contracts.saveAndFlush(c);
     }
 
+    // Creates an offering fixture with the requested rate and inventory.
     ContractRoomOffering newOffering(Contract c, RoomType room, int count, int adults, String rate) {
         ContractRoomOffering o = new ContractRoomOffering();
         o.setContract(c);
@@ -96,11 +98,13 @@ class QuotationSearchMySqlIntegrationTest {
         return offerings.saveAndFlush(o);
     }
 
+    // Builds a valid request fixture for the tested operation.
     QuotationSearchRequest request(int... adults) {
         return new QuotationSearchRequest(in, out,
                 Arrays.stream(adults).mapToObj(RequestedRoom::new).toList(), null, hotel.getHotelId(), null);
     }
 
+    // Creates reservation commitments for inventory checks.
     Integer booking(ContractRoomOffering o, String status, int start, int end, int items) {
         jdbc.update("insert into customer(name) values (?)", "Search customer " + UUID.randomUUID());
         Integer customer = jdbc.queryForObject("select last_insert_id()", Integer.class);
@@ -116,6 +120,7 @@ class QuotationSearchMySqlIntegrationTest {
         return reservation;
     }
 
+    // Creates a seasonal rate fixture for the selected offering.
     void season(LocalDate from, LocalDate to, String rate) {
         OfferingSeasonalRate s = new OfferingSeasonalRate();
         s.setOffering(offer);
@@ -125,6 +130,7 @@ class QuotationSearchMySqlIntegrationTest {
         seasons.saveAndFlush(s);
     }
 
+    // Verifies actual sql applies hotel contract and offering eligibility.
     @ParameterizedTest
     @CsvSource({"ACTIVE,APPROVED,ENABLED,true", "INACTIVE,APPROVED,ENABLED,false",
             "ACTIVE,DRAFT,ENABLED,false", "ACTIVE,SUSPENDED,ENABLED,false", "ACTIVE,TERMINATED,ENABLED,false",
@@ -141,6 +147,7 @@ class QuotationSearchMySqlIntegrationTest {
         assertTrue(result.unavailableOptions().isEmpty());
     }
 
+    // Verifies full stay contract validity is inclusive for nights and exclusive for checkout.
     @Test
     void fullStayContractValidityIsInclusiveForNightsAndExclusiveForCheckout() {
         contract.setValidTo(out.minusDays(1));
@@ -152,6 +159,7 @@ class QuotationSearchMySqlIntegrationTest {
         assertTrue(search.search(request(2)).unavailableOptions().isEmpty());
     }
 
+    // Verifies occupancy uses approved enabled full stay offerings and returns changed limits.
     @Test
     void occupancyUsesApprovedEnabledFullStayOfferingsAndReturnsChangedLimits() {
         assertEquals(2,
@@ -174,28 +182,9 @@ class QuotationSearchMySqlIntegrationTest {
         assertTrue(search.occupancy(hotel.getHotelId(), type.getRoomTypeId(), in, out, null).isEmpty());
     }
 
-    static Stream<Arguments> closures() {
-        return Stream.of(Arguments.of(1, 1, false), Arguments.of(3, 4, true), Arguments.of(-2, -1, true),
-                Arguments.of(-2, 0, false), Arguments.of(-2, null, false), Arguments.of(3, null, true));
-    }
-
-    @ParameterizedTest
-    @MethodSource("closures")
-    void closureSqlRespectsInclusiveBoundsAndOpenEnd(int start, Integer end, boolean match) {
-        jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)",
-                hotel.getHotelId(), in.plusDays(start), end == null ? null : in.plusDays(end),
-                "Search fixture");
-        var result = search.search(request(1));
-        assertEquals(match, !result.quotations().isEmpty());
-        assertEquals(match ? 0 : 1, result.unavailableOptions().size());
-        if (!match) assertEquals(QuotationSearchResponse.ReasonCode.HOTEL_CLOSED,
-                result.unavailableOptions().get(0).reasons().get(0).code());
-    }
-
+    // Verifies administrative exclusions never appear as unavailable inventory.
     @Test
-    void closedAdministrativeExclusionsNeverAppearAsUnavailableInventory() {
-        jdbc.update("insert into hotel_closure(hotel_id,start_date,end_date,reason) values (?,?,?,?)",
-                hotel.getHotelId(), in, out, "Search fixture");
+    void administrativeExclusionsNeverAppearAsUnavailableInventory() {
         for (ContractStatus status : List.of(ContractStatus.DRAFT, ContractStatus.SUSPENDED,
                 ContractStatus.TERMINATED)) {
             contract.setStatus(status);
@@ -216,6 +205,7 @@ class QuotationSearchMySqlIntegrationTest {
         assertTrue(search.search(request(1)).unavailableOptions().isEmpty());
     }
 
+    // Verifies non confirmed reservations do not consume inventory.
     @ParameterizedTest
     @ValueSource(strings = {"PENDING", "CANCELLED"})
     void nonConfirmedReservationsDoNotConsumeInventory(String status) {
@@ -223,6 +213,7 @@ class QuotationSearchMySqlIntegrationTest {
         assertEquals(3, search.search(request(1)).quotations().get(0).rooms().get(0).availableRoomsForStay());
     }
 
+    // Verifies one item is one room and peak night is not sum across nights.
     @Test
     void oneItemIsOneRoomAndPeakNightIsNotSumAcrossNights() {
         booking(offer, "CONFIRMED", 0, 1, 1);
@@ -231,6 +222,7 @@ class QuotationSearchMySqlIntegrationTest {
                 search.search(request(2, 1)).quotations().get(0).rooms().get(0).availableRoomsForStay());
     }
 
+    // Verifies multiple items and exclusive checkouts are counted per night.
     @Test
     void multipleItemsAndExclusiveCheckoutsAreCountedPerNight() {
         booking(offer, "CONFIRMED", -3, 0, 3);
@@ -240,6 +232,7 @@ class QuotationSearchMySqlIntegrationTest {
         assertTrue(search.search(request(2, 1)).quotations().isEmpty());
     }
 
+    // Verifies fully booked and overbooked have different outcomes.
     @Test
     void fullyBookedAndOverbookedHaveDifferentOutcomes() {
         booking(offer, "CONFIRMED", 0, 3, 3);
@@ -250,6 +243,7 @@ class QuotationSearchMySqlIntegrationTest {
                 () -> search.search(requestForAssertion1)).getStatus());
     }
 
+    // Verifies unrelated offering consumption does not reduce requested room inventory.
     @Test
     void unrelatedOfferingConsumptionDoesNotReduceRequestedRoomInventory() {
         RoomType other = new RoomType();
@@ -263,6 +257,7 @@ class QuotationSearchMySqlIntegrationTest {
         assertEquals(3, result.quotations().get(0).rooms().get(0).availableRoomsForStay());
     }
 
+    // Verifies explicit mixed room selection uses actual capacity and seasonal pricing.
     @Test
     void explicitMixedRoomSelectionUsesActualCapacityAndSeasonalPricing() {
         offer.setContractedRoomCount(1);
@@ -281,6 +276,7 @@ class QuotationSearchMySqlIntegrationTest {
         assertEquals(other.getRoomTypeId(), q.rooms().get(1).roomTypeId());
     }
 
+    // Verifies city and reference filters use real existing records.
     @Test
     void cityAndReferenceFiltersUseRealExistingRecords() {
         assertEquals(1, search.search(new QuotationSearchRequest(in, out, List.of(new RequestedRoom(1)),
@@ -291,6 +287,7 @@ class QuotationSearchMySqlIntegrationTest {
                         hotel.getHotelId(), null)).quotations().isEmpty());
     }
 
+    // Verifies old contract commitments outside old validity cannot become extra inventory.
     @ParameterizedTest
     @EnumSource(value = ContractStatus.class, names = {"SUSPENDED", "TERMINATED"})
     void oldContractCommitmentsOutsideOldValidityCannotBecomeExtraInventory(ContractStatus status) {
@@ -303,6 +300,7 @@ class QuotationSearchMySqlIntegrationTest {
                 () -> search.search(requestForAssertion2)).getStatus());
     }
 
+    // Verifies malformed or duplicate approval data fails closed.
     @Test
     void malformedOrDuplicateApprovalDataFailsClosed() {
         newContract(ContractStatus.APPROVED, in.minusDays(1), out);
@@ -311,6 +309,7 @@ class QuotationSearchMySqlIntegrationTest {
                 () -> search.search(requestForAssertion3)).getStatus());
     }
 
+    // Verifies overlapping seasonal data is never arbitrarily selected.
     @Test
     void overlappingSeasonalDataIsNeverArbitrarilySelected() {
         season(in, in.plusDays(1), "120");
@@ -320,6 +319,7 @@ class QuotationSearchMySqlIntegrationTest {
                 () -> search.search(requestForAssertion4)).getStatus());
     }
 
+    // Verifies search does not mutate confirmed reservation or snapshot rows.
     @Test
     void searchDoesNotMutateConfirmedReservationOrSnapshotRows() {
         Integer reservation = booking(offer, "CONFIRMED", 0, 3, 1);

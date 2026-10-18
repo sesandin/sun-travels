@@ -50,6 +50,7 @@ public class NightlyQuotationPricing {
         return List.copyOf(result);
     }
 
+    // Rejects invalid or conflicting seasonal periods before using the contract.
     private void validateSeasons(Candidate offering, List<Season> sorted) {
         LocalDate previousEnd = null;
         for (Season season : sorted) {
@@ -63,6 +64,7 @@ public class NightlyQuotationPricing {
         }
     }
 
+    // Checks whether a stored rate is valid for pricing.
     public boolean validRate(BigDecimal rate) {
         return rate != null && rate.signum() > 0 && rate.scale() <= 2 &&
                 rate.compareTo(new BigDecimal("99999999.99")) <= 0;
@@ -84,6 +86,7 @@ public class NightlyQuotationPricing {
                 BigDecimal::add);
     }
 
+    // Builds the nightly selling-price breakdown returned with a quotation.
     public List<NightlyPrice> breakdown(List<Tariff> tariffs, int adults, BigDecimal markup) {
         return tariffs.stream().map(
                 t -> new NightlyPrice(t.date(), t.seasonId() == null ? "BASE" : "SEASONAL", t.seasonId(),

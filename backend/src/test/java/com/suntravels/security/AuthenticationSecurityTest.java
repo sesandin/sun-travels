@@ -51,6 +51,7 @@ class AuthenticationSecurityTest {
     @MockitoBean
     CustomerService customers;
 
+    // Prepares staff accounts and authentication mocks for the test.
     @BeforeEach
     void users() {
         when(users.findByUsernameIgnoreCase("admin01")).thenReturn(
@@ -62,6 +63,7 @@ class AuthenticationSecurityTest {
         when(users.findByUsernameIgnoreCase("missing")).thenReturn(Optional.empty());
     }
 
+    // Verifies admin and agent login restore safe profiles with bcrypt.
     @Test
     void adminAndAgentLoginRestoreSafeProfilesWithBcrypt() throws Exception {
         MockHttpSession admin = login("admin01");
@@ -80,6 +82,7 @@ class AuthenticationSecurityTest {
                 user(9, "x", UserRole.ADMIN, UserStatus.ACTIVE).getPasswordHash()));
     }
 
+    // Verifies unknown wrong password and inactive use same failure.
     @Test
     void unknownWrongPasswordAndInactiveUseSameFailure() throws Exception {
         for (String body : List.of(loginJson("missing", "Correct-Horse-123!"),
@@ -90,6 +93,7 @@ class AuthenticationSecurityTest {
         }
     }
 
+    // Verifies csrf is required and unauthenticated apis return json401.
     @Test
     void csrfIsRequiredAndUnauthenticatedApisReturnJson401() throws Exception {
         mvc.perform(get("/api/auth/csrf")).andExpect(status().isOk()).andExpect(
@@ -100,6 +104,7 @@ class AuthenticationSecurityTest {
                 jsonPath("$.message").value("Authentication is required."));
     }
 
+    // Verifies agent cannot mutate contract but admin reaches business controller.
     @Test
     void agentCannotMutateContractButAdminReachesBusinessController() throws Exception {
         mvc.perform(patch("/api/contracts/1/suspend").session(login("agent01")).with(csrf())).andExpect(
@@ -110,6 +115,7 @@ class AuthenticationSecurityTest {
         verify(contracts).suspendContract(1);
     }
 
+    // Verifies both roles can search and agent can read filter references.
     @Test
     void bothRolesCanSearchAndAgentCanReadFilterReferences() throws Exception {
         var limits = new QuotationSearchResponse.Limits(LocalDate.of(2026, 10, 15), 8, 31, 730, 20,
@@ -133,6 +139,7 @@ class AuthenticationSecurityTest {
         mvc.perform(get("/api/hotels").session(login("agent01"))).andExpect(status().isForbidden());
     }
 
+    // Verifies occupancy is read only and available to admin and agent only when authenticated.
     @Test
     void occupancyIsReadOnlyAndAvailableToAdminAndAgentOnlyWhenAuthenticated() throws Exception {
         when(search.occupancy(anyInt(), anyInt(), any(), any(), isNull())).thenReturn(
@@ -147,6 +154,7 @@ class AuthenticationSecurityTest {
         }
     }
 
+    // Verifies both roles can manage customers but anonymous is rejected and writes need csrf.
     @Test
     void bothRolesCanManageCustomersButAnonymousIsRejectedAndWritesNeedCsrf() throws Exception {
         when(customers.searchCustomers(null, 0, 10)).thenReturn(
@@ -165,6 +173,7 @@ class AuthenticationSecurityTest {
         }
     }
 
+    // Verifies logout invalidates session and requires csrf.
     @Test
     void logoutInvalidatesSessionAndRequiresCsrf() throws Exception {
         MockHttpSession session = login("admin01");
@@ -173,6 +182,7 @@ class AuthenticationSecurityTest {
         mvc.perform(get("/api/auth/me").session(session)).andExpect(status().isUnauthorized());
     }
 
+    // Signs in a test account and returns its authenticated session.
     private MockHttpSession login(String username) throws Exception {
         return (MockHttpSession) mvc.perform(
                 post("/api/auth/login").with(csrf()).contentType("application/json").content(
@@ -180,21 +190,25 @@ class AuthenticationSecurityTest {
                 status().isOk()).andReturn().getRequest().getSession(false);
     }
 
+    // Builds the JSON staff sign-in request used by security tests.
     private String loginJson(String username, String password) {
         return "{\"username\":\"" + username + "\",\"password\":\"" + password + "\"}";
     }
 
+    // Creates a staff account fixture with the requested role.
     private User user(int id, String username, UserRole role, UserStatus status) {
         User user = new User(username, encoder.encode("Correct-Horse-123!"), "Test User", role, status);
         ReflectionTestUtils.setField(user, "userId", id);
         return user;
     }
 
+    // Builds the contract fixture used by this test suite.
     private ContractResponse contract() {
         return new ContractResponse(1, "C001", 1, "Hotel", LocalDate.of(2026, 1, 1),
                 LocalDate.of(2026, 12, 31), new BigDecimal("15.00"), "USD", ContractStatus.APPROVED);
     }
 
+    // Verifies both roles can customize with csrf.
     @Test
     void bothRolesCanCustomizeWithCsrf() throws Exception {
         String selection = """
@@ -212,6 +226,7 @@ class AuthenticationSecurityTest {
                 selection)).andExpect(status().isUnauthorized());
     }
 
+    // Verifies directory pages remain admin only.
     @Test
     void directoryPagesRemainAdminOnly() throws Exception {
         for (String resource : List.of("hotels", "room-types", "contracts", "offerings")) {

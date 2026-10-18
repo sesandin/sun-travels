@@ -33,6 +33,7 @@ class ReservationControllerTest {
   {"customerId":9,"hotelId":1,"contractId":4,"checkIn":"2026-10-25","checkOut":"2026-10-28","rooms":[{"offeringId":7,"adults":2}],"acceptedTotal":690,"acceptedCurrency":"USD"}
   """;
 
+    // Verifies admin and agent can use all reservation endpoints with csrf.
     @Test
     void adminAndAgentCanUseAllReservationEndpointsWithCsrf() throws Exception {
         when(reservations.list("", "", 0, 10, null, null, "")).thenReturn(
@@ -48,6 +49,7 @@ class ReservationControllerTest {
         }
     }
 
+    // Verifies anonymous requests return401 and authenticated mutations require csrf.
     @Test
     void anonymousRequestsReturn401AndAuthenticatedMutationsRequireCsrf() throws Exception {
         mvc.perform(get("/api/reservations")).andExpect(status().isUnauthorized());
@@ -65,6 +67,7 @@ class ReservationControllerTest {
         verifyNoInteractions(reservations);
     }
 
+    // Verifies invalid payload and wrong role do not reach service.
     @Test
     void invalidPayloadAndWrongRoleDoNotReachService() throws Exception {
         mvc.perform(post("/api/reservations").with(user("staff").roles("AGENT")).with(csrf()).contentType(
@@ -75,6 +78,7 @@ class ReservationControllerTest {
         verifyNoInteractions(reservations);
     }
 
+    // Verifies price change is structured and does not report success.
     @Test
     void priceChangeIsStructuredAndDoesNotReportSuccess() throws Exception {
         var q = new ReservationResponse.Quote(1, "Ocean", 4, java.time.LocalDate.of(2026, 10, 25),
@@ -89,6 +93,7 @@ class ReservationControllerTest {
                 jsonPath("$.quotation.markupPercentage").doesNotExist());
     }
 
+    // Verifies adult integer validation has no fixed occupancy ceiling.
     @Test
     void adultIntegerValidationHasNoFixedOccupancyCeiling() throws Exception {
         mvc.perform(post("/api/reservations").with(user("agent").roles("AGENT")).with(csrf()).contentType(
@@ -105,6 +110,7 @@ class ReservationControllerTest {
                 status().isBadRequest());
     }
 
+    // Verifies both roles receive agent safe operational warnings without a status change.
     @Test
     void bothRolesReceiveAgentSafeOperationalWarningsWithoutAStatusChange() throws Exception {
         var date = java.time.LocalDate.of(2026, 10, 25);
@@ -124,6 +130,7 @@ class ReservationControllerTest {
                     jsonPath("$.warnings[0].markupPercentage").doesNotExist());
     }
 
+    // Verifies date filters are parsed and malformed dates are rejected.
     @Test
     void dateFiltersAreParsedAndMalformedDatesAreRejected() throws Exception {
         mvc.perform(get("/api/reservations").with(user("agent").roles("AGENT")).param("stayFrom",
@@ -134,6 +141,7 @@ class ReservationControllerTest {
                 "invalid")).andExpect(status().isBadRequest());
     }
 
+    // Verifies stay period is passed with the ten record default.
     @Test
     void stayPeriodIsPassedWithTheTenRecordDefault() throws Exception {
         mvc.perform(get("/api/reservations").with(user("agent").roles("AGENT")).param("status",
@@ -141,6 +149,7 @@ class ReservationControllerTest {
         verify(reservations).list("", "CONFIRMED", 0, 10, null, null, "ONGOING");
     }
 
+    // Verifies past and other periods reach the service alongside every other filter.
     @Test
     void pastAndOtherPeriodsReachTheServiceAlongsideEveryOtherFilter() throws Exception {
         for (String period : List.of("PAST", "UPCOMING", "ONGOING", "ALL")) {

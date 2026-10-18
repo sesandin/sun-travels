@@ -14,6 +14,7 @@ import org.springframework.security.authentication.AnonymousAuthenticationToken;
 
 @Component
 public class JsonAccessDeniedHandler implements AccessDeniedHandler {
+    // Returns a JSON forbidden response when the staff role lacks access.
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
             AccessDeniedException exception) throws IOException {

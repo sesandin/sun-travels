@@ -31,11 +31,13 @@ class ContractControllerTest {
         {"contractCode":"CODE","hotelId":7,"validFrom":"2026-01-01","validTo":"2026-12-31","markupPercentage":15.00,"currencyCode":"USD"}
         """;
 
+    // Builds a response fixture for the tested operation.
     ContractResponse response() {
         return new ContractResponse(1, "CODE", 7, "Hotel", LocalDate.of(2026, 1, 1),
                 LocalDate.of(2026, 12, 31), new BigDecimal("15.00"), "USD", ContractStatus.DRAFT);
     }
 
+    // Configures the component and its test dependencies.
     @BeforeEach
     void setup() {
         validator = new LocalValidatorFactoryBean();
@@ -44,11 +46,13 @@ class ContractControllerTest {
                 new ContractExceptionHandler(), new GlobalExceptionHandler()).setValidator(validator).build();
     }
 
+    // Releases resources created for the test.
     @AfterEach
     void close() {
         validator.close();
     }
 
+    // Verifies lists and reads dtos.
     @Test
     void listsAndReadsDtos() throws Exception {
         when(service.getAllContracts()).thenReturn(List.of(response()));
@@ -59,6 +63,7 @@ class ContractControllerTest {
                 jsonPath("$.status").value("DRAFT"));
     }
 
+    // Verifies writes valid payloads and ignores client status.
     @Test
     void writesValidPayloadsAndIgnoresClientStatus() throws Exception {
         when(service.createContract(any())).thenReturn(response());
@@ -74,6 +79,7 @@ class ContractControllerTest {
         verify(service).createContract(any(ContractRequest.class));
     }
 
+    // Verifies validates header boundaries on both writes.
     @Test
     void validatesHeaderBoundariesOnBothWrites() throws Exception {
         for (String invalid : List.of("{}", json.replace("15.00", "-0.01"), json.replace("15.00", "1000"),
@@ -88,6 +94,7 @@ class ContractControllerTest {
         verifyNoInteractions(service);
     }
 
+    // Verifies accepts maximum decimal and equal dates.
     @Test
     void acceptsMaximumDecimalAndEqualDates() throws Exception {
         mvc.perform(post("/api/contracts").contentType("application/json").content(
@@ -96,6 +103,7 @@ class ContractControllerTest {
         verify(service).createContract(any());
     }
 
+    // Verifies validates markup and malformed inputs.
     @Test
     void validatesMarkupAndMalformedInputs() throws Exception {
         for (String body : List.of("{}", "{\"markupPercentage\":-1}", "{\"markupPercentage\":1000}",
@@ -111,6 +119,7 @@ class ContractControllerTest {
         verifyNoInteractions(service);
     }
 
+    // Verifies reports missing hotels contracts and conflicts.
     @Test
     void reportsMissingHotelsContractsAndConflicts() throws Exception {
         when(service.getContractById(9)).thenThrow(ContractException.missing(9));
@@ -125,6 +134,7 @@ class ContractControllerTest {
                 jsonPath("$.message").value("Only DRAFT contracts allow header editing"));
     }
 
+    // Verifies lock contention is translated without sql details.
     @Test
     void lockContentionIsTranslatedWithoutSqlDetails() throws Exception {
         when(service.approveContract(1)).thenThrow(
@@ -134,6 +144,7 @@ class ContractControllerTest {
                         "Another operation is updating this contract. Refresh and try again."));
     }
 
+    // Verifies lifecycle conflicts and database failures are safe.
     @Test
     void lifecycleConflictsAndDatabaseFailuresAreSafe() throws Exception {
         when(service.approveContract(1)).thenThrow(
@@ -150,6 +161,7 @@ class ContractControllerTest {
                         "Database verification or save failed. Reload the contract before retrying."));
     }
 
+    // Verifies exposes safe lifecycle operations only.
     @Test
     void exposesSafeLifecycleOperationsOnly() throws Exception {
         when(service.suspendContract(1)).thenReturn(response());

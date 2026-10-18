@@ -11,9 +11,11 @@ import {
 export class ReservationService {
   private readonly http = inject(HttpClient);
   private readonly url = '/api/reservations';
+  // Confirms the reservation using the accepted quotation and current availability.
   confirm(request: ReservationRequest) {
     return this.http.post<Reservation>(this.url, request);
   }
+  // Lists reservation records matching the supplied filters.
   list(query = '', status = '', page = 0, stayFrom = '', stayTo = '', stayPeriod: StayPeriod = '') {
     let params = new HttpParams()
       .set('query', query)
@@ -25,9 +27,11 @@ export class ReservationService {
     if (stayTo) params = params.set('stayTo', stayTo);
     return this.http.get<ReservationPage>(this.url, { params });
   }
+  // Retrieves the requested reservation details.
   get(id: number) {
     return this.http.get<Reservation>(`${this.url}/${id}`);
   }
+  // Cancels the selected reservation while preserving its history.
   cancel(id: number) {
     return this.http.post<Reservation>(`${this.url}/${id}/cancel`, {});
   }
@@ -55,6 +59,7 @@ export class ReservationService {
     };
     sessionStorage.setItem('suntravels.booking', JSON.stringify(selling));
   }
+  // Returns the quotation currently held for reservation review.
   draft(): ReservationQuote | null {
     try {
       const draft = JSON.parse(sessionStorage.getItem('suntravels.booking') ?? 'null');
@@ -63,6 +68,7 @@ export class ReservationService {
       return null;
     }
   }
+  // Clears the locally held reservation quotation.
   clearDraft() {
     sessionStorage.removeItem('suntravels.booking');
   }

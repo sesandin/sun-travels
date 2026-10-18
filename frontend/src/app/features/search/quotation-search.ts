@@ -36,13 +36,16 @@ import { apiError } from '../../services/api-error';
 import { catchError, distinctUntilChanged, forkJoin, map, of, switchMap } from 'rxjs';
 import { Router } from '@angular/router';
 import { ReservationService } from '../../services/reservation.service';
+// Validates a search date using the supported calendar-date format.
 const date = (value: string) =>
   /^\d{4}-\d{2}-\d{2}$/.test(value) &&
   !Number.isNaN(Date.parse(value + 'T00:00:00Z')) &&
   new Date(value + 'T00:00:00Z').toISOString().slice(0, 10) === value;
 // This is the API's signed Integer representation bound, not a room occupancy limit.
+// Validates an adult count as a representable positive integer.
 const adultInteger: ValidatorFn = (c) =>
   Number.isInteger(c.value) && c.value <= 2147483647 ? null : { integer: true };
+// Validates a numeric form value as a whole number.
 const integer: ValidatorFn = (c) => (Number.isInteger(c.value) ? null : { integer: true });
 @Component({
   selector: 'app-quotation-search',
@@ -53,6 +56,7 @@ const integer: ValidatorFn = (c) => (Number.isInteger(c.value) ? null : { intege
 export class QuotationSearch implements OnInit {
   private readonly router = inject(Router);
   private readonly reservations = inject(ReservationService);
+  // Stores an available quotation and opens the agent’s reservation review.
   reserve(quote: AccommodationQuotation | UnavailableAccommodation) {
     if (quote.availabilityStatus !== 'AVAILABLE' || this.edited() || this.searching()) return;
     this.reservations.saveDraft(quote);
@@ -89,6 +93,7 @@ export class QuotationSearch implements OnInit {
       return 'No eligible offering found for these filters and dates. Try another selection.';
     return 'Enter a positive whole number. Actual capacity depends on each selected room type.';
   });
+  // Checks requested adults against the selected offering’s known capacity.
   private readonly occupancyValidator: ValidatorFn = (control) => {
     const max = this.occupancyMax();
     return !this.showUnavailable.value && max !== null && control.value > max
@@ -132,19 +137,23 @@ export class QuotationSearch implements OnInit {
   readonly canCustomize = computed(
     () => !!this.response() && this.requestedRooms() > 1 && !this.edited() && !this.searching(),
   );
+  // Returns the booking action label for the quotation.
   bookLabel(quote: AccommodationQuotation) {
     return quote.rooms.length === 1
       ? 'Book This Room'
       : 'Book All ' + quote.rooms.length + ' Rooms as ' + quote.rooms[0].roomTypeName;
   }
+  // Checks that the supplied stay-wide inventory is a valid nonnegative integer.
   knownInventory(value: number | undefined) {
     return Number.isInteger(value) && value! >= 0;
   }
+  // Opens room selection for the current search results.
   openCustomization() {
     if (!this.canCustomize()) return;
     this.customizationOpen.set(true);
     afterNextRender(() => this.customTitle()?.nativeElement.focus(), { injector: this.injector });
   }
+  // Closes room selection and invalidates pending custom quotations.
   closeCustomization(restoreFocus = true) {
     this.selectionVersion++;
     this.customizationOpen.set(false);
@@ -155,10 +164,12 @@ export class QuotationSearch implements OnInit {
     this.selectionLoading.set(false);
     if (restoreFocus) this.customizeTrigger()?.nativeElement.focus();
   }
+  // Returns custom offerings that can accommodate the selected room.
   roomOptions(room: number) {
     return this.customOptions().filter((o) => !this.optionReason(o, room));
   }
 
+  // Reads the server-provided selling price for one custom room choice.
   selectionRoomPrice(room: number, offeringId: number): number | null {
     // Display the backend's selling quotation; this does not calculate or select a rate.
     return (
@@ -178,16 +189,17 @@ export class QuotationSearch implements OnInit {
       (this.response()?.selectionOfferings ?? [])
         .filter(
           (o) =>
-            !o.hotelClosed &&
             this.knownInventory(o.availableRoomsForStay) &&
             o.availableRoomsForStay > 0,
         )
         .map((o) => [o.contractId, o]),
     ).values(),
   ]);
+  // Returns the adult limit of the selected offering.
   capacity(offeringId: number) {
     return this.response()?.selectionOfferings?.find((o) => o.offeringId === offeringId)?.maxAdults;
   }
+  // Initializes custom room choices for the selected hotel and contract.
   customize(group: { hotelId: number; contractId: number }) {
     if (!this.lastRequest || !this.canCustomize()) return;
     this.customizationOpen.set(true);
@@ -202,8 +214,8 @@ export class QuotationSearch implements OnInit {
     );
     this.selectedIds.set(this.lastRequest.rooms.map(() => 0));
   }
+  // Explains why an offering cannot be chosen for the requested room.
   optionReason(option: SelectionOffering, room: number) {
-    if (option.hotelClosed) return 'Hotel unavailable during the requested stay';
     if (
       !option.rooms[room] ||
       option.rooms[room].adults > option.maxAdults ||
@@ -216,6 +228,7 @@ export class QuotationSearch implements OnInit {
     ).length;
     return used >= option.availableRoomsForStay ? 'Insufficient shared inventory' : '';
   }
+  // Updates one room’s offering selection and requests a fresh quotation.
   choose(room: number, event: Event) {
     if (!this.customizationOpen() || this.edited() || this.searching()) return;
     const id = Number((event.target as HTMLSelectElement).value);
@@ -226,6 +239,7 @@ export class QuotationSearch implements OnInit {
     this.selectedIds.set(ids);
     this.requote();
   }
+  // Requests an exact quotation for the current custom room choices.
   private requote() {
     const version = ++this.selectionVersion;
     this.customQuote.set(null);
@@ -300,9 +314,11 @@ export class QuotationSearch implements OnInit {
       },
     },
   );
+  // Returns the form array containing the requested rooms.
   get rooms() {
     return this.form.controls.rooms;
   }
+  // Creates a requested-room form group with adult-count validation.
   private room() {
     return new FormGroup({
       adults: new FormControl<number | null>(1, [
@@ -313,6 +329,7 @@ export class QuotationSearch implements OnInit {
       ]),
     });
   }
+  // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       const { checkIn, nights } = this.form.getRawValue();
@@ -391,11 +408,13 @@ export class QuotationSearch implements OnInit {
     });
     this.loadSetup();
   }
+  // Rechecks adult controls when the available occupancy guidance changes.
   private revalidateOccupancy() {
     this.rooms.controls.forEach((room) =>
       room.controls.adults.updateValueAndValidity({ emitEvent: false }),
     );
   }
+  // Loads search limits, reference filters, and occupancy guidance.
   loadSetup() {
     if (this.setupLoading()) return;
     this.setupLoading.set(true);
@@ -427,6 +446,7 @@ export class QuotationSearch implements OnInit {
         },
       });
   }
+  // Adds a requested room within the search room limit.
   addRoom() {
     const l = this.limits();
     if (!l || this.searching() || this.rooms.length >= l.maxRooms) return;
@@ -439,9 +459,11 @@ export class QuotationSearch implements OnInit {
     ]);
     this.rooms.push(r);
   }
+  // Removes a requested room and clears stale custom selections.
   removeRoom(index: number) {
     if (!this.searching() && this.rooms.length > 1) this.rooms.removeAt(index);
   }
+  // Validates the stay request and loads available and unavailable quotations.
   search() {
     if (
       this.searching() ||
@@ -488,5 +510,6 @@ export class QuotationSearch implements OnInit {
       });
   }
 }
+// Accepts an empty optional filter or a whole-number reference.
 const integerOptional: ValidatorFn = (c) =>
   c.value === null || Number.isInteger(c.value) ? null : { integer: true };

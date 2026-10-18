@@ -75,6 +75,7 @@ export class OfferingPanel implements OnInit, OnChanges {
       validators: [Validators.required],
     }),
   });
+  // Refreshes offering data or focus when component inputs change.
   ngOnChanges(changes: SimpleChanges) {
     const parent = changes['contract'];
     if (
@@ -104,6 +105,7 @@ export class OfferingPanel implements OnInit, OnChanges {
         this.focusLinkedOffering();
     }
   }
+  // Scrolls to and focuses the offering selected by a directory link.
   private focusLinkedOffering() {
     if (this.loading()) {
       this.targetMissing.set(false);
@@ -126,15 +128,19 @@ export class OfferingPanel implements OnInit, OnChanges {
         { injector: this.injector },
       );
   }
+  // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.load();
   }
+  // Checks whether the contract permits offering status changes.
   canChangeStatus() {
     return this.contract().status !== 'TERMINATED';
   }
+  // Checks whether the contract permits rate and seasonal maintenance.
   canMaintain() {
     return this.contract().status === 'DRAFT' || this.contract().status === 'APPROVED';
   }
+  // Loads the contract’s offerings and focuses any linked offering.
   load() {
     if (this.loading()) return;
     this.loading.set(true);
@@ -154,6 +160,7 @@ export class OfferingPanel implements OnInit, OnChanges {
         },
       });
   }
+  // Loads room type choices and exposes loading failures for retry.
   loadRooms() {
     if (this.roomsLoading()) return;
     this.roomsLoading.set(true);
@@ -172,6 +179,7 @@ export class OfferingPanel implements OnInit, OnChanges {
         },
       });
   }
+  // Opens the appropriate offering creation or maintenance form.
   open(row: Offering | null = null, mode: 'draft' | 'rate' | 'status' = 'draft') {
     if (
       this.saving() ||
@@ -197,9 +205,11 @@ export class OfferingPanel implements OnInit, OnChanges {
     if (mode === 'draft') this.loadRooms();
     afterNextRender(() => this.editor()?.nativeElement.focus(), { injector: this.injector });
   }
+  // Closes offering maintenance when no save is pending.
   cancel() {
     if (!this.saving()) this.mode.set(null);
   }
+  // Validates and saves the selected offering fields or status.
   save() {
     if (this.saving() || (this.mode() === 'status' ? !this.canChangeStatus() : !this.canMaintain()))
       return;

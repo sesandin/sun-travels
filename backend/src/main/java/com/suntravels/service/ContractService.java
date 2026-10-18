@@ -26,6 +26,7 @@ public class ContractService {
     private final ReservationCommitmentRepository commitments;
     private final Clock clock;
 
+    // Initializes the contract service and its required dependencies.
     public ContractService(ContractRepository repository, HotelRepository hotels, Validator validator,
             SeasonalRateRepository seasons, OfferingRepository offerings,
             ReservationCommitmentRepository commitments, Clock clock) {
@@ -38,14 +39,17 @@ public class ContractService {
         this.clock = clock;
     }
 
+    // Returns the all contracts.
     public List<ContractResponse> getAllContracts() {
         return repository.findAll(Sort.by("contractId").descending()).stream().map(this::response).toList();
     }
 
+    // Returns the contract by id.
     public ContractResponse getContractById(Integer id) {
         return response(repository.findById(id).orElseThrow(() -> ContractException.missing(id)));
     }
 
+    // Creates the contract.
     @Transactional
     public ContractResponse createContract(ContractRequest request) {
         validate(request);
@@ -71,6 +75,7 @@ public class ContractService {
         }
     }
 
+    // Formats the permanent contract code from its generated database ID.
     static String generatedCode(Integer id) {
         if (id == null || id <= 0) {
             throw ContractException.conflict("A valid database contract ID could not be allocated");
@@ -78,6 +83,7 @@ public class ContractService {
         return "C" + String.format(Locale.ROOT, "%03d", id);
     }
 
+    // Updates the contract.
     @Transactional
     public ContractResponse updateContract(Integer id, ContractRequest request) {
         validate(request);
@@ -90,6 +96,7 @@ public class ContractService {
         return persist(contract);
     }
 
+    // Updates the markup.
     @Transactional
     public ContractResponse updateMarkup(Integer id, ContractMarkupRequest request) {
         Contract contract = coordinated(id, null);
@@ -139,11 +146,13 @@ public class ContractService {
         return persist(contract);
     }
 
+    // Approves the contract.
     @Transactional
     public ContractResponse approveContract(Integer id) {
         return approve(id, ContractStatus.DRAFT);
     }
 
+    // Reapproves the contract.
     @Transactional
     public ContractResponse reapproveContract(Integer id) {
         return approve(id, ContractStatus.SUSPENDED);
@@ -213,6 +222,7 @@ public class ContractService {
         return persist(contract);
     }
 
+    // Rejects invalid or conflicting seasonal periods before using the contract.
     private void validateSeasons(Contract contract, List<OfferingSeasonalRate> rates) {
         Map<Integer, LocalDate> latestEnd = new HashMap<>();
         for (OfferingSeasonalRate rate : rates) {
@@ -230,6 +240,7 @@ public class ContractService {
         }
     }
 
+    // Rejects lifecycle changes when confirmed reservation data is malformed.
     private void invalidCommitments(List<Integer> invalid) {
         if (!invalid.isEmpty()) {
             throw ContractException.conflict("CONFIRMED reservation " + invalid.get(0) +
@@ -255,16 +266,19 @@ public class ContractService {
         return contract;
     }
 
+    // Retrieves and locks the hotel or reports that it does not exist.
     private Hotel lockedHotel(Integer id) {
         return hotels.findForUpdate(id).orElseThrow(() -> new HotelNotFoundException(id));
     }
 
+    // Rejects an operation unless the contract has the required status.
     private void requireStatus(Contract contract, ContractStatus status, String message) {
         if (contract.getStatus() != status) {
             throw ContractException.conflict(message);
         }
     }
 
+    // Validates contract input and reports field errors before writing.
     private void validate(Object request) {
         if (request == null) {
             throw ContractException.invalid("Contract details are required");
@@ -277,6 +291,7 @@ public class ContractService {
         }
     }
 
+    // Checks stored commercial terms and reports invalid data as a conflict.
     private void validatePersisted(Object request) {
         try {
             validate(request);
@@ -285,6 +300,7 @@ public class ContractService {
         }
     }
 
+    // Copies editable contract terms without changing its permanent contract code.
     private void apply(Contract contract, ContractRequest request, Hotel hotel) {
         // Code is assigned only at creation; never changed by header edits.
         contract.setHotel(hotel);
@@ -294,6 +310,7 @@ public class ContractService {
         contract.setCurrencyCode(request.currencyCode());
     }
 
+    // Saves the contract and translates database conflicts into a business error.
     private ContractResponse persist(Contract contract) {
         try {
             return response(repository.saveAndFlush(contract));
@@ -303,6 +320,7 @@ public class ContractService {
         }
     }
 
+    // Maps the stored record to its API response fields.
     ContractResponse response(Contract contract) {
         return new ContractResponse(contract.getContractId(), contract.getContractCode(),
                 contract.getHotel().getHotelId(), contract.getHotel().getName(), contract.getValidFrom(),

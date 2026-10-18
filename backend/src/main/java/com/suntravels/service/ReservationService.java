@@ -31,6 +31,7 @@ public class ReservationService {
     private final Validator validator;
     private final Clock clock;
 
+    // Initializes the reservation service and its required dependencies.
     public ReservationService(ReservationRepository reservations, HotelRepository hotels,
             CustomerRepository customers, QuotationSearchRepository search, NightlyQuotationPricing pricing,
             StayAvailability availability, Validator validator, Clock clock, ContractRepository contracts,
@@ -47,18 +48,22 @@ public class ReservationService {
         this.offerings = offerings;
     }
 
+    // Returns a reservation’s stored details and current operational warnings.
     public ReservationResponse detail(int id) {
         return reservations.detail(id);
     }
 
+    // Normalizes directory filters and retrieves the requested reservation page.
     public Page list(String query, String status, int page, int size) {
         return list(query, status, page, size, null, null);
     }
 
+    // Normalizes directory filters and retrieves the requested reservation page.
     public Page list(String query, String status, int page, int size, LocalDate stayFrom, LocalDate stayTo) {
         return list(query, status, page, size, stayFrom, stayTo, "");
     }
 
+    // Normalizes directory filters and retrieves the requested reservation page.
     public Page list(String query, String status, int page, int size, LocalDate stayFrom, LocalDate stayTo,
             String stayPeriod) {
         return reservations.list(query.trim(), status, page, size, stayFrom, stayTo, stayPeriod);
@@ -133,6 +138,7 @@ public class ReservationService {
         return persistConfirmed(request, parent, tariffs, selected);
     }
 
+    // Validates the exact submitted offerings against fresh eligibility and adult limits.
     private Map<Integer, Candidate> validateSelectedOfferings(ReservationRequest request,
             List<Candidate> candidates) {
         Map<Integer, Candidate> selected = new TreeMap<>();
@@ -156,10 +162,11 @@ public class ReservationService {
         return selected;
     }
 
+    // Revalidates inventory and resolves nightly rates before confirmation.
     private Map<Integer, List<NightlyQuotationPricing.Tariff>> confirmationTariffs(ReservationRequest request,
             Map<Integer, Candidate> selected) {
         Set<Integer> ids = selected.keySet();
-        if (search.inconsistent(ids, Set.of(request.contractId()), Set.of(request.hotelId()),
+        if (search.inconsistent(ids, Set.of(request.contractId()),
                 LocalDate.now(clock))) {
             throw ReservationException.unavailable();
         }
@@ -187,6 +194,7 @@ public class ReservationService {
         return tariffs;
     }
 
+    // Stores the confirmed reservation, its rooms, and agreed nightly price snapshots.
     private ReservationResponse persistConfirmed(ReservationRequest request, Candidate parent,
             Map<Integer, List<NightlyQuotationPricing.Tariff>> tariffs, Map<Integer, Candidate> selected) {
         int reservation = reservations.insert(
@@ -211,6 +219,7 @@ public class ReservationService {
         return reservations.detail(reservation);
     }
 
+    // Validates customer, stay, room choices, and accepted quotation fields.
     private void validate(ReservationRequest request) {
         if (request == null || !validator.validate(request).isEmpty()) {
             throw new ReservationException(400, "INVALID_REQUEST",

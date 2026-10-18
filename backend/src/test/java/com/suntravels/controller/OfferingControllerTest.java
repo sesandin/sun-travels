@@ -35,15 +35,18 @@ class OfferingControllerTest {
  {"validFrom":"2026-06-01","validTo":"2026-06-30","ratePerPersonPerNight":150.00}
  """;
 
+    // Builds a response fixture for the tested operation.
     OfferingResponse response() {
         return new OfferingResponse(3, 1, 2, "Double", BigDecimal.TEN, 10, 2, OfferingStatus.ENABLED, "USD");
     }
 
+    // Builds a seasonal-rate response fixture.
     SeasonalRateResponse seasonal() {
         return new SeasonalRateResponse(4, 3, LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 30),
                 BigDecimal.TEN);
     }
 
+    // Configures the component and its test dependencies.
     @BeforeEach
     void setup() {
         validator = new LocalValidatorFactoryBean();
@@ -52,11 +55,13 @@ class OfferingControllerTest {
                 new OfferingExceptionHandler()).setValidator(validator).build();
     }
 
+    // Releases resources created for the test.
     @AfterEach
     void close() {
         validator.close();
     }
 
+    // Verifies lists global directory dto without entities.
     @Test
     void listsGlobalDirectoryDtoWithoutEntities() throws Exception {
         var row = new OfferingDirectoryResponse(3, 7, "Ocean Hotel",
@@ -77,12 +82,14 @@ class OfferingControllerTest {
         verify(service).directory();
     }
 
+    // Verifies global directory empty result is an array.
     @Test
     void globalDirectoryEmptyResultIsAnArray() throws Exception {
         when(service.directory()).thenReturn(List.of());
         mvc.perform(get("/api/offerings")).andExpect(status().isOk()).andExpect(content().json("[]"));
     }
 
+    // Verifies reads dtos.
     @Test
     void readsDtos() throws Exception {
         when(service.list(1)).thenReturn(List.of(response()));
@@ -96,6 +103,7 @@ class OfferingControllerTest {
                 jsonPath("$[0].seasonalRateId").value(4));
     }
 
+    // Verifies creates and updates offering payloads.
     @Test
     void createsAndUpdatesOfferingPayloads() throws Exception {
         when(service.create(eq(1), any())).thenReturn(response());
@@ -108,6 +116,7 @@ class OfferingControllerTest {
                 new OfferingRequest(2, new BigDecimal("100.25"), 10, 2, OfferingStatus.ENABLED));
     }
 
+    // Verifies controlled patch payloads.
     @Test
     void controlledPatchPayloads() throws Exception {
         when(service.rate(eq(3), any())).thenReturn(response());
@@ -118,6 +127,7 @@ class OfferingControllerTest {
                 "{\"status\":\"SUSPENDED\"}")).andExpect(status().isOk());
     }
 
+    // Verifies creates and updates seasonal dtos.
     @Test
     void createsAndUpdatesSeasonalDtos() throws Exception {
         when(service.createSeason(eq(3), any())).thenReturn(seasonal());
@@ -128,6 +138,7 @@ class OfferingControllerTest {
                 season)).andExpect(status().isOk());
     }
 
+    // Verifies invalid offering fields do not call service.
     @Test
     void invalidOfferingFieldsDoNotCallService() throws Exception {
         for (String body : List.of("{}", offering.replace("100.25", "0"),
@@ -141,6 +152,7 @@ class OfferingControllerTest {
         verifyNoInteractions(service);
     }
 
+    // Verifies validates seasonal writes.
     @Test
     void validatesSeasonalWrites() throws Exception {
         for (String body : List.of("{}", season.replace("150.00", "0"), season.replace("150.00", "1.001"),
@@ -153,6 +165,7 @@ class OfferingControllerTest {
         verifyNoInteractions(service);
     }
 
+    // Verifies malformed dates ids and statuses return400.
     @Test
     void malformedDatesIdsAndStatusesReturn400() throws Exception {
         mvc.perform(get("/api/offerings/abc")).andExpect(status().isBadRequest());
@@ -165,6 +178,7 @@ class OfferingControllerTest {
         verifyNoInteractions(service);
     }
 
+    // Verifies safe404 and409 errors.
     @Test
     void safe404And409Errors() throws Exception {
         when(service.get(9)).thenThrow(OfferingException.missing("Offering", 9));
@@ -176,6 +190,7 @@ class OfferingControllerTest {
                 jsonPath("$.message").value("Seasonal period overlaps"));
     }
 
+    // Verifies database and lock failures do not leak details.
     @Test
     void databaseAndLockFailuresDoNotLeakDetails() throws Exception {
         when(service.create(eq(1), any())).thenThrow(new DataIntegrityViolationException("secret SQL"));
@@ -189,11 +204,13 @@ class OfferingControllerTest {
                 jsonPath("$.message").value("Conflicting or concurrent update. Refresh and try again."));
     }
 
+    // Verifies no deletion endpoint.
     @Test
     void noDeletionEndpoint() throws Exception {
         mvc.perform(delete("/api/offerings/3")).andExpect(status().isMethodNotAllowed());
     }
 
+    // Verifies seasonal rate deletion is not supported.
     @Test
     void seasonalRateDeletionIsNotSupported() throws Exception {
         mvc.perform(delete("/api/offerings/3/seasonal-rates/4"))

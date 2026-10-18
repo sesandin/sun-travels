@@ -8,6 +8,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Hotel, HotelStatus, HotelUpdateRequest } from '../../../models/hotel.model';
+// Rejects values containing only whitespace.
 const notBlank: ValidatorFn = (control: AbstractControl) =>
   typeof control.value === 'string' && !control.value.trim() ? { required: true } : null;
 @Component({
@@ -47,9 +48,11 @@ export class HotelForm {
       validators: [Validators.required, Validators.pattern(/^(ACTIVE|INACTIVE)$/)],
     }),
   });
+  // Creates an empty object for fields to be populated after construction.
   constructor() {
     this.reset(null);
   }
+  // Populates or clears the hotel form for the selected editing mode.
   reset(hotel: Hotel | null): void {
     this.editing = !!hotel;
     for (const field of this.fields) {
@@ -71,11 +74,13 @@ export class HotelForm {
       status: hotel?.status ?? 'ACTIVE',
     });
   }
+  // Returns the configured length limit for a hotel form field.
   private maximumLength(key: string): number {
     if (key === 'address') return 255;
     if (key === 'phone') return 20;
     return 100;
   }
+  // Returns a readable validation message for the selected form control.
   validationMessage(key: keyof typeof this.form.controls): string {
     const control = this.form.controls[key];
     if (!control.touched || !control.errors) return '';
@@ -85,6 +90,7 @@ export class HotelForm {
     if (control.hasError('email')) return 'Enter a valid email address.';
     return 'Choose a valid value.';
   }
+  // Validates hotel fields and emits the create or update request.
   submit(): void {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.busy()) return;

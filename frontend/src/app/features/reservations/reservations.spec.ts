@@ -372,9 +372,9 @@ describe('Reservation directory and details', () => {
     {
       hotelId: 1,
       hotelName: 'Ocean',
-      code: 'HOTEL_CLOSURE' as const,
+      code: 'CONTRACT_SUSPENDED' as const,
       message:
-        'A hotel closure overlaps this reservation. Please contact the hotel to confirm arrangements.',
+        'This reservation is confirmed, but its hotel contract is currently suspended. Please verify the booking arrangements with the hotel.',
     },
   ];
   it.each([
@@ -501,7 +501,7 @@ describe('Reservation directory and details', () => {
     expect(dialog.showModal).toHaveBeenCalled();
     expect(f.componentInstance.selected()?.reservationId).toBe(101);
     expect(dialog.textContent).toContain('Hotel inactive');
-    expect(dialog.textContent).toContain('Hotel closure overlaps this stay');
+    expect(dialog.textContent).toContain('Contract suspended');
     for (const warning of operationalWarnings)
       expect(dialog.textContent).toContain(warning.message);
     expect(dialog.textContent).toContain('This reservation remains confirmed');

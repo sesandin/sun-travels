@@ -16,6 +16,7 @@ class HotelRegistrationValidationTest {
     private HotelService service;
     private MockMvc mvc;
 
+    // Updates the fixture’s up.
     @BeforeEach
     void setUp() {
         service = mock(HotelService.class);
@@ -24,6 +25,7 @@ class HotelRegistrationValidationTest {
         mvc = MockMvcBuilders.standaloneSetup(new HotelController(service)).setValidator(validator).build();
     }
 
+    // Verifies registration reject oversized field but accept boundary.
     @ParameterizedTest
     @CsvSource({"name,150", "address,255", "city,100", "country,100", "phone,20", "email,100"})
     void registrationShouldRejectOversizedFieldButAcceptBoundary(String field, int max) throws Exception {
@@ -38,6 +40,7 @@ class HotelRegistrationValidationTest {
         verify(service).createHotel(any());
     }
 
+    // Builds a valid request fixture for the tested operation.
     private String request(String field, String value) {
         String json = """
                 {"name":"Hotel","address":"Beach Road","city":"Galle",

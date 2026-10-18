@@ -159,13 +159,11 @@
                 {{
                   warning.code === 'HOTEL_INACTIVE'
                     ? 'Hotel inactive'
-                    : warning.code === 'HOTEL_CLOSURE'
-                      ? 'Hotel closure overlaps this stay'
-                      : warning.code === 'CONTRACT_SUSPENDED'
-                        ? 'Contract suspended'
-                        : warning.code === 'OFFERING_SUSPENDED'
-                          ? 'Room offering suspended'
-                          : 'Verify hotel arrangements'
+                    : warning.code === 'CONTRACT_SUSPENDED'
+                      ? 'Contract suspended'
+                      : warning.code === 'OFFERING_SUSPENDED'
+                        ? 'Room offering suspended'
+                        : 'Verify hotel arrangements'
                 }}</strong
               >
               <p>{{ warning.message }}</p>

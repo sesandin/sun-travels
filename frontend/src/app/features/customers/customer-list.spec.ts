@@ -14,6 +14,7 @@ const page = {
 };
 
 describe('CustomerList', () => {
+  // Configures the component and its test dependencies.
   async function setup(response = page) {
     await TestBed.configureTestingModule({
       imports: [CustomerList],

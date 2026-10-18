@@ -34,6 +34,7 @@ public class AuthController {
     private final CsrfTokenRepository csrfRepository;
     private final SecurityContextHolderStrategy contextHolder = SecurityContextHolder.getContextHolderStrategy();
 
+    // Initializes the auth controller and its required dependencies.
     public AuthController(AuthenticationManager authenticationManager,
             SecurityContextRepository contextRepository, SessionAuthenticationStrategy sessionStrategy,
             CsrfTokenRepository csrfRepository) {
@@ -43,6 +44,7 @@ public class AuthController {
         this.csrfRepository = csrfRepository;
     }
 
+    // Generates and saves a CSRF token for subsequent authenticated requests.
     @GetMapping("/csrf")
     public Map<String, String> csrf(HttpServletRequest request, HttpServletResponse response) {
         CsrfToken token = csrfRepository.generateToken(request);
@@ -50,6 +52,7 @@ public class AuthController {
         return Map.of("headerName", token.getHeaderName(), "token", token.getToken());
     }
 
+    // Authenticates staff credentials and saves the signed-in session.
     @PostMapping("/login")
     public ResponseEntity<AuthenticatedUserResponse> login(@Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest, HttpServletResponse response) {
@@ -68,11 +71,13 @@ public class AuthController {
         }
     }
 
+    // Returns the signed-in staff member’s safe profile.
     @GetMapping("/me")
     public AuthenticatedUserResponse me(Authentication authentication) {
         return principal(authentication).safeProfile();
     }
 
+    // Invalidates the staff session and clears its security context.
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(Authentication authentication, HttpServletRequest request,
             HttpServletResponse response) {
@@ -80,6 +85,7 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    // Retrieves the authenticated database user or rejects unauthenticated access.
     private DatabaseUserPrincipal principal(Authentication authentication) {
         if (authentication == null ||
                 !(authentication.getPrincipal() instanceof DatabaseUserPrincipal principal)) {
@@ -88,6 +94,7 @@ public class AuthController {
         return principal;
     }
 
+    // Returns a safe unauthorized response for invalid sign-in credentials.
     @ExceptionHandler(BadCredentialsException.class)
     ResponseEntity<Map<String, String>> invalidCredentials() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(

@@ -189,6 +189,9 @@
                       : 'Terminate Contract'
       }}
     </h2>
+    @if (mode() === 'create') {
+      <p>New contracts start as DRAFT. Open contract details to add room offerings.</p>
+    }
     @if (submissionError()) {
       <p role="alert" class="error-message">{{ submissionError() }}</p>
     }
@@ -206,10 +209,12 @@
       <form [formGroup]="form" (ngSubmit)="save()">
         <fieldset [disabled]="saving()">
           <div class="form-grid">
-            <div>
-              <span>Contract code</span>
-              <p>{{ selected()?.contractCode ?? 'Generated automatically after creation' }}</p>
-            </div>
+            @if (mode() === 'edit') {
+              <div>
+                <span>Contract code</span>
+                <p>{{ selected()?.contractCode }}</p>
+              </div>
+            }
             <div>
               <label for="hotel">Hotel</label>
               <select id="hotel" formControlName="hotelId">
@@ -264,7 +269,6 @@
           @if (form.touched && form.hasError('dateRange')) {
             <p class="field-error">Valid from must not be later than valid to.</p>
           }
-          <p>New contracts start as DRAFT. Open contract details to add room offerings.</p>
           <div class="actions">
             <button type="button" (click)="closeEditor()">Cancel</button>
             <button
@@ -325,10 +329,13 @@
         @if (selected(); as contract) {
           <app-offering-panel [contract]="contract" [focusOfferingId]="linkedOffering()" />
         }
-        @if (selected(); as contract) {
+      }
+      <div class="actions details-actions">
+        @if (!detailsLoading() && !submissionError() && selected(); as contract) {
           @if (contract.status === 'DRAFT' || contract.status === 'SUSPENDED') {
             <button
               type="button"
+              class="primary"
               (click)="
                 confirmAction(contract, contract.status === 'DRAFT' ? 'approve' : 'reapprove')
               "
@@ -338,8 +345,8 @@
             </button>
           }
         }
-      }
-      <button type="button" (click)="closeEditor()" [disabled]="detailsLoading()">Close</button>
+        <button type="button" (click)="closeEditor()" [disabled]="detailsLoading()">Close</button>
+      </div>
     } @else {
       <p>
         {{
@@ -347,11 +354,22 @@
             ? 'Termination is permanent and requires no outstanding confirmed stays.'
             : mode() === 'suspend'
               ? 'Suspension stops new sales and preserves existing room commitments and booked prices.'
-              : 'The backend will check hotel eligibility, offerings, contract overlap and confirmed reservation commitments before approval.'
+              : 'Before approving, check that the contract dates, room rates and allocated rooms are correct.'
         }}
         Existing confirmed reservations will remain unchanged.
       </p>
-      <p>Confirm {{ mode() }} for {{ selected()?.contractCode }}?</p>
+      <p>
+        {{
+          mode() === 'approve'
+            ? 'Approve contract'
+            : mode() === 'reapprove'
+              ? 'Reapprove contract'
+              : mode() === 'suspend'
+                ? 'Suspend contract'
+                : 'Terminate contract'
+        }}
+        {{ selected()?.contractCode }}?
+      </p>
       <div class="actions">
         <button type="button" (click)="closeEditor()" [disabled]="saving()">Cancel</button>
         <button type="button" class="primary" (click)="save()" [disabled]="saving()">

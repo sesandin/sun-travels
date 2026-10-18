@@ -89,7 +89,7 @@ export interface UnavailableAccommodation {
     availableRoomsForStay: number;
   }[];
   reasons: {
-    code: 'INSUFFICIENT_INVENTORY' | 'MAX_ADULT_OCCUPANCY' | 'HOTEL_CLOSED';
+    code: 'INSUFFICIENT_INVENTORY' | 'MAX_ADULT_OCCUPANCY';
     message: string;
   }[];
   indicativeTotalPrice: number | null;
@@ -104,6 +104,5 @@ export interface SelectionOffering {
   maxAdults: number;
   availableRoomsForStay: number;
   currencyCode: string;
-  hotelClosed: boolean;
   rooms: { roomNumber: number; adults: number; totalPrice: number | null }[];
 }

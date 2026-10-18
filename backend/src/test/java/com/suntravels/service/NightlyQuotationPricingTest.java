@@ -15,11 +15,13 @@ class NightlyQuotationPricingTest {
     final NightlyQuotationPricing pricing = new NightlyQuotationPricing();
     final LocalDate from = LocalDate.of(2026, 11, 1), in = from.plusDays(7), out = in.plusDays(3);
 
+    // Builds the room-offering fixture used by this test suite.
     Candidate offering(String rate) {
         return new Candidate(7, 4, 1, "Hotel", "Colombo", "C004", "USD", new BigDecimal("15.00"), from,
                 from.plusDays(29), 2, "Double", new BigDecimal(rate), 10, 2);
     }
 
+    // Verifies base fallback and markup use exact decimals.
     @Test
     void baseFallbackAndMarkupUseExactDecimals() {
         var tariffs = pricing.tariffs(offering("100"), List.of(), in, out);
@@ -29,6 +31,7 @@ class NightlyQuotationPricingTest {
         assertEquals(new BigDecimal("690.00"), pricing.total(tariffs, 2, new BigDecimal("15")));
     }
 
+    // Verifies seasonal end is inclusive and stay can span base and multiple periods.
     @Test
     void seasonalEndIsInclusiveAndStayCanSpanBaseAndMultiplePeriods() {
         var c = offering("100");
@@ -42,6 +45,7 @@ class NightlyQuotationPricingTest {
                 pricing.total(tariffs, 2, c.markup()));
     }
 
+    // Verifies each room night rounds half up before summation.
     @Test
     void eachRoomNightRoundsHalfUpBeforeSummation() {
         var tariffs = pricing.tariffs(offering("0.05"), List.of(), in, in.plusDays(2));
@@ -49,6 +53,7 @@ class NightlyQuotationPricingTest {
         assertEquals(new BigDecimal("0.34"), pricing.total(tariffs, 3, new BigDecimal("10")));
     }
 
+    // Verifies crossing checkout uses only occupied nights.
     @Test
     void crossingCheckoutUsesOnlyOccupiedNights() {
         var c = offering("100");
@@ -59,6 +64,7 @@ class NightlyQuotationPricingTest {
         assertEquals(new BigDecimal("345.00"), pricing.total(tariffs, 2, c.markup()));
     }
 
+    // Verifies conflicting or invalid periods fail instead of arbitrary selection.
     @Test
     void conflictingOrInvalidPeriodsFailInsteadOfArbitrarySelection() {
         var c = offering("100");

@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface HotelRepository extends JpaRepository<Hotel, Integer>,
         JpaSpecificationExecutor<Hotel> {
+    // Retrieves and locks the record before a coordinated update.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select h from Hotel h where h.hotelId = :id")
     Optional<Hotel> findForUpdate(@Param("id") Integer id);

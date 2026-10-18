@@ -19,6 +19,7 @@ public record QuotationSearchResponse(
         boolean unavailableTruncated,
         List<SelectionOffering> selectionOfferings
 ) {
+    // Initializes the quotation search response and its required dependencies.
     public QuotationSearchResponse(LocalDate businessDate, LocalDate checkIn, LocalDate checkOut, int nights,
             List<Quotation> quotations, int matchingOptions, boolean truncated, String allocationPolicy,
             String notice) {
@@ -26,6 +27,7 @@ public record QuotationSearchResponse(
                 allocationPolicy, notice, List.of(), 0, false);
     }
 
+    // Initializes the quotation search response and its required dependencies.
     public QuotationSearchResponse(LocalDate businessDate, LocalDate checkIn, LocalDate checkOut, int nights,
             List<Quotation> quotations, int matchingOptions, boolean truncated, String allocationPolicy,
             String notice, List<UnavailableOption> unavailableOptions, int matchingUnavailableOptions,
@@ -44,7 +46,6 @@ public record QuotationSearchResponse(
             int maxAdults,
             int availableRoomsForStay,
             String currencyCode,
-            boolean hotelClosed,
             List<SelectionRoom> rooms
     ) {
     }
@@ -63,8 +64,7 @@ public record QuotationSearchResponse(
 
     public enum ReasonCode {
         INSUFFICIENT_INVENTORY,
-        MAX_ADULT_OCCUPANCY,
-        HOTEL_CLOSED
+        MAX_ADULT_OCCUPANCY
     }
 
     public record UnavailabilityReason(
@@ -111,6 +111,7 @@ public record QuotationSearchResponse(
             String eligibility,
             AvailabilityStatus availabilityStatus
     ) {
+        // Initializes the quotation search response and its required dependencies.
         public Quotation(Integer hotelId, String hotelName, String city, Integer contractId,
                 String contractCode, String currencyCode, LocalDate checkIn, LocalDate checkOut, int nights,
                 List<RoomAllocation> rooms, BigDecimal totalPrice, String eligibility) {

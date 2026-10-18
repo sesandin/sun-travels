@@ -43,6 +43,7 @@ class ContractServiceTest {
     final LocalDate from = LocalDate.of(2026, 1, 1), to = LocalDate.of(2026, 12, 31), today = LocalDate.of(
             2026, 10, 14);
 
+    // Configures the component and its test dependencies.
     @BeforeEach
     void setup() {
         factory = Validation.buildDefaultValidatorFactory();
@@ -74,34 +75,41 @@ class ContractServiceTest {
         offering.setMaxAdults(2);
     }
 
+    // Releases resources created for the test.
     @AfterEach
     void close() {
         factory.close();
     }
 
+    // Builds a valid request fixture for the tested operation.
     ContractRequest request() {
         return new ContractRequest(7, from, to, new BigDecimal("15.00"), "USD");
     }
 
+    // Configures mocks for the locked records needed by the test.
     void locked() {
         when(repository.findHotelId(1)).thenReturn(Optional.of(7));
         when(hotels.findForUpdate(7)).thenReturn(Optional.of(hotel));
         when(repository.findForUpdate(1)).thenReturn(Optional.of(c));
     }
 
+    // Configures repository mocks to return saved test entities.
     void saving() {
         when(repository.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
     }
 
+    // Prepares locked contract and offering mocks for approval checks.
     void approvalReady() {
         locked();
         when(offerings.findAllForUpdate(1)).thenReturn(List.of(offering));
     }
 
+    // Asserts that the operation returns the expected business error.
     void error(int status, Runnable work) {
         assertEquals(status, assertThrows(ContractException.class, work::run).getStatus());
     }
 
+    // Verifies generates code after identity without returning temporary value.
     @Test
     void generatesCodeAfterIdentityWithoutReturningTemporaryValue() {
         when(hotels.findForUpdate(7)).thenReturn(Optional.of(hotel));
@@ -121,12 +129,14 @@ class ContractServiceTest {
         verify(repository).existsByContractCodeAndContractIdNot("C004", 4);
     }
 
+    // Verifies code format uses minimum padding.
     @ParameterizedTest
     @CsvSource({"1,C001", "42,C042", "999,C999", "1000,C1000", "2147483647,C2147483647"})
     void codeFormatUsesMinimumPadding(int id, String expected) {
         assertEquals(expected, ContractService.generatedCode(id));
     }
 
+    // Verifies code collision fails without second save or overwriting existing row.
     @Test
     void codeCollisionFailsWithoutSecondSaveOrOverwritingExistingRow() {
         when(hotels.findForUpdate(7)).thenReturn(Optional.of(hotel));
@@ -141,6 +151,7 @@ class ContractServiceTest {
         verify(repository, never()).findById(any());
     }
 
+    // Verifies database creation race has safe error.
     @Test
     void databaseCreationRaceHasSafeError() {
         when(hotels.findForUpdate(7)).thenReturn(Optional.of(hotel));
@@ -151,6 +162,7 @@ class ContractServiceTest {
         assertFalse(ex.getMessage().contains("secret"));
     }
 
+    // Verifies invalid headers before any write.
     @Test
     void invalidHeadersBeforeAnyWrite() {
         for (var r : List.of(new ContractRequest(7, to, from, BigDecimal.ZERO, "USD"),
@@ -162,6 +174,7 @@ class ContractServiceTest {
         verifyNoInteractions(repository, hotels);
     }
 
+    // Verifies missing hotel and contract.
     @Test
     void missingHotelAndContract() {
         var requestForAssertion2 = request();
@@ -170,6 +183,7 @@ class ContractServiceTest {
         error(404, () -> service.terminateContract(1));
     }
 
+    // Verifies draft header updates preserve legacy code.
     @Test
     void draftHeaderUpdatesPreserveLegacyCode() {
         locked();
@@ -179,6 +193,7 @@ class ContractServiceTest {
         assertEquals(new BigDecimal("15.00"), c.getMarkupPercentage());
     }
 
+    // Verifies shrinking dates cannot exclude seasonal period.
     @Test
     void shrinkingDatesCannotExcludeSeasonalPeriod() {
         locked();
@@ -188,6 +203,7 @@ class ContractServiceTest {
         verify(repository, never()).saveAndFlush(any());
     }
 
+    // Verifies non draft header immutable.
     @ParameterizedTest
     @EnumSource(value = ContractStatus.class, names = {"APPROVED", "SUSPENDED", "TERMINATED"})
     void nonDraftHeaderImmutable(ContractStatus status) {
@@ -197,6 +213,7 @@ class ContractServiceTest {
         assertEquals("LEGACY", c.getContractCode());
     }
 
+    // Verifies approved markup changes only markup.
     @Test
     void approvedMarkupChangesOnlyMarkup() {
         c.setStatus(ContractStatus.APPROVED);
@@ -209,6 +226,7 @@ class ContractServiceTest {
         verifyNoInteractions(commitments, offerings, seasons);
     }
 
+    // Verifies markup requires approved.
     @ParameterizedTest
     @EnumSource(value = ContractStatus.class, names = {"DRAFT", "SUSPENDED", "TERMINATED"})
     void markupRequiresApproved(ContractStatus status) {
@@ -217,6 +235,7 @@ class ContractServiceTest {
         error(409, () -> service.updateMarkup(1, new ContractMarkupRequest(BigDecimal.ZERO)));
     }
 
+    // Verifies suspension does not cancel or query reservations.
     @Test
     void suspensionDoesNotCancelOrQueryReservations() {
         c.setStatus(ContractStatus.APPROVED);
@@ -227,6 +246,7 @@ class ContractServiceTest {
         assertEquals(BigDecimal.TEN, c.getMarkupPercentage());
     }
 
+    // Verifies invalid suspension.
     @ParameterizedTest
     @EnumSource(value = ContractStatus.class, names = {"DRAFT", "SUSPENDED", "TERMINATED"})
     void invalidSuspension(ContractStatus status) {
@@ -235,6 +255,7 @@ class ContractServiceTest {
         error(409, () -> service.suspendContract(1));
     }
 
+    // Verifies initial approval locks hotel first and changes only candidate.
     @Test
     void initialApprovalLocksHotelFirstAndChangesOnlyCandidate() {
         approvalReady();
@@ -255,6 +276,7 @@ class ContractServiceTest {
         order.verify(repository).saveAndFlush(c);
     }
 
+    // Verifies future validity can be approved.
     @Test
     void futureValidityCanBeApproved() {
         c.setValidFrom(today.plusDays(30));
@@ -263,6 +285,7 @@ class ContractServiceTest {
         assertEquals(ContractStatus.APPROVED, service.approveContract(1).status());
     }
 
+    // Verifies expired contract can remain approved and is not terminated.
     @Test
     void expiredContractCanRemainApprovedAndIsNotTerminated() {
         c.setValidTo(today.minusDays(1));
@@ -271,6 +294,7 @@ class ContractServiceTest {
         assertEquals(ContractStatus.APPROVED, service.approveContract(1).status());
     }
 
+    // Verifies reapproves suspended through same guards.
     @Test
     void reapprovesSuspendedThroughSameGuards() {
         c.setStatus(ContractStatus.SUSPENDED);
@@ -280,6 +304,7 @@ class ContractServiceTest {
         verify(commitments).replacementConflicts(7, 1, from, to, today, Set.of(2));
     }
 
+    // Verifies only draft initial approval.
     @ParameterizedTest
     @EnumSource(value = ContractStatus.class, names = {"APPROVED", "SUSPENDED", "TERMINATED"})
     void onlyDraftInitialApproval(ContractStatus status) {
@@ -289,6 +314,7 @@ class ContractServiceTest {
         assertEquals(status, c.getStatus());
     }
 
+    // Verifies only suspended reapproval.
     @ParameterizedTest
     @EnumSource(value = ContractStatus.class, names = {"DRAFT", "APPROVED", "TERMINATED"})
     void onlySuspendedReapproval(ContractStatus status) {
@@ -297,6 +323,7 @@ class ContractServiceTest {
         error(409, () -> service.reapproveContract(1));
     }
 
+    // Verifies inactive hotel is never activated.
     @Test
     void inactiveHotelIsNeverActivated() {
         hotel.setStatus(HotelStatus.INACTIVE);
@@ -306,6 +333,7 @@ class ContractServiceTest {
         assertEquals(ContractStatus.DRAFT, c.getStatus());
     }
 
+    // Verifies approval requires enabled offering.
     @Test
     void approvalRequiresEnabledOffering() {
         locked();
@@ -315,6 +343,7 @@ class ContractServiceTest {
         error(409, () -> service.approveContract(1));
     }
 
+    // Verifies persisted invalid rate blocks approval.
     @ParameterizedTest
     @ValueSource(strings = {"0", "-1", "100000000", "1.001"})
     void persistedInvalidRateBlocksApproval(String value) {
@@ -324,6 +353,7 @@ class ContractServiceTest {
         assertEquals(ContractStatus.DRAFT, c.getStatus());
     }
 
+    // Verifies invalid offering inventory capacity and header fail closed.
     @Test
     void invalidOfferingInventoryCapacityAndHeaderFailClosed() {
         approvalReady();
@@ -337,6 +367,7 @@ class ContractServiceTest {
         error(409, () -> service.approveContract(1));
     }
 
+    // Verifies overlaps block approval and reapproval without suspending other.
     @Test
     void overlapsBlockApprovalAndReapprovalWithoutSuspendingOther() {
         approvalReady();
@@ -354,6 +385,7 @@ class ContractServiceTest {
         verify(repository, never()).saveAndFlush(any());
     }
 
+    // Verifies replacement commitment rejects without mutation.
     @Test
     void replacementCommitmentRejectsWithoutMutation() {
         approvalReady();
@@ -363,6 +395,7 @@ class ContractServiceTest {
         verify(repository, never()).saveAndFlush(any());
     }
 
+    // Verifies invalid confirmed data cannot be ignored.
     @Test
     void invalidConfirmedDataCannotBeIgnored() {
         approvalReady();
@@ -372,6 +405,7 @@ class ContractServiceTest {
         verify(repository, never()).saveAndFlush(any());
     }
 
+    // Verifies termination allowed without outstanding commitments.
     @ParameterizedTest
     @EnumSource(value = ContractStatus.class, names = {"DRAFT", "APPROVED", "SUSPENDED"})
     void terminationAllowedWithoutOutstandingCommitments(ContractStatus status) {
@@ -382,6 +416,7 @@ class ContractServiceTest {
         verify(commitments).outstanding(1, today);
     }
 
+    // Verifies ongoing or future confirmed commitments block termination.
     @ParameterizedTest
     @EnumSource(value = ContractStatus.class, names = {"DRAFT", "APPROVED", "SUSPENDED"})
     void ongoingOrFutureConfirmedCommitmentsBlockTermination(ContractStatus status) {
@@ -393,6 +428,7 @@ class ContractServiceTest {
         verify(repository, never()).saveAndFlush(any());
     }
 
+    // Verifies terminal contract has no outgoing transitions.
     @Test
     void terminalContractHasNoOutgoingTransitions() {
         c.setStatus(ContractStatus.TERMINATED);
@@ -403,6 +439,7 @@ class ContractServiceTest {
         verifyNoInteractions(commitments);
     }
 
+    // Verifies database guard failure does not assume zero.
     @Test
     void databaseGuardFailureDoesNotAssumeZero() {
         locked();
@@ -412,6 +449,7 @@ class ContractServiceTest {
         verify(repository, never()).saveAndFlush(any());
     }
 
+    // Verifies stale hotel lookup fails rather than uses wrong lock.
     @Test
     void staleHotelLookupFailsRatherThanUsesWrongLock() {
         locked();
@@ -422,6 +460,7 @@ class ContractServiceTest {
         verifyNoInteractions(offerings, commitments);
     }
 
+    // Verifies hotel reassignment locks both hotels in id order.
     @Test
     void hotelReassignmentLocksBothHotelsInIdOrder() {
         locked();
@@ -440,6 +479,7 @@ class ContractServiceTest {
         assertEquals("LEGACY", c.getContractCode());
     }
 
+    // Verifies historical contracts remain listable.
     @Test
     void historicalContractsRemainListable() {
         c.setStatus(ContractStatus.TERMINATED);
@@ -449,6 +489,7 @@ class ContractServiceTest {
         assertEquals(1, service.getAllContracts().size());
     }
 
+    // Verifies corrupt seasonal overlap prevents approval.
     @Test
     void corruptSeasonalOverlapPreventsApproval() {
         approvalReady();
@@ -462,6 +503,7 @@ class ContractServiceTest {
         assertEquals(ContractStatus.DRAFT, c.getStatus());
     }
 
+    // Verifies termination reports distinct reservation count without saving.
     @Test
     void terminationReportsDistinctReservationCountWithoutSaving() {
         c.setStatus(ContractStatus.APPROVED);

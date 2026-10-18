@@ -38,6 +38,7 @@ class OfferingServiceTest {
     RoomType room;
     final LocalDate from = LocalDate.of(2026, 1, 1), to = LocalDate.of(2026, 12, 31);
 
+    // Configures the component and its test dependencies.
     @BeforeEach
     void setup() {
         factory = Validation.buildDefaultValidatorFactory();
@@ -61,33 +62,40 @@ class OfferingServiceTest {
         o.setStatus(OfferingStatus.ENABLED);
     }
 
+    // Releases resources created for the test.
     @AfterEach
     void close() {
         factory.close();
     }
 
+    // Builds a valid request fixture for the tested operation.
     OfferingRequest request() {
         return new OfferingRequest(2, new BigDecimal("120.50"), 20, 3, OfferingStatus.SUSPENDED);
     }
 
+    // Creates a seasonal rate fixture for the selected offering.
     SeasonalRateRequest season(LocalDate a, LocalDate b) {
         return new SeasonalRateRequest(a, b, new BigDecimal("150"));
     }
 
+    // Configures mocks for the locked records needed by the test.
     void locked() {
         when(offerings.findContractId(3)).thenReturn(Optional.of(1));
         when(contracts.findForUpdate(1)).thenReturn(Optional.of(c));
         when(offerings.findForUpdate(3)).thenReturn(Optional.of(o));
     }
 
+    // Configures the offering repository mock to return the saved entity.
     void saveOffering() {
         when(offerings.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
     }
 
+    // Configures the seasonal-rate repository mock to return the saved entity.
     void saveSeason() {
         when(seasons.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
     }
 
+    // Builds an existing seasonal-rate fixture for update tests.
     OfferingSeasonalRate existing() {
         var s = new OfferingSeasonalRate();
         ReflectionTestUtils.setField(s, "seasonalRateId", 4);
@@ -98,10 +106,12 @@ class OfferingServiceTest {
         return s;
     }
 
+    // Asserts that the operation returns the expected business error.
     void error(int status, Runnable work) {
         assertEquals(status, assertThrows(OfferingException.class, work::run).getStatus());
     }
 
+    // Verifies directory includes every contract status and inactive hotels.
     @ParameterizedTest
     @EnumSource(ContractStatus.class)
     void directoryIncludesEveryContractStatusAndInactiveHotels(ContractStatus status) {
@@ -115,10 +125,12 @@ class OfferingServiceTest {
         o.setStatus(OfferingStatus.SUSPENDED);
         when(offerings.findDirectoryOfferings()).thenReturn(List.of(o));
         when(seasons.countPeriodsByOffering()).thenReturn(List.of(new SeasonalRateRepository.PeriodCount() {
+            // Returns the fixture’s offering id.
             public Integer getOfferingId() {
                 return 3;
             }
 
+            // Returns the fixture’s period count.
             public long getPeriodCount() {
                 return 2L;
             }
@@ -144,6 +156,7 @@ class OfferingServiceTest {
         verify(seasons, never()).findByOfferingOfferingIdOrderByValidFrom(any());
     }
 
+    // Verifies directory returns empty without counting seasons.
     @Test
     void directoryReturnsEmptyWithoutCountingSeasons() {
         when(offerings.findDirectoryOfferings()).thenReturn(List.of());
@@ -151,6 +164,7 @@ class OfferingServiceTest {
         verifyNoInteractions(seasons, contracts, rooms);
     }
 
+    // Verifies directory defaults to zero periods.
     @Test
     void directoryDefaultsToZeroPeriods() {
         Hotel h = new Hotel();
@@ -160,6 +174,7 @@ class OfferingServiceTest {
         assertEquals(0L, service.directory().get(0).seasonalRateCount());
     }
 
+    // Verifies creates draft offering with real room type.
     @Test
     void createsDraftOfferingWithRealRoomType() {
         when(contracts.findForUpdate(1)).thenReturn(Optional.of(c));
@@ -171,6 +186,7 @@ class OfferingServiceTest {
         assertEquals(1, r.contractId());
     }
 
+    // Verifies duplicate create does not write.
     @Test
     void duplicateCreateDoesNotWrite() {
         when(contracts.findForUpdate(1)).thenReturn(Optional.of(c));
@@ -180,11 +196,13 @@ class OfferingServiceTest {
         verify(offerings, never()).saveAndFlush(any());
     }
 
+    // Verifies missing contract.
     @Test
     void missingContract() {
         error(404, () -> service.create(1, request()));
     }
 
+    // Verifies missing room type.
     @Test
     void missingRoomType() {
         when(contracts.findForUpdate(1)).thenReturn(Optional.of(c));
@@ -192,6 +210,7 @@ class OfferingServiceTest {
         verify(offerings, never()).saveAndFlush(any());
     }
 
+    // Verifies missing offering.
     @Test
     void missingOffering() {
         error(404, () -> service.get(3));
@@ -199,6 +218,7 @@ class OfferingServiceTest {
         error(404, () -> service.seasonalRates(3));
     }
 
+    // Verifies invalid base rates.
     @ParameterizedTest
     @ValueSource(strings = {"0", "-0.01", "100000000", "1.001"})
     void invalidBaseRates(String value) {
@@ -209,6 +229,7 @@ class OfferingServiceTest {
         verify(offerings, never()).saveAndFlush(any());
     }
 
+    // Verifies invalid counts and null fields.
     @Test
     void invalidCountsAndNullFields() {
         when(contracts.findForUpdate(1)).thenReturn(Optional.of(c));
@@ -218,6 +239,7 @@ class OfferingServiceTest {
             error(400, () -> service.create(1, r));
     }
 
+    // Verifies updates draft without changing contract.
     @Test
     void updatesDraftWithoutChangingContract() {
         locked();
@@ -229,6 +251,7 @@ class OfferingServiceTest {
         assertEquals(3, o.getMaxAdults());
     }
 
+    // Verifies duplicate update preserves all existing values.
     @Test
     void duplicateUpdatePreservesAllExistingValues() {
         locked();
@@ -240,6 +263,7 @@ class OfferingServiceTest {
         verify(offerings, never()).delete(any());
     }
 
+    // Verifies structural edits and creation rejected.
     @ParameterizedTest
     @EnumSource(value = ContractStatus.class, names = {"APPROVED", "SUSPENDED", "TERMINATED"})
     void structuralEditsAndCreationRejected(ContractStatus status) {
@@ -251,6 +275,7 @@ class OfferingServiceTest {
         verify(offerings, never()).saveAndFlush(any());
     }
 
+    // Verifies approved rate changes only rate.
     @Test
     void approvedRateChangesOnlyRate() {
         c.setStatus(ContractStatus.APPROVED);
@@ -266,6 +291,7 @@ class OfferingServiceTest {
         verify(contracts, never()).saveAndFlush(any());
     }
 
+    // Verifies rate maintenance requires approved.
     @ParameterizedTest
     @EnumSource(value = ContractStatus.class, names = {"DRAFT", "SUSPENDED", "TERMINATED"})
     void rateMaintenanceRequiresApproved(ContractStatus status) {
@@ -274,6 +300,7 @@ class OfferingServiceTest {
         error(409, () -> service.rate(3, new OfferingRateRequest(BigDecimal.ONE)));
     }
 
+    // Verifies enables and suspends only status.
     @ParameterizedTest
     @EnumSource(value = ContractStatus.class, names = {"DRAFT", "APPROVED", "SUSPENDED"})
     void enablesAndSuspendsOnlyStatus(ContractStatus status) {
@@ -287,6 +314,7 @@ class OfferingServiceTest {
         assertEquals(10, o.getContractedRoomCount());
     }
 
+    // Verifies historical contracts still reject seasonal maintenance and terminated rejects status changes.
     @ParameterizedTest
     @EnumSource(value = ContractStatus.class, names = {"SUSPENDED", "TERMINATED"})
     void historicalContractsStillRejectSeasonalMaintenanceAndTerminatedRejectsStatusChanges(
@@ -300,6 +328,7 @@ class OfferingServiceTest {
         verifyNoInteractions(seasons);
     }
 
+    // Verifies creates season with inclusive contract bounds.
     @ParameterizedTest
     @EnumSource(value = ContractStatus.class, names = {"DRAFT", "APPROVED"})
     void createsSeasonWithInclusiveContractBounds(ContractStatus status) {
@@ -317,6 +346,7 @@ class OfferingServiceTest {
         order.verify(seasons).saveAndFlush(any());
     }
 
+    // Verifies multiple consecutive periods and single night allowed.
     @Test
     void multipleConsecutivePeriodsAndSingleNightAllowed() {
         locked();
@@ -327,6 +357,7 @@ class OfferingServiceTest {
         verify(seasons, times(3)).saveAndFlush(any());
     }
 
+    // Verifies overlaps are scoped to offering.
     @Test
     void overlapsAreScopedToOffering() {
         locked();
@@ -336,6 +367,7 @@ class OfferingServiceTest {
         verify(seasons, never()).findAll();
     }
 
+    // Verifies shared inclusive boundary conflicts.
     @ParameterizedTest
     @ValueSource(ints = {0, 5})
     void sharedInclusiveBoundaryConflicts(int day) {
@@ -346,6 +378,7 @@ class OfferingServiceTest {
         verify(seasons, never()).saveAndFlush(any());
     }
 
+    // Verifies rejects outside and reversed dates.
     @Test
     void rejectsOutsideAndReversedDates() {
         locked();
@@ -355,6 +388,7 @@ class OfferingServiceTest {
         verifyNoInteractions(seasons);
     }
 
+    // Verifies invalid seasonal rates.
     @ParameterizedTest
     @ValueSource(strings = {"0", "-1", "100000000", "0.001"})
     void invalidSeasonalRates(String value) {
@@ -363,6 +397,7 @@ class OfferingServiceTest {
         verifyNoInteractions(seasons);
     }
 
+    // Verifies update excludes current record and keeps association.
     @Test
     void updateExcludesCurrentRecordAndKeepsAssociation() {
         locked();
@@ -375,6 +410,7 @@ class OfferingServiceTest {
         assertEquals(to, s.getValidTo());
     }
 
+    // Verifies conflicting update preserves period and rate.
     @Test
     void conflictingUpdatePreservesPeriodAndRate() {
         locked();
@@ -387,6 +423,7 @@ class OfferingServiceTest {
         verify(seasons, never()).saveAndFlush(any());
     }
 
+    // Verifies seasonal rate cannot be moved between offerings.
     @Test
     void seasonalRateCannotBeMovedBetweenOfferings() {
         locked();
@@ -394,6 +431,7 @@ class OfferingServiceTest {
         verify(seasons, never()).saveAndFlush(any());
     }
 
+    // Verifies nightly resolver uses inclusive season then base and does not write snapshots.
     @Test
     void nightlyResolverUsesInclusiveSeasonThenBaseAndDoesNotWriteSnapshots() {
         when(offerings.findById(3)).thenReturn(Optional.of(o));
@@ -406,6 +444,7 @@ class OfferingServiceTest {
         verifyNoInteractions(contracts, rooms);
     }
 
+    // Verifies corrupt persisted overlaps fail closed.
     @Test
     void corruptPersistedOverlapsFailClosed() {
         when(offerings.findById(3)).thenReturn(Optional.of(o));
@@ -413,6 +452,7 @@ class OfferingServiceTest {
         error(409, () -> service.effectiveRate(3, from));
     }
 
+    // Verifies historical offerings and periods are readable.
     @Test
     void historicalOfferingsAndPeriodsAreReadable() {
         c.setStatus(ContractStatus.TERMINATED);

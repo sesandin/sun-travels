@@ -10,6 +10,7 @@ public record SeasonalRateRequest(
         @NotNull LocalDate validTo,
         @NotNull @DecimalMin(value = "0", inclusive = false) @Digits(integer = 8, fraction = 2) BigDecimal ratePerPersonPerNight
 ) {
+    // Checks that the start date is not after the end date.
     @AssertTrue(message = "Start date must be on or before end date")
     public boolean isDateRangeValid() {
         return validFrom == null || validTo == null || !validFrom.isAfter(validTo);

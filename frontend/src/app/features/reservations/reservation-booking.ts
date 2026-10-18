@@ -59,6 +59,7 @@ export class ReservationBooking {
         c.get('phone')?.value?.trim() || c.get('email')?.value?.trim() ? null : { contact: true },
     },
   );
+  // Finds customer records matching the agent’s booking search.
   searchCustomers() {
     if (this.customerBusy() || this.busy() || this.query.invalid) return;
     this.customerBusy.set(true);
@@ -78,6 +79,7 @@ export class ReservationBooking {
         },
       });
   }
+  // Selects an existing customer for the reservation.
   select(customer: Customer) {
     if (this.busy()) return;
     this.selected.set(customer);
@@ -87,6 +89,7 @@ export class ReservationBooking {
     this.customerError.set('');
     this.showRegistration.set(false);
   }
+  // Clears the selected customer so the agent can choose another.
   changeCustomer() {
     if (this.busy() || this.customerBusy()) return;
     this.selected.set(null);
@@ -94,6 +97,7 @@ export class ReservationBooking {
     this.query.reset();
     this.registration.reset();
   }
+  // Registers a customer and selects the new record for the booking.
   register() {
     this.registration.markAllAsTouched();
     if (this.registration.invalid || this.customerBusy() || this.busy()) return;
@@ -115,6 +119,7 @@ export class ReservationBooking {
         },
       });
   }
+  // Leaves the booking review without confirming the reservation.
   cancelBooking() {
     if (this.busy() || this.customerBusy()) return;
     this.service.clearDraft();
@@ -124,6 +129,7 @@ export class ReservationBooking {
     this.accepted.setValue(false);
     void this.router.navigate(['/search']);
   }
+  // Confirms the reviewed quotation for the selected customer and handles price changes.
   confirm() {
     const q = this.quote(),
       customer = this.selected();

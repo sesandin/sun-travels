@@ -16,11 +16,13 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 public class OfferingExceptionHandler {
     private static final String MESSAGE = "message";
 
+    // Maps an offering business exception to its HTTP response.
     @ExceptionHandler(OfferingException.class)
     public ResponseEntity<Map<String, String>> offering(OfferingException ex) {
         return ResponseEntity.status(ex.getStatus()).body(Map.of(MESSAGE, ex.getMessage()));
     }
 
+    // Returns readable field-validation errors.
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> validation(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new LinkedHashMap<>();
@@ -30,12 +32,14 @@ public class OfferingExceptionHandler {
                 Map.of(MESSAGE, "Check the offering or seasonal rate details", "fieldErrors", errors));
     }
 
+    // Returns a safe error for a malformed request.
     @ExceptionHandler({HttpMessageNotReadableException.class, MethodArgumentTypeMismatchException.class})
     public ResponseEntity<Map<String, String>> malformed(Exception ex) {
         return ResponseEntity.badRequest().body(Map.of(MESSAGE,
                 "Provide valid JSON, ISO dates, numeric IDs and ENABLED/SUSPENDED offering status"));
     }
 
+    // Creates or returns a conflict error for the requested operation.
     @ExceptionHandler({DataIntegrityViolationException.class, PessimisticLockingFailureException.class})
     public ResponseEntity<Map<String, String>> conflict(Exception ex) {
         return ResponseEntity.status(409).body(

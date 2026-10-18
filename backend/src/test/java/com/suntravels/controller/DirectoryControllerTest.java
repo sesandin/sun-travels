@@ -15,6 +15,7 @@ class DirectoryControllerTest {
     private final DirectoryService service = mock(DirectoryService.class);
     private final MockMvc mvc = MockMvcBuilders.standaloneSetup(new DirectoryController(service)).build();
 
+    // Verifies binds hotel filters and returns authoritative page metadata.
     @Test
     void bindsHotelFiltersAndReturnsAuthoritativePageMetadata() throws Exception {
         when(service.hotels("Galle", "ACTIVE", 2)).thenReturn(
@@ -25,6 +26,7 @@ class DirectoryControllerTest {
                 .andExpect(jsonPath("$.totalPages").value(3));
     }
 
+    // Verifies defaults to first page and passes all offering filters.
     @Test
     void defaultsToFirstPageAndPassesAllOfferingFilters() throws Exception {
         mvc.perform(get("/api/room-types/page")).andExpect(status().isOk());

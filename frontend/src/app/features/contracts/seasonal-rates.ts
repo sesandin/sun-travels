@@ -47,12 +47,15 @@ export class SeasonalRates implements OnInit {
     },
     { validators: period },
   );
+  // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.load();
   }
+  // Checks whether the contract permits rate and seasonal maintenance.
   canMaintain() {
     return this.contract().status === 'DRAFT' || this.contract().status === 'APPROVED';
   }
+  // Loads the offering’s seasonal rate periods.
   load() {
     if (this.loading()) return;
     this.loading.set(true);
@@ -71,6 +74,7 @@ export class SeasonalRates implements OnInit {
         },
       });
   }
+  // Opens the seasonal period form with new or existing values.
   open(row: SeasonalRate | null = null) {
     if (!this.canMaintain() || this.saving()) return;
     this.selected.set(row);
@@ -84,9 +88,11 @@ export class SeasonalRates implements OnInit {
     });
     afterNextRender(() => this.editor()?.nativeElement.focus(), { injector: this.injector });
   }
+  // Closes the seasonal rate editor when no save is pending.
   cancel() {
     if (!this.saving()) this.editing.set(false);
   }
+  // Validates and saves the seasonal period and rate.
   save() {
     if (!this.canMaintain() || this.saving() || !this.editing()) return;
     this.form.markAllAsTouched();

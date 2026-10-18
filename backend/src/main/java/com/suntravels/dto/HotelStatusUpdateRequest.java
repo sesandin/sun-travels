@@ -8,10 +8,12 @@ public class HotelStatusUpdateRequest {
     @NotNull
     private HotelStatus status;
 
+    // Returns the status.
     public HotelStatus getStatus() {
         return status;
     }
 
+    // Updates the status.
     public void setStatus(HotelStatus status) {
         this.status = status;
     }
