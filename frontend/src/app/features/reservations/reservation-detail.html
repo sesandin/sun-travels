@@ -53,20 +53,24 @@
       </ul>
     </aside>
   }
-  <section class="panel">
+  <section class="panel reservation-detail-panel">
     <div class="reservation-identity">
       <h2>Reservation #{{ r.reservationId }}</h2>
-      <span class="status-badge" [attr.data-status]="r.status">{{ r.status }}</span>
+      <span class="reservation-status" [class.cancelled]="r.status === 'CANCELLED'">
+        {{ r.status === 'CONFIRMED' ? 'Confirmed' : 'Cancelled' }}
+      </span>
     </div>
     <dl class="reservation-facts detail-facts">
       <div>
         <dt>Customer</dt>
         <dd>
-          #{{ r.customerId }} &middot; {{ r.customerName }}<span>{{ r.phone }} {{ r.email }}</span>
+          {{ r.customerName }}
+          @if (r.phone) { <span>{{ r.phone }}</span> }
+          @if (r.email) { <span>{{ r.email }}</span> }
         </dd>
       </div>
       <div>
-        <dt>Created</dt>
+        <dt>Booked on</dt>
         <dd>{{ r.createdAt | date: 'medium' }}</dd>
       </div>
       <div>
@@ -76,9 +80,10 @@
         </dd>
       </div>
       <div>
-        <dt>Checkout (exclusive)</dt>
+        <dt>Checkout</dt>
         <dd>
           <time [attr.datetime]="r.checkOut">{{ r.checkOut }}</time>
+          <span>Checkout day is not charged</span>
         </dd>
       </div>
       <div>
@@ -91,49 +96,49 @@
       </div>
     </dl>
     <h2 class="section-title">Rooms and Booked Pricing</h2>
-    @for (room of r.rooms; track room.reservationItemId) {
-      <article class="room">
-        <h3>{{ room.hotelName }} · {{ room.roomTypeName }} · {{ room.adults }} Adults</h3>
-        <p class="money room-selling-total">
-          Room total: {{ room.totalPrice | number: '1.2-2' }} {{ r.currencyCode }}
-        </p>
-        <details open>
-          <summary>Booked nightly selling prices</summary>
-          <div class="table-scroll" tabindex="0" role="region" aria-label="Nightly selling prices">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Occupied date</th>
-                  <th scope="col">Selling price</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (night of room.nightlyPrices; track night.occupiedDate) {
-                  <tr>
-                    <td>{{ night.occupiedDate }}</td>
-                    <td>{{ night.sellingPrice | number: '1.2-2' }} {{ r.currencyCode }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
+    <p class="booked-price-note">
+      These are the prices saved when this reservation was confirmed. Later changes to hotel
+      rates or markup do not affect this booking.
+    </p>
+    @for (room of r.rooms; track room.reservationItemId; let i = $index) {
+      <article class="room booked-room-card">
+        <header class="booked-room-heading">
+          <div>
+            <span class="room-label">Room {{ i + 1 }}</span>
+            <h3>{{ room.roomTypeName }}</h3>
+            <p>{{ room.hotelName }} &middot; {{ room.adults }} {{ room.adults === 1 ? 'adult' : 'adults' }}</p>
           </div>
-        </details>
+          <div class="booked-room-amount">
+            <span>Booked room total</span>
+            <strong>
+              @if (room.totalPrice !== null) {
+                {{ room.totalPrice | number: '1.2-2' }} {{ r.currencyCode }}
+              } @else { Unavailable }
+            </strong>
+            <small>For {{ r.nights }} {{ r.nights === 1 ? 'night' : 'nights' }}</small>
+          </div>
+        </header>
+        <app-booked-price-breakdown [room]="room" [currency]="r.currencyCode" [nights]="r.nights" [roomNumber]="i + 1" />
       </article>
     }
     @if (r.totalPrice !== null) {
-      <p class="total quoted-total">
-        Booked total: <strong>{{ r.totalPrice | number: '1.2-2' }} {{ r.currencyCode }}</strong>
-      </p>
+      <div class="quoted-total booked-total-summary">
+        <div><span>Booked total</span><small>All {{ r.rooms.length }} {{ r.rooms.length === 1 ? 'room' : 'rooms' }} for {{ r.nights }} {{ r.nights === 1 ? 'night' : 'nights' }}</small></div>
+        <strong>{{ r.totalPrice | number: '1.2-2' }} {{ r.currencyCode }}</strong>
+      </div>
     } @else {
       <p class="error-message">
         This historical reservation has incomplete nightly snapshots. Its total is unavailable;
         current contract rates have not been used to reconstruct it.
       </p>
     }
-    <div class="actions">
+    <div class="actions reservation-detail-actions">
+      <button class="secondary" type="button" (click)="back()" [disabled]="cancelling()">
+        Back to reservations
+      </button>
       @if (r.status === 'CONFIRMED') {
         <button
-          class="primary danger"
+          class="secondary danger"
           type="button"
           (click)="openCancel()"
           [disabled]="cancelling()"
@@ -141,9 +146,6 @@
           Cancel reservation
         </button>
       }
-      <button class="secondary" type="button" (click)="back()" [disabled]="cancelling()">
-        Back
-      </button>
     </div>
   </section>
 }

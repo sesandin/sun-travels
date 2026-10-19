@@ -234,6 +234,28 @@ describe('Contract offerings', () => {
     r.flush({ ...offering, status: 'SUSPENDED' });
     expect(c.rows()[0].status).toBe('SUSPENDED');
   });
+  it('enables a suspended offering through the rendered dropdown and confirm button', () => {
+    fixture.componentRef.setInput('contract', { ...contract, status: 'APPROVED' });
+    load([{ ...offering, status: 'SUSPENDED' }]);
+    const button = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(button => button.textContent?.trim() === 'Change offering status')!;
+    button.click();
+    fixture.detectChanges();
+    const select: HTMLSelectElement = fixture.nativeElement.querySelector('#maintained-status');
+    expect(select.value).toBe('SUSPENDED');
+    select.value = 'ENABLED';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    fixture.detectChanges();
+    expect(c.statusForm.controls.status.value).toBe('ENABLED');
+    const confirm = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
+      .find(button => button.textContent?.trim() === 'Confirm status')!;
+    confirm.click();
+    const req = http.expectOne(api + '/offerings/8/status');
+    expect(req.request.body).toEqual({ status: 'ENABLED' });
+    req.flush({ ...offering, status: 'ENABLED' });
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.status-badge')?.textContent?.trim()).toBe('ENABLED');
+  });
   for (const status of ['TERMINATED'] as const)
     it(status + ' exposes history with no maintenance actions', () => {
       fixture.componentRef.setInput('contract', { ...contract, status });

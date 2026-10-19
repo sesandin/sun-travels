@@ -194,7 +194,9 @@ export class CustomerList implements OnInit {
         this.saving.set(false);
         this.closeEditor();
         this.notice.set(
-          `${saved.name} ${current ? 'updated' : 'registered'} successfully (customer #${saved.customerId}).`,
+          current
+            ? `Customer details for ${saved.name} have been updated.`
+            : `${saved.name} has been added to your customers.`,
         );
         this.load(this.page());
       },

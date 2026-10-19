@@ -61,7 +61,10 @@ export interface Reservation {
     roomTypeName: string;
     adults: number;
     totalPrice: number | null;
-    nightlyPrices: SellingNight[];
+    nightlyPrices: (SellingNight & {
+      bookedRatePerAdult?: number | null;
+      bookedMarkupPercentage?: number | null;
+    })[];
   }[];
 }
 export interface ReservationPage {

@@ -149,8 +149,9 @@ public class ReservationRepository {
    """, (r, n) -> {
             int item = r.getInt("reservation_item_id");
             var nights = jdbc.query(
-                    "select occupied_date,selling_price from reservation_item_nightly_rate where reservation_item_id=? order by occupied_date",
-                    (v, j) -> new Night(v.getObject(1, LocalDate.class), v.getBigDecimal(2)), item);
+                    "select occupied_date,selling_price,hotelier_rate,markup_percentage from reservation_item_nightly_rate where reservation_item_id=? order by occupied_date",
+                    (v, j) -> new BookedNight(v.getObject(1, LocalDate.class), v.getBigDecimal(2),
+                            v.getBigDecimal(3), v.getBigDecimal(4)), item);
             // Legacy aggregate semantics are not established; never guess a stay total from a single-night field.
             boolean complete = out.isAfter(in) && nights.size() == ChronoUnit.DAYS.between(in, out) &&
                     nights.stream().allMatch(
@@ -158,7 +159,7 @@ public class ReservationRepository {
             return new Item(item, r.getInt("offering_id"), r.getInt(HOTEL_ID_COLUMN),
                     r.getString("hotel_name"), r.getInt(CONTRACT_ID_COLUMN), r.getString("room_name"),
                     r.getInt("number_of_adults"), complete ?
-                    nights.stream().map(Night::sellingPrice).reduce(new BigDecimal("0.00"), BigDecimal::add) :
+                    nights.stream().map(BookedNight::sellingPrice).reduce(new BigDecimal("0.00"), BigDecimal::add) :
                     null, nights);
         }, id);
     }

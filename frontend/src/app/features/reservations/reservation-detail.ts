@@ -11,11 +11,12 @@ import { DecimalPipe, DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Reservation } from '../../models/reservation.model';
+import { BookedPriceBreakdown } from './booked-price-breakdown';
 import { ReservationService } from '../../services/reservation.service';
 import { apiError } from '../../services/api-error';
 @Component({
   selector: 'app-reservation-detail',
-  imports: [RouterLink, DecimalPipe, DatePipe],
+  imports: [RouterLink, DecimalPipe, DatePipe, BookedPriceBreakdown],
   templateUrl: './reservation-detail.html',
   styleUrl: './reservations.scss',
 })

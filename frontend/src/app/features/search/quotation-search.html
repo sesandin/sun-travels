@@ -144,6 +144,16 @@
           </div>
         }
       </div>
+      <div class="actions">
+        <button
+          type="button"
+          class="secondary"
+          (click)="addRoom()"
+          [disabled]="!limits() || rooms.length >= (limits()?.maxRooms ?? 0)"
+        >
+          Add room
+        </button>
+      </div>
       <section class="optional-filters" aria-labelledby="optional-filters-title">
         <div class="form-section-heading">
           <h3 id="optional-filters-title">Narrow Your Search</h3>
@@ -188,14 +198,6 @@
       </label>
       <div class="actions">
         <button
-          type="button"
-          class="primary"
-          (click)="addRoom()"
-          [disabled]="!limits() || rooms.length >= (limits()?.maxRooms ?? 0)"
-        >
-          Add room
-        </button>
-        <button
           class="primary"
           type="submit"
           [disabled]="!limits() || form.invalid || occupancyLoading()"
@@ -234,8 +236,10 @@
       </p>
     }
     <p class="muted">
-      {{ result.notice }} Each room type accommodates the entire request independently; different
-      currencies are grouped, not converted.
+      Prices and availability may change until you confirm your booking. Each room-type option
+      covers all the rooms you requested. Available options appear first, grouped by currency
+      and sorted by lowest total price within each currency. Prices are shown in their original
+      currency without conversion.
     </p>
     @if (result.truncated) {
       <p>

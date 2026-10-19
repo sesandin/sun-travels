@@ -373,6 +373,50 @@ summary {
 .reservation-identity h2 {
   margin-bottom: 0;
 }
+.booked-price-note {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 10px 0 20px;
+  max-width: 80ch;
+}
+.booked-room-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 18px;
+  min-width: 0;
+}
+.booked-room-heading, .booked-total-summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.room-label, .booked-room-amount > span, .booked-room-amount small {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+}
+.booked-room-heading h3 { margin: 6px 0; }
+.booked-room-heading p { margin: 0; color: var(--muted); font-size: 13px; }
+.booked-room-amount strong {
+  display: block;
+  color: var(--primary);
+  font-size: 19px;
+  margin: 6px 0;
+  font-variant-numeric: tabular-nums;
+}
+.booked-total-summary { align-items: center; }
+.booked-total-summary span { font-weight: 650; }
+.booked-total-summary small { display: block; margin-top: 6px; }
+.reservation-detail-actions { justify-content: space-between; padding-top: 8px; }
+.reservation-detail-panel { min-width: 0; }
+@media (max-width: 650px) {
+  .booked-room-card { padding: 14px; }
+  .reservation-detail-actions button { flex: 1 1 100%; }
+}
 .detail-facts {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 22px 0;

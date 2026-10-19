@@ -35,6 +35,26 @@ class ReservationControllerTest {
 
     // Verifies admin and agent can use all reservation endpoints with csrf.
     @Test
+    void staffDetailsExposeBookedNightlyRateAndMarkupSnapshots() throws Exception {
+        var date = java.time.LocalDate.of(2026, 11, 10);
+        var night = new ReservationResponse.BookedNight(date, new java.math.BigDecimal("123.20"),
+                new java.math.BigDecimal("55.00"), new java.math.BigDecimal("12.00"));
+        var room = new ReservationResponse.Item(5, 6, 5, "Coastal Bay Hotel", 6, "Standard", 2,
+                new java.math.BigDecimal("123.20"), List.of(night));
+        when(reservations.detail(5)).thenReturn(new ReservationResponse(5, 6, "Customer", null, null,
+                date, date.plusDays(1), 1, "CONFIRMED", date.atStartOfDay(), "USD",
+                new java.math.BigDecimal("123.20"), List.of(room)));
+        for (String role : List.of("ADMIN", "AGENT")) {
+            mvc.perform(get("/api/reservations/5").with(user("staff").roles(role)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.rooms[0].nightlyPrices[0].bookedRatePerAdult").value(55.00))
+                    .andExpect(jsonPath("$.rooms[0].nightlyPrices[0].bookedMarkupPercentage").value(12.00))
+                    .andExpect(jsonPath("$.rooms[0].nightlyPrices[0].sellingPrice").value(123.20));
+        }
+        mvc.perform(get("/api/reservations/5")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void adminAndAgentCanUseAllReservationEndpointsWithCsrf() throws Exception {
         when(reservations.list("", "", 0, 10, null, null, "")).thenReturn(
                 new ReservationResponse.Page(List.of(), 0, 10, 0));

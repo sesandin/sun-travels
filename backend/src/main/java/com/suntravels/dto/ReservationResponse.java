@@ -7,7 +7,8 @@ import java.time.*;
 import java.util.List;
 
 /**
- * Public selling prices only; internal hotelier rates and markup never leave this API.
+ * Reservation details include booked commercial snapshots for authenticated staff.
+ * Informational quotes continue to expose selling prices only.
  */
 public record ReservationResponse(
         int reservationId,
@@ -62,6 +63,14 @@ public record ReservationResponse(
         private static final long serialVersionUID = 1L;
     }
 
+    public record BookedNight(
+            LocalDate occupiedDate,
+            BigDecimal sellingPrice,
+            BigDecimal bookedRatePerAdult,
+            BigDecimal bookedMarkupPercentage
+    ) {
+    }
+
     public record Item(
             int reservationItemId,
             int offeringId,
@@ -71,7 +80,7 @@ public record ReservationResponse(
             String roomTypeName,
             int adults,
             BigDecimal totalPrice,
-            List<Night> nightlyPrices
+            List<BookedNight> nightlyPrices
     ) {
     }
 
