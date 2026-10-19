@@ -1,5 +1,6 @@
 import { DirectoryState } from '../../../shared/directory-state';
 import { Pagination } from '../../../shared/pagination';
+import { Icon } from '../../../shared/icon';
 import {
   Component,
   computed,
@@ -18,7 +19,7 @@ import { HotelForm } from '../hotel-form/hotel-form';
 @Component({
   selector: 'app-hotel-list',
   standalone: true,
-  imports: [Pagination, HotelForm],
+  imports: [Pagination, HotelForm, Icon],
   templateUrl: './hotel-list.html',
   styleUrl: './hotel-list.scss',
 })

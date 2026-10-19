@@ -16,7 +16,7 @@
         aria-label="Close navigation"
         (click)="closeNavigation(true)"
       >
-        Close menu <span aria-hidden="true">&times;</span>
+        Close menu <span aria-hidden="true"><app-icon name="close" /></span>
       </button>
       <a
         class="brand"
@@ -24,7 +24,7 @@
         (click)="closeNavigation()"
         aria-label="Sun Travels home"
       >
-        <span class="brand-mark" aria-hidden="true">&#9728;</span>
+        <span class="brand-mark" aria-hidden="true"><app-icon name="sun" /></span>
         <span>Sun Travels<small>STAFF WORKSPACE</small> </span>
       </a>
       <p class="nav-label">WORKSPACE</p>
@@ -36,7 +36,7 @@
             ariaCurrentWhenActive="page"
             (click)="closeNavigation()"
           >
-            <span aria-hidden="true">&#9637;</span> Hotels</a
+            <span aria-hidden="true"><app-icon name="hotel" /></span> Hotels</a
           >
           <a
             routerLink="/contracts"
@@ -44,7 +44,7 @@
             ariaCurrentWhenActive="page"
             (click)="closeNavigation()"
           >
-            <span aria-hidden="true">&#9636;</span> Contracts</a
+            <span aria-hidden="true"><app-icon name="contract" /></span> Contracts</a
           >
           <a
             routerLink="/room-types"
@@ -52,7 +52,7 @@
             ariaCurrentWhenActive="page"
             (click)="closeNavigation()"
           >
-            <span aria-hidden="true">&#9638;</span> Room Types</a
+            <span aria-hidden="true"><app-icon name="bed" /></span> Room Types</a
           >
         }
         <a
@@ -61,7 +61,7 @@
           ariaCurrentWhenActive="page"
           (click)="closeNavigation()"
         >
-          <span aria-hidden="true">&#8981;</span> Search &amp; Quotations</a
+          <span aria-hidden="true"><app-icon name="search" /></span> Search &amp; Quotations</a
         >
         <a
           routerLink="/customers"
@@ -69,7 +69,7 @@
           ariaCurrentWhenActive="page"
           (click)="closeNavigation()"
         >
-          <span aria-hidden="true">&#9823;</span> Customers</a
+          <span aria-hidden="true"><app-icon name="customers" /></span> Customers</a
         >
         <a
           routerLink="/reservations"
@@ -77,11 +77,11 @@
           ariaCurrentWhenActive="page"
           (click)="closeNavigation()"
         >
-          <span aria-hidden="true">&#9635;</span> Reservations</a
+          <span aria-hidden="true"><app-icon name="reservation" /></span> Reservations</a
         >
       </nav>
       <div class="sidebar-note">
-        <span aria-hidden="true">&#10023;</span>
+        <span aria-hidden="true"><app-icon name="sun" /></span>
         <strong>Great journeys start here.</strong>
         <p>Serve hotel partners and travellers with confidence.</p>
       </div>
@@ -108,7 +108,7 @@
           [attr.aria-expanded]="menuOpen()"
           (click)="toggleNavigation()"
         >
-          &#9776;
+          <app-icon name="menu" />
         </button>
         <div class="breadcrumb">
           Workspace <span aria-hidden="true">/</span>

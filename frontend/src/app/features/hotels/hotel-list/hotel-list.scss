@@ -63,6 +63,9 @@ td small {
   min-width: 120px;
 }
 .hotel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 8px;
   background: #edf3f1;
   padding: 10px;

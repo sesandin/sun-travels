@@ -77,7 +77,7 @@
       </div>
     } @else if (!filtered().length) {
       <div class="state">
-        <span class="empty-icon" aria-hidden="true">&#9637;</span>
+        <span class="empty-icon" aria-hidden="true"><app-icon name="hotel" /></span>
         <h3>
           {{
             $any(directory.summary()['totalRecords'] ?? 0)
@@ -123,7 +123,7 @@
               <tr>
                 <td>
                   <div class="hotel-name">
-                    <span class="hotel-icon" aria-hidden="true">&#9637;</span>
+                    <span class="hotel-icon" aria-hidden="true"><app-icon name="hotel" /></span>
                     <div>
                       <strong>{{ hotel.name }}</strong>
                       <small>Partner #{{ hotel.hotelId }}</small>
@@ -133,7 +133,7 @@
                 <td>
                   {{ hotel.city }}<small>{{ hotel.country }}</small>
                 </td>
-                <td><span class="stars" aria-hidden="true">&#9733;</span> {{ hotel.starRating }} / 5</td>
+                <td><span class="stars" aria-hidden="true"><app-icon name="star" /></span> {{ hotel.starRating }} / 5</td>
                 <td>
                   <span
                     class="badge status-badge"

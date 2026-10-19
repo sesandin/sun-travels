@@ -4,10 +4,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { finalize } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { apiError } from '../../services/api-error';
+import { Icon } from '../../shared/icon';
 
 @Component({
   selector: 'app-login',
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, Icon],
   templateUrl: './login.html',
   styleUrl: './login.scss',
 })
