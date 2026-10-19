@@ -26,6 +26,7 @@ import { Hotel } from '../../models/hotel.model';
 import { ContractService } from '../../services/contract.service';
 import { HotelService } from '../../services/hotel.service';
 import { OfferingPanel } from './offering-panel';
+import { isContractExpired } from './contract-expiration';
 import { apiError } from '../../services/api-error';
 // Validates the allowed decimal precision for contract markup.
 const decimal: ValidatorFn = (c) =>
@@ -83,6 +84,10 @@ export class ContractList implements OnInit {
   >(null);
   readonly detailsLoading = signal(false);
   readonly filtered = this.contracts;
+
+  isExpired(validTo: string): boolean {
+    return isContractExpired(validTo);
+  }
 
   readonly form = new FormGroup(
     {

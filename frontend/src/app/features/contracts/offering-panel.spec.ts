@@ -42,7 +42,29 @@ describe('Contract offerings', () => {
     fixture.componentRef.setInput('contract', contract);
     fixture.detectChanges();
   });
-  afterEach(() => http.verify());
+  afterEach(() => {
+    vi.useRealTimers();
+    http.verify();
+  });
+  it('does not open or submit expired contract maintenance', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 19, 0, 15));
+    fixture.componentRef.setInput('contract', {
+      ...contract, status: 'APPROVED', validTo: '2026-10-18',
+    });
+    load([offering]);
+    c.open(offering, 'rate');
+    expect(c.mode()).toBeNull();
+    c.open(offering, 'status');
+    expect(c.mode()).toBeNull();
+    c.mode.set('rate');
+    c.selected.set(offering);
+    c.rateForm.setValue({ ratePerPersonPerNight: 125 });
+    c.save();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[aria-label="Offering editor"]')).toBeNull();
+    http.expectNone((r) => r.method !== 'GET');
+  });
   // Completes the pending API request with test fixture data.
   function load(rows: Offering[] = []) {
     http.expectOne(api + '/contracts/7/offerings').flush(rows);
@@ -139,6 +161,38 @@ describe('Contract offerings', () => {
     c.form.controls.contractedRoomCount.setValue(1.5);
     c.save();
     expect(c.form.invalid).toBe(true);
+    http.expectNone(api + '/contracts/7/offerings');
+  });
+  it('shows accessible field guidance after invalid submission and clears it as fields are corrected', () => {
+    load();
+    open();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.validation-notice')).toBeNull();
+
+    c.save();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain(
+      'A few details need your attention',
+    );
+    for (const id of ['offering-room', 'offering-rate', 'offering-rooms', 'offering-adults']) {
+      const input: HTMLElement = fixture.nativeElement.querySelector('#' + id);
+      expect(input.getAttribute('aria-invalid')).toBe('true');
+      expect(input.getAttribute('aria-describedby')).toBe(id + '-error');
+      expect(fixture.nativeElement.querySelector('#' + id + '-error').textContent.trim()).not.toBe('');
+    }
+    fill();
+    c.form.controls.ratePerPersonPerNight.setValue(1.001);
+    c.save();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#offering-rate-error').textContent).toContain(
+      'Use up to 2 decimal places',
+    );
+    expect(fixture.nativeElement.querySelector('#offering-room-error')).toBeNull();
+
+    c.form.controls.ratePerPersonPerNight.setValue(125.25);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.validation-notice')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#offering-rate').getAttribute('aria-invalid')).toBe('false');
     http.expectNone(api + '/contracts/7/offerings');
   });
   it('retries room type loading and prevents writes while unavailable', () => {

@@ -49,11 +49,14 @@ describe('Contract offering directory links', () => {
     http.expectOne((r) => r.url === api + '/contracts/page').flush(directoryPage([contract]));
     http.expectOne(api + '/hotels').flush([]);
   });
-  afterEach(() => http.verify());
+  afterEach(() => {
+    vi.useRealTimers();
+    http.verify();
+  });
   // Opens linked contract details and supplies their API response.
-  function open(status: Contract['status'] = 'DRAFT', offeringId = '8') {
+  function open(status: Contract['status'] = 'DRAFT', offeringId = '8', validTo = contract.validTo) {
     params.next(convertToParamMap({ contractId: '4', offeringId }));
-    http.expectOne(api + '/contracts/4').flush({ ...contract, status });
+    http.expectOne(api + '/contracts/4').flush({ ...contract, status, validTo });
     fixture.detectChanges();
     http.expectOne(api + '/contracts/4/offerings').flush([offering]);
     fixture.detectChanges();
@@ -85,6 +88,28 @@ describe('Contract offering directory links', () => {
     const card: HTMLElement = fixture.nativeElement.querySelector('#offering-8');
     expect(card.textContent).toContain('Edit base rate');
     expect(card.textContent).not.toContain('Edit offering');
+  });
+  it.each([
+    ['2026-10-18', true],
+    ['2026-10-19', false],
+    ['2026-10-20', false],
+  ] as const)('shows expiration and appropriate detail actions for %s', (validTo, expired) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 19, 0, 15));
+    open('APPROVED', '8', validTo);
+    fixture.detectChanges();
+    const panel: HTMLElement = fixture.nativeElement.querySelector('app-offering-panel');
+    const details = panel.parentElement!;
+    expect(details.querySelector('.expired-badge')?.textContent?.trim() ?? null)
+      .toBe(expired ? 'Expired' : null);
+    expect(details.textContent).toContain('APPROVED');
+    for (const label of ['Edit base rate', 'Change offering status', 'Add Seasonal Rate']) {
+      expect(panel.textContent?.includes(label)).toBe(!expired);
+    }
+    expect(panel.textContent).toContain('Double');
+    expect(panel.textContent).toContain('100');
+    expect(panel.textContent).toContain('Seasonal Rates');
+    http.expectNone((r) => r.method !== 'GET');
   });
   it('reports an offering that does not belong to the selected contract', () => {
     open('DRAFT', '99');

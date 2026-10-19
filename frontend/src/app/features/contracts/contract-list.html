@@ -95,6 +95,9 @@
                 <span class="badge status-badge" [attr.data-status]="row.status">{{
                   row.status
                 }}</span>
+                @if (isExpired(row.validTo)) {
+                  <span class="badge expired-badge">Expired</span>
+                }
               </td>
               <td>
                 <div class="actions">
@@ -106,7 +109,7 @@
                   >
                     Details
                   </button>
-                  @if (row.status === 'DRAFT' || row.status === 'APPROVED') {
+                  @if (row.status === 'DRAFT' || (row.status === 'APPROVED' && !isExpired(row.validTo))) {
                     <button
                       type="button"
                       class="text-button"
@@ -126,7 +129,7 @@
                       {{ row.status === 'DRAFT' ? 'Approve' : 'Reapprove' }}
                     </button>
                   }
-                  @if (row.status === 'APPROVED') {
+                  @if (row.status === 'APPROVED' && !isExpired(row.validTo)) {
                     <button
                       type="button"
                       class="text-button"
@@ -136,7 +139,7 @@
                       Suspend
                     </button>
                   }
-                  @if (row.status !== 'TERMINATED') {
+                  @if (row.status !== 'TERMINATED' && !isExpired(row.validTo)) {
                     <button
                       type="button"
                       class="text-button"
@@ -324,7 +327,14 @@
           <dt>Currency</dt>
           <dd>{{ selected()?.currencyCode }}</dd>
           <dt>Status</dt>
-          <dd>{{ selected()?.status }}</dd>
+          <dd>
+            {{ selected()?.status }}
+            @if (selected(); as contract) {
+              @if (isExpired(contract.validTo)) {
+                <span class="badge expired-badge">Expired</span>
+              }
+            }
+          </dd>
         </dl>
         @if (selected(); as contract) {
           <app-offering-panel [contract]="contract" [focusOfferingId]="linkedOffering()" />

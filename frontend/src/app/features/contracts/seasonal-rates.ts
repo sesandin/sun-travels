@@ -18,6 +18,7 @@ import { Offering, SeasonalRate } from '../../models/offering.model';
 import { OfferingService } from '../../services/offering.service';
 import { apiError } from '../../services/api-error';
 import { money, period } from './offering-validators';
+import { isContractExpired } from './contract-expiration';
 @Component({
   selector: 'app-seasonal-rates',
   imports: [ReactiveFormsModule, DatePipe],
@@ -53,7 +54,8 @@ export class SeasonalRates implements OnInit {
   }
   // Checks whether the contract permits rate and seasonal maintenance.
   canMaintain() {
-    return this.contract().status === 'DRAFT' || this.contract().status === 'APPROVED';
+    return !isContractExpired(this.contract().validTo) &&
+      (this.contract().status === 'DRAFT' || this.contract().status === 'APPROVED');
   }
   // Loads the offering’s seasonal rate periods.
   load() {

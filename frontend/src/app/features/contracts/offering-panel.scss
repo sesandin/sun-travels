@@ -162,6 +162,53 @@ dd {
   border-color: var(--border);
   background: var(--surface-soft);
 }
+.editor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+.validation-notice {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border: 1px solid #efd5d0;
+  border-radius: 8px;
+  background: #fff6f4;
+  color: #8a3d38;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.validation-notice p {
+  margin: 4px 0 0;
+}
+.validation-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 22px;
+  height: 22px;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  font-weight: 700;
+}
+.form-grid [aria-invalid='true'] {
+  border-color: var(--danger);
+}
+.form-grid .field-error {
+  margin: 6px 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+@media (max-width: 480px) {
+  .editor-actions button {
+    flex: 1;
+  }
+}
 .form-grid {
   grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
 }

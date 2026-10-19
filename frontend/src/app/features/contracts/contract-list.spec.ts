@@ -31,7 +31,10 @@ describe('Contract management', () => {
     component = fixture.componentInstance;
     fixture.detectChanges();
   });
-  afterEach(() => http.verify());
+  afterEach(() => {
+    vi.useRealTimers();
+    http.verify();
+  });
   // Completes the pending API request with test fixture data.
   function load(rows: Contract[] = [row]) {
     http.expectOne((r) => r.url === url + '/page').flush(directoryPage(rows));
@@ -48,6 +51,90 @@ describe('Contract management', () => {
       currencyCode: 'USD',
     });
   }
+  it.each(['DRAFT', 'APPROVED', 'SUSPENDED', 'TERMINATED'] as const)(
+    'shows Expired alongside the unchanged %s status for a past validTo',
+    (status) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 9, 19, 0, 15));
+      const contract = Object.freeze({ ...row, validTo: '2026-10-18', status });
+      load([contract]);
+
+      const rendered: HTMLElement = fixture.nativeElement.querySelector('tbody tr');
+      expect(rendered.querySelector('.status-badge')?.textContent?.trim()).toBe(status);
+      expect(rendered.querySelector('.status-badge')?.getAttribute('data-status')).toBe(status);
+      expect(rendered.querySelector('.expired-badge')?.textContent).toBe('Expired');
+      expect(component.contracts()[0].status).toBe(status);
+      expect(component.statuses).toEqual(['DRAFT', 'APPROVED', 'SUSPENDED', 'TERMINATED']);
+    },
+  );
+  it.each(['2026-10-19', '2026-10-20'])(
+    'does not mark today or a future validTo (%s) expired near local midnight',
+    (validTo) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 9, 19, 0, 15));
+      load([{ ...row, validTo }]);
+
+      expect(fixture.nativeElement.querySelector('.expired-badge')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.status-badge').textContent.trim()).toBe('DRAFT');
+    },
+  );
+  it('compares calendar dates across a year boundary', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2027, 0, 1, 23, 45));
+    load([
+      { ...row, validTo: '2026-12-31' },
+      { ...row, contractId: 8, validTo: '2027-01-01' },
+      { ...row, contractId: 9, validTo: '2027-01-02' },
+    ]);
+
+    const rendered = fixture.nativeElement.querySelectorAll('tbody tr');
+    expect(rendered[0].querySelector('.expired-badge')).not.toBeNull();
+    expect(rendered[1].querySelector('.expired-badge')).toBeNull();
+    expect(rendered[2].querySelector('.expired-badge')).toBeNull();
+  });
+  it.each([
+    ['2026-10-18', ['Details']],
+    ['2026-10-19', ['Details', 'Edit markup', 'Suspend', 'Terminate']],
+    ['2026-10-20', ['Details', 'Edit markup', 'Suspend', 'Terminate']],
+  ] as const)('shows the appropriate approved-contract actions for validTo %s', (validTo, actions) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 19, 0, 15));
+    load([{ ...row, status: 'APPROVED', validTo }]);
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('tbody tr .actions button') as NodeListOf<HTMLButtonElement>,
+    );
+    expect(buttons.map((button) => button.textContent?.trim())).toEqual([...actions]);
+    expect(component.contracts()[0].status).toBe('APPROVED');
+    expect(buttons[0].disabled).toBe(false);
+  });
+  it('hides termination for expired drafts and suspended contracts while preserving their other actions', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 19, 0, 15));
+    load([
+      { ...row, validTo: '2026-10-18', status: 'DRAFT' },
+      { ...row, contractId: 8, validTo: '2026-10-18', status: 'SUSPENDED' },
+    ]);
+    const rows = fixture.nativeElement.querySelectorAll('tbody tr') as NodeListOf<HTMLElement>;
+    const labels = (element: HTMLElement) =>
+      Array.from(element.querySelectorAll('.actions button')).map((button) => button.textContent?.trim());
+    expect(labels(rows[0])).toEqual(['Details', 'Edit', 'Approve']);
+    expect(labels(rows[1])).toEqual(['Details', 'Reapprove']);
+  });
+  it('recalculates expiration when refreshing after the calendar day changes', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 19, 23, 59));
+    load([{ ...row, validTo: '2026-10-19' }]);
+    expect(fixture.nativeElement.querySelector('.expired-badge')).toBeNull();
+
+    vi.setSystemTime(new Date(2026, 9, 20, 0, 0));
+    component.loadContracts();
+    http
+      .expectOne((r) => r.url === url + '/page')
+      .flush(directoryPage([{ ...row, validTo: '2026-10-19' }]));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.expired-badge')?.textContent).toBe('Expired');
+  });
   it('lists real data with loading, search, status filtering and empty matches', () => {
     expect(fixture.nativeElement.textContent).toContain('Loading contracts');
     load([row, { ...row, contractId: 8, status: 'SUSPENDED' }]);

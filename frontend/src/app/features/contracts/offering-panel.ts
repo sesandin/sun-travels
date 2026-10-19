@@ -23,6 +23,7 @@ import { OfferingService } from '../../services/offering.service';
 import { RoomTypeService } from '../../services/room-type.service';
 import { apiError } from '../../services/api-error';
 import { SeasonalRates } from './seasonal-rates';
+import { isContractExpired } from './contract-expiration';
 import { money, positiveInteger } from './offering-validators';
 @Component({
   selector: 'app-offering-panel',
@@ -75,6 +76,23 @@ export class OfferingPanel implements OnInit, OnChanges {
       validators: [Validators.required],
     }),
   });
+  offeringError(
+    field: 'roomTypeId' | 'ratePerPersonPerNight' | 'contractedRoomCount' | 'maxAdults',
+  ): string {
+    const control = this.form.controls[field];
+    if (!control.touched || control.valid) return '';
+    if (field === 'roomTypeId') return 'Choose a room type for this offering.';
+    if (field === 'ratePerPersonPerNight') {
+      if (control.hasError('required')) return 'Enter the rate per adult, per night.';
+      if (Number(control.value) <= 0) return 'Enter a rate greater than 0.';
+      if (Number(control.value) > 99999999.99) return 'Enter a rate of 99,999,999.99 or less.';
+      return 'Use up to 2 decimal places, for example 125.50.';
+    }
+    if (Number(control.value) > 2147483647) return 'Enter a count of 2,147,483,647 or less.';
+    return field === 'contractedRoomCount'
+      ? 'Enter at least 1 room, using a whole number.'
+      : 'Enter at least 1 adult per room, using a whole number.';
+  }
   // Refreshes offering data or focus when component inputs change.
   ngOnChanges(changes: SimpleChanges) {
     const parent = changes['contract'];
@@ -134,11 +152,15 @@ export class OfferingPanel implements OnInit, OnChanges {
   }
   // Checks whether the contract permits offering status changes.
   canChangeStatus() {
-    return this.contract().status !== 'TERMINATED';
+    return !this.isExpired() && this.contract().status !== 'TERMINATED';
+  }
+  isExpired() {
+    return isContractExpired(this.contract().validTo);
   }
   // Checks whether the contract permits rate and seasonal maintenance.
   canMaintain() {
-    return this.contract().status === 'DRAFT' || this.contract().status === 'APPROVED';
+    return !this.isExpired() &&
+      (this.contract().status === 'DRAFT' || this.contract().status === 'APPROVED');
   }
   // Loads the contract’s offerings and focuses any linked offering.
   load() {

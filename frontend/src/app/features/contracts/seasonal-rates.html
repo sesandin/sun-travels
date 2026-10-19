@@ -43,7 +43,7 @@
       <output>{{ notice() }}</output>
     </p>
   }
-  @if (editing()) {
+  @if (editing() && canMaintain()) {
     <form
       #editor
       tabindex="-1"

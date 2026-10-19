@@ -50,7 +50,29 @@ describe('Seasonal rate management', () => {
     fixture.componentRef.setInput('offering', offering);
     fixture.detectChanges();
   });
-  afterEach(() => http.verify());
+  afterEach(() => {
+    vi.useRealTimers();
+    http.verify();
+  });
+  it('preserves expired seasonal history and prevents opening or submitting maintenance', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 19, 0, 15));
+    fixture.componentRef.setInput('contract', { ...contract, validTo: '2026-10-18' });
+    load();
+    expect(fixture.nativeElement.textContent).toContain('150');
+    expect(fixture.nativeElement.textContent).not.toContain('Add Seasonal Rate');
+    expect(fixture.nativeElement.textContent).not.toContain('Edit seasonal rate');
+    c.open(seasonal);
+    expect(c.editing()).toBe(false);
+    c.editing.set(true);
+    c.form.setValue({
+      validFrom: seasonal.validFrom, validTo: seasonal.validTo, ratePerPersonPerNight: 165,
+    });
+    c.save();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[aria-label="Seasonal rate editor"]')).toBeNull();
+    http.expectNone((r) => r.method !== 'GET');
+  });
   const url = api + '/offerings/8/seasonal-rates';
   // Completes the pending API request with test fixture data.
   function load(rows = [seasonal]) {
