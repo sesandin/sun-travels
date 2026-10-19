@@ -168,6 +168,14 @@ pnpm-debug.log*
 test-results/
 playwright-report/
 
+# Local SunTravels test automation files and execution workbooks
+/execution-evidence/
+/SUNTRAVELS_AUTOMATION_EXECUTION_REPORT.md
+/SunTravels_Final_Test_Cases_Executed*.xlsx
+/backend/src/test/java/com/suntravels/integration/ManualCaseApiMySqlTest.java
+/backend/src/test/java/com/suntravels/integration/ManualInventoryMySqlTest.java
+/frontend/src/test-setup.ts
+
 
 # ============================================================
 # 7. OPERATING SYSTEM FILES

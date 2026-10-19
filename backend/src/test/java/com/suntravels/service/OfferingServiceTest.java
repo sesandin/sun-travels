@@ -260,7 +260,7 @@ class OfferingServiceTest {
         error(409, () -> service.update(3, request()));
         assertEquals(10, o.getContractedRoomCount());
         assertEquals(new BigDecimal("100"), o.getRatePerPersonPerNight());
-        verify(offerings, never()).delete(any());
+        verify(offerings, never()).delete(any(ContractRoomOffering.class));
     }
 
     // Verifies structural edits and creation rejected.
