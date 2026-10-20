@@ -1,6 +1,7 @@
 package com.suntravels.entity;
 
-public enum ContractStatus {
+public enum ContractStatus
+{
     DRAFT,
     APPROVED,
     SUSPENDED,

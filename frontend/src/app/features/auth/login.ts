@@ -13,12 +13,8 @@ import { Icon } from '../../shared/icon';
   styleUrl: './login.scss',
 })
 export class Login {
-  private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
   readonly submitting = signal(false);
   readonly error = signal('');
-  readonly sessionMessage = this.auth.state.sessionMessage;
   readonly form = new FormGroup({
     username: new FormControl('', {
       nonNullable: true,
@@ -29,6 +25,11 @@ export class Login {
       validators: [Validators.required, Validators.maxLength(200)],
     }),
   });
+  private readonly auth = inject(AuthService);
+  readonly sessionMessage = this.auth.state.sessionMessage;
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+
   // Validates credentials, signs in staff, and opens the requested page.
   submit() {
     if (this.form.invalid || this.submitting()) {

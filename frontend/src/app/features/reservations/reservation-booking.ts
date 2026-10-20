@@ -16,11 +16,6 @@ import { apiError } from '../../services/api-error';
   styleUrl: './reservations.scss',
 })
 export class ReservationBooking {
-  private readonly service = inject(ReservationService);
-  private readonly customerService = inject(CustomerService);
-  private readonly router = inject(Router);
-  private readonly destroyRef = inject(DestroyRef);
-  readonly quote = signal(this.service.draft());
   readonly previous = signal<ReservationQuote | null>(null);
   readonly selected = signal<Customer | null>(null);
   readonly customers = signal<Customer[]>([]);
@@ -59,6 +54,12 @@ export class ReservationBooking {
         c.get('phone')?.value?.trim() || c.get('email')?.value?.trim() ? null : { contact: true },
     },
   );
+  private readonly service = inject(ReservationService);
+  readonly quote = signal(this.service.draft());
+  private readonly customerService = inject(CustomerService);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+
   // Finds customer records matching the agent’s booking search.
   searchCustomers() {
     if (this.customerBusy() || this.busy() || this.query.invalid) return;

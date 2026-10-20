@@ -5,20 +5,20 @@
       <h1 id="page-title">Room Type Management</h1>
       <p>Manage reusable room categories for your accommodation partners.</p>
     </div>
-    <button type="button" class="primary" (click)="openEditor()">Create room type</button>
+    <button (click)="openEditor()" class="primary" type="button">Create room type</button>
   </header>
   @if (notice()) {
-    <p class="success-message">
-      <output>{{ notice() }}</output>
-    </p>
+  <p class="success-message">
+    <output>{{ notice() }}</output>
+  </p>
   }
-  <div class="list-panel" [attr.aria-busy]="loading()">
+  <div [attr.aria-busy]="loading()" class="list-panel">
     <div class="panel-heading">
       <div>
         <h2>Room Type Directory</h2>
         <p>Shared room categories across hotel contracts.</p>
       </div>
-      <button type="button" class="secondary" [disabled]="loading()" (click)="loadRoomTypes()">
+      <button (click)="loadRoomTypes()" [disabled]="loading()" class="secondary" type="button">
         Refresh
       </button>
     </div>
@@ -26,130 +26,132 @@
       <div>
         <label for="room-type-search">Search room types</label>
         <input
-          id="room-type-search"
-          type="search"
-          placeholder="Search by name or description"
-          [value]="query()"
           (input)="query.set($any($event.target).value); loadRoomTypes(0)"
+          [value]="query()"
+          id="room-type-search"
+          placeholder="Search by name or description"
+          type="search"
         />
       </div>
     </div>
     @if (loading()) {
-      <div class="state" role="status">
-        <span class="spinner" aria-hidden="true"></span>
-        <h3>Loading Room Types...</h3>
-      </div>
+    <div aria-atomic="true" aria-live="polite" class="state">
+      <span aria-hidden="true" class="spinner"></span>
+      <h3>Loading Room Types...</h3>
+    </div>
     } @else if (error()) {
-      <div class="state">
-        <p class="error-message" role="alert">{{ error() }}</p>
-        <button class="primary" type="button" (click)="loadRoomTypes()">Retry loading</button>
-      </div>
+    <div class="state">
+      <p class="error-message" role="alert">{{ error() }}</p>
+      <button (click)="loadRoomTypes()" class="primary" type="button">Retry loading</button>
+    </div>
     } @else if (!filtered().length) {
-      <div class="state">
-        <h3>
-          {{
-            $any(directory.summary()['totalRecords'] ?? 0)
-              ? 'No Matching Room Types'
-              : 'No Room Types Yet'
-          }}
-        </h3>
-        <p>
-          {{
-            $any(directory.summary()['totalRecords'] ?? 0)
-              ? 'Try another search.'
-              : 'Create your first reusable room category.'
-          }}
-        </p>
-        @if ($any(directory.summary()['totalRecords'] ?? 0)) {
-          <button type="button" class="secondary" (click)="query.set(''); loadRoomTypes(0)">
-            Clear search
-          </button>
-        } @else {
-          <button type="button" class="primary" (click)="openEditor()">Create room type</button>
-        }
-      </div>
+    <div class="state">
+      <h3>
+        {{
+        $any(directory.summary()['totalRecords'] ?? 0)
+        ? 'No Matching Room Types'
+        : 'No Room Types Yet'
+        }}
+      </h3>
+      <p>
+        {{
+        $any(directory.summary()['totalRecords'] ?? 0)
+        ? 'Try another search.'
+        : 'Create your first reusable room category.'
+        }}
+      </p>
+      @if ($any(directory.summary()['totalRecords'] ?? 0)) {
+      <button (click)="query.set(''); loadRoomTypes(0)" class="secondary" type="button">
+        Clear search
+      </button>
+      } @else {
+      <button (click)="openEditor()" class="primary" type="button">Create room type</button>
+      }
+    </div>
     } @else {
-      <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable results">
-        <table>
-          <caption class="sr-only">
-            Room types and management actions
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Room type</th>
-              <th scope="col">Description</th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of filtered(); track row.roomTypeId) {
-              <tr>
-                <td>
-                  <strong>{{ row.name }}</strong>
-                  <small>Room type #{{ row.roomTypeId }}</small>
-                </td>
-                <td class="description">{{ row.description || 'Not provided' }}</td>
-                <td>
-                  <button
-                    type="button"
-                    class="text-button"
-                    [attr.aria-label]="'Edit ' + row.name"
-                    (click)="openEditor(row)"
-                  >
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+    <section aria-label="Scrollable results" class="table-scroll" tabindex="0">
+      <table>
+        <caption class="sr-only">
+          Room types and management actions
+        </caption>
+        <thead>
+        <tr>
+          <th scope="col">Room type</th>
+          <th scope="col">Description</th>
+          <th scope="col">Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        @for (row of filtered(); track row.roomTypeId) {
+        <tr>
+          <td>
+            <strong>{{ row.name }}</strong>
+            <small>Room type #{{ row.roomTypeId }}</small>
+          </td>
+          <td class="description">{{ row.description || 'Not provided' }}</td>
+          <td>
+            <button
+              (click)="openEditor(row)"
+              [attr.aria-label]="'Edit ' + row.name"
+              class="text-button"
+              type="button"
+            >
+              Edit
+            </button>
+          </td>
+        </tr>
+        }
+        </tbody>
+      </table>
+    </section>
     }
   </div>
 </section>
 
 <app-pagination
-  [page]="directory.page()"
-  [totalPages]="directory.totalPages()"
-  [totalElements]="directory.totalElements()"
-  [loading]="loading()"
   (pageChange)="loadRoomTypes($event)"
+  [loading]="loading()"
+  [page]="directory.page()"
+  [totalElements]="directory.totalElements()"
+  [totalPages]="directory.totalPages()"
 />
 <dialog
   #editor
-  aria-labelledby="editor-title"
   (cancel)="saving() ? $event.preventDefault() : closeEditor()"
+  aria-labelledby="editor-title"
 >
-  <form [formGroup]="form" (ngSubmit)="save()" class="room-form">
+  <form (ngSubmit)="save()" [formGroup]="form" class="room-form">
     <h2 id="editor-title">{{ selected() ? 'Edit Room Type' : 'Create Room Type' }}</h2>
     <p>Define a room category that can be reused across contracts.</p>
     @if (submissionError()) {
-      <p class="error-message" role="alert">{{ submissionError() }}</p>
+    <p class="error-message" role="alert">{{ submissionError() }}</p>
     }
     <fieldset [disabled]="saving()">
       <label for="room-name">Name *</label>
       <input
-        id="room-name"
-        formControlName="name"
-        required
-        maxlength="100"
         [attr.aria-invalid]="!!validationMessage('name')"
         aria-describedby="name-error"
+        formControlName="name"
+        id="room-name"
+        maxlength="100"
+        required
       />
-      <p id="name-error" class="field-error">{{ validationMessage('name') }}</p>
+      <p class="field-error" id="name-error">{{ validationMessage('name') }}</p>
       <label for="room-description">Description <span>(optional)</span> </label>
       <textarea
-        id="room-description"
-        formControlName="description"
-        maxlength="255"
-        rows="4"
         [attr.aria-invalid]="!!validationMessage('description')"
         aria-describedby="description-error"
+        formControlName="description"
+        id="room-description"
+        maxlength="255"
+        rows="4"
       ></textarea>
-      <p id="description-error" class="field-error">{{ validationMessage('description') }}</p>
+      <p class="field-error" id="description-error">{{ validationMessage('description') }}</p>
       <div class="actions">
-        <button type="button" class="secondary" (click)="closeEditor()">Cancel</button>
-        <button type="submit" class="primary">{{ saving() ? 'Saving...' : 'Save room type' }}</button>
+        <button (click)="closeEditor()" class="secondary" type="button">Cancel</button>
+        <button class="primary" type="submit">
+          {{ saving() ? 'Saving...' : 'Save room type' }}
+        </button>
       </div>
     </fieldset>
   </form>

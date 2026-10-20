@@ -1,6 +1,8 @@
 package com.suntravels.dto;
 
-import com.suntravels.entity.*;
+import com.suntravels.entity.ContractStatus;
+import com.suntravels.entity.HotelStatus;
+import com.suntravels.entity.OfferingStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -26,5 +28,6 @@ public record OfferingDirectoryResponse(
         Integer maxAdults,
         OfferingStatus status,
         long seasonalRateCount
-) {
+)
+{
 }

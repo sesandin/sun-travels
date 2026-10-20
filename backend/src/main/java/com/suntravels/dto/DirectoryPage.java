@@ -9,6 +9,7 @@ public record DirectoryPage<T>(
         int size,
         long totalElements,
         int totalPages,
-        Map<String, Object> summary
-) {
+        Map<String,Object> summary
+)
+{
 }

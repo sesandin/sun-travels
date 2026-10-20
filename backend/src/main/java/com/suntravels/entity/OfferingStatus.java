@@ -1,6 +1,7 @@
 package com.suntravels.entity;
 
-public enum OfferingStatus {
+public enum OfferingStatus
+{
     ENABLED,
     SUSPENDED
 }

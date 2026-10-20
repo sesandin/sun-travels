@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ContractList } from './contract-list';
 import { Contract } from '../../models/contract.model';
+
 const url = '/api/contracts';
 const hotelsUrl = '/api/hotels';
 const row: Contract = {
@@ -96,18 +97,23 @@ describe('Contract management', () => {
     ['2026-10-18', ['Details']],
     ['2026-10-19', ['Details', 'Edit markup', 'Suspend', 'Terminate']],
     ['2026-10-20', ['Details', 'Edit markup', 'Suspend', 'Terminate']],
-  ] as const)('shows the appropriate approved-contract actions for validTo %s', (validTo, actions) => {
-    vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date(2026, 9, 19, 0, 15));
-    load([{ ...row, status: 'APPROVED', validTo }]);
+  ] as const)(
+    'shows the appropriate approved-contract actions for validTo %s',
+    (validTo, actions) => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date(2026, 9, 19, 0, 15));
+      load([{ ...row, status: 'APPROVED', validTo }]);
 
-    const buttons = Array.from(
-      fixture.nativeElement.querySelectorAll('tbody tr .actions button') as NodeListOf<HTMLButtonElement>,
-    );
-    expect(buttons.map((button) => button.textContent?.trim())).toEqual([...actions]);
-    expect(component.contracts()[0].status).toBe('APPROVED');
-    expect(buttons[0].disabled).toBe(false);
-  });
+      const buttons = Array.from(
+        fixture.nativeElement.querySelectorAll(
+          'tbody tr .actions button',
+        ) as NodeListOf<HTMLButtonElement>,
+      );
+      expect(buttons.map((button) => button.textContent?.trim())).toEqual([...actions]);
+      expect(component.contracts()[0].status).toBe('APPROVED');
+      expect(buttons[0].disabled).toBe(false);
+    },
+  );
   it('hides termination for expired drafts and suspended contracts while preserving their other actions', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 9, 19, 0, 15));
@@ -117,7 +123,9 @@ describe('Contract management', () => {
     ]);
     const rows = fixture.nativeElement.querySelectorAll('tbody tr') as NodeListOf<HTMLElement>;
     const labels = (element: HTMLElement) =>
-      Array.from(element.querySelectorAll('.actions button')).map((button) => button.textContent?.trim());
+      Array.from(element.querySelectorAll('.actions button')).map((button) =>
+        button.textContent?.trim(),
+      );
     expect(labels(rows[0])).toEqual(['Details', 'Edit', 'Approve']);
     expect(labels(rows[1])).toEqual(['Details', 'Reapprove']);
   });

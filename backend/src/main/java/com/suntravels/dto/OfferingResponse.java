@@ -1,8 +1,8 @@
 package com.suntravels.dto;
 
-import java.math.BigDecimal;
-
 import com.suntravels.entity.OfferingStatus;
+
+import java.math.BigDecimal;
 
 public record OfferingResponse(
         Integer offeringId,
@@ -14,5 +14,6 @@ public record OfferingResponse(
         Integer maxAdults,
         OfferingStatus status,
         String currencyCode
-) {
+)
+{
 }

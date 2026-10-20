@@ -10,109 +10,128 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "hotel")
-public class Hotel {
+@Table( name = "hotel" )
+public class Hotel
+{
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "hotel_id")
+    @GeneratedValue( strategy = GenerationType.IDENTITY )
+    @Column( name = "hotel_id" )
     private Integer hotelId;
 
-    @Column(name = "name", nullable = false, length = 150)
+    @Column( name = "name", nullable = false, length = 150 )
     private String name;
 
-    @Column(name = "address", length = 255)
+    @Column( name = "address", length = 255 )
     private String address;
 
-    @Column(name = "city", length = 100)
+    @Column( name = "city", length = 100 )
     private String city;
 
-    @Column(name = "country", length = 100)
+    @Column( name = "country", length = 100 )
     private String country;
 
-    @Column(name = "phone", length = 20)
+    @Column( name = "phone", length = 20 )
     private String phone;
 
-    @Column(name = "email", length = 100)
+    @Column( name = "email", length = 100 )
     private String email;
 
-    @Column(name = "star_rating")
+    @Column( name = "star_rating" )
     private Byte starRating;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
+    @Enumerated( EnumType.STRING )
+    @Column( name = "status", nullable = false, length = 20 )
     private HotelStatus status;
 
     // Creates an empty object for fields to be populated after construction.
-    public Hotel() {
+    public Hotel()
+    {
         // Required by JPA.
     }
 
-    public Integer getHotelId() {
+    public Integer getHotelId()
+    {
         return hotelId;
     }
 
-    public String getName() {
+    public String getName()
+    {
         return name;
     }
 
-    public void setName(String name) {
+    public void setName( String name )
+    {
         this.name = name;
     }
 
-    public String getAddress() {
+    public String getAddress()
+    {
         return address;
     }
 
-    public void setAddress(String address) {
+    public void setAddress( String address )
+    {
         this.address = address;
     }
 
-    public String getCity() {
+    public String getCity()
+    {
         return city;
     }
 
-    public void setCity(String city) {
+    public void setCity( String city )
+    {
         this.city = city;
     }
 
-    public String getCountry() {
+    public String getCountry()
+    {
         return country;
     }
 
-    public void setCountry(String country) {
+    public void setCountry( String country )
+    {
         this.country = country;
     }
 
-    public String getPhone() {
+    public String getPhone()
+    {
         return phone;
     }
 
-    public void setPhone(String phone) {
+    public void setPhone( String phone )
+    {
         this.phone = phone;
     }
 
-    public String getEmail() {
+    public String getEmail()
+    {
         return email;
     }
 
-    public void setEmail(String email) {
+    public void setEmail( String email )
+    {
         this.email = email;
     }
 
-    public Byte getStarRating() {
+    public Byte getStarRating()
+    {
         return starRating;
     }
 
-    public void setStarRating(Byte starRating) {
+    public void setStarRating( Byte starRating )
+    {
         this.starRating = starRating;
     }
 
-    public HotelStatus getStatus() {
+    public HotelStatus getStatus()
+    {
         return status;
     }
 
-    public void setStatus(HotelStatus status) {
+    public void setStatus( HotelStatus status )
+    {
         this.status = status;
     }
 }

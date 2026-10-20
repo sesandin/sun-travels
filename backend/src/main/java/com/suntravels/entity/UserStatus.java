@@ -1,6 +1,7 @@
 package com.suntravels.entity;
 
-public enum UserStatus {
+public enum UserStatus
+{
     ACTIVE,
     INACTIVE
 }

@@ -1,72 +1,83 @@
 package com.suntravels.service;
 
-import java.util.List;
-
-import com.suntravels.dto.*;
+import com.suntravels.dto.RoomTypeRequest;
+import com.suntravels.dto.RoomTypeResponse;
 import com.suntravels.entity.RoomType;
-import com.suntravels.exception.*;
+import com.suntravels.exception.DuplicateRoomTypeException;
+import com.suntravels.exception.RoomTypeNotFoundException;
 import com.suntravels.repository.RoomTypeRepository;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
-@Transactional(readOnly = true)
-public class RoomTypeService {
+@Transactional( readOnly = true )
+public class RoomTypeService
+{
     private final RoomTypeRepository repository;
 
     // Initializes the room type service and its required dependencies.
-    public RoomTypeService(RoomTypeRepository repository) {
+    public RoomTypeService( RoomTypeRepository repository )
+    {
         this.repository = repository;
     }
 
     // Returns the all room types.
-    public List<RoomTypeResponse> getAllRoomTypes() {
-        return repository.findAll(Sort.by("name").and(Sort.by("roomTypeId"))).stream().map(
-                this::toResponse).toList();
+    public List<RoomTypeResponse> getAllRoomTypes()
+    {
+        return repository.findAll( Sort.by( "name" ).and( Sort.by( "roomTypeId" ) ) ).stream().map(
+                this::toResponse ).toList();
     }
 
     // Returns the room type by id.
-    public RoomTypeResponse getRoomTypeById(Integer id) {
-        return toResponse(find(id));
+    public RoomTypeResponse getRoomTypeById( Integer id )
+    {
+        return toResponse( find( id ) );
     }
 
     // Creates the room type.
     @Transactional
-    public RoomTypeResponse createRoomType(RoomTypeRequest request) {
+    public RoomTypeResponse createRoomType( RoomTypeRequest request )
+    {
         String name = request.getName().trim();
         // Best-effort check only: the existing schema has no unique name index.
-        if (repository.existsByNameIgnoreCase(name)) throw new DuplicateRoomTypeException(name);
+        if( repository.existsByNameIgnoreCase( name ) ) throw new DuplicateRoomTypeException( name );
         RoomType roomType = new RoomType();
-        apply(roomType, request);
-        return toResponse(repository.save(roomType));
+        apply( roomType, request );
+        return toResponse( repository.save( roomType ) );
     }
 
     // Updates the room type.
     @Transactional
-    public RoomTypeResponse updateRoomType(Integer id, RoomTypeRequest request) {
-        RoomType roomType = find(id);
+    public RoomTypeResponse updateRoomType( Integer id, RoomTypeRequest request )
+    {
+        RoomType roomType = find( id );
         String name = request.getName().trim();
-        if (repository.existsByNameIgnoreCaseAndRoomTypeIdNot(name, id))
-            throw new DuplicateRoomTypeException(name);
-        apply(roomType, request);
-        return toResponse(repository.save(roomType));
+        if( repository.existsByNameIgnoreCaseAndRoomTypeIdNot( name, id ) )
+            throw new DuplicateRoomTypeException( name );
+        apply( roomType, request );
+        return toResponse( repository.save( roomType ) );
     }
 
     // Finds a room type or reports that it does not exist.
-    private RoomType find(Integer id) {
-        return repository.findById(id).orElseThrow(() -> new RoomTypeNotFoundException(id));
+    private RoomType find( Integer id )
+    {
+        return repository.findById( id ).orElseThrow( () -> new RoomTypeNotFoundException( id ) );
     }
 
     // Trims and copies the editable room-type name and description.
-    private void apply(RoomType roomType, RoomTypeRequest request) {
-        roomType.setName(request.getName().trim());
+    private void apply( RoomType roomType, RoomTypeRequest request )
+    {
+        roomType.setName( request.getName().trim() );
         String description = request.getDescription();
-        roomType.setDescription(description == null || description.isBlank() ? null : description.trim());
+        roomType.setDescription( description == null || description.isBlank() ? null : description.trim() );
     }
 
     // Maps the stored record to its API response fields.
-    RoomTypeResponse toResponse(RoomType roomType) {
-        return new RoomTypeResponse(roomType.getRoomTypeId(), roomType.getName(), roomType.getDescription());
+    RoomTypeResponse toResponse( RoomType roomType )
+    {
+        return new RoomTypeResponse( roomType.getRoomTypeId(), roomType.getName(), roomType.getDescription() );
     }
 }

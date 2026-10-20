@@ -6,6 +6,7 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { ContractList } from './contract-list';
 import { Contract } from '../../models/contract.model';
+
 const api = '/api';
 const contract: Contract = {
   contractId: 4,
@@ -54,7 +55,11 @@ describe('Contract offering directory links', () => {
     http.verify();
   });
   // Opens linked contract details and supplies their API response.
-  function open(status: Contract['status'] = 'DRAFT', offeringId = '8', validTo = contract.validTo) {
+  function open(
+    status: Contract['status'] = 'DRAFT',
+    offeringId = '8',
+    validTo = contract.validTo,
+  ) {
     params.next(convertToParamMap({ contractId: '4', offeringId }));
     http.expectOne(api + '/contracts/4').flush({ ...contract, status, validTo });
     fixture.detectChanges();
@@ -100,8 +105,9 @@ describe('Contract offering directory links', () => {
     fixture.detectChanges();
     const panel: HTMLElement = fixture.nativeElement.querySelector('app-offering-panel');
     const details = panel.parentElement!;
-    expect(details.querySelector('.expired-badge')?.textContent?.trim() ?? null)
-      .toBe(expired ? 'Expired' : null);
+    expect(details.querySelector('.expired-badge')?.textContent?.trim() ?? null).toBe(
+      expired ? 'Expired' : null,
+    );
     expect(details.textContent).toContain('APPROVED');
     for (const label of ['Edit base rate', 'Change offering status', 'Add Seasonal Rate']) {
       expect(panel.textContent?.includes(label)).toBe(!expired);

@@ -1,8 +1,8 @@
 import {
+  afterNextRender,
   Component,
   DestroyRef,
   ElementRef,
-  afterNextRender,
   inject,
   signal,
   viewChild,
@@ -18,12 +18,12 @@ import { Icon } from './shared/icon';
   styleUrl: './app.scss',
 })
 export class App {
-  private readonly authService = inject(AuthService);
-  readonly auth = this.authService.state;
   readonly menuOpen = signal(false);
   readonly loggingOut = signal(false);
   readonly router = inject(Router);
   readonly mobileNavigation = signal(false);
+  private readonly authService = inject(AuthService);
+  readonly auth = this.authService.state;
   private readonly destroyRef = inject(DestroyRef);
   private readonly navigation = viewChild<ElementRef<HTMLElement>>('navigation');
   private readonly navigationToggle = viewChild<ElementRef<HTMLButtonElement>>('navigationToggle');

@@ -1,15 +1,15 @@
 import {
+  afterNextRender,
   Component,
   DestroyRef,
   ElementRef,
-  Injector,
-  OnInit,
-  OnChanges,
-  SimpleChanges,
-  afterNextRender,
   inject,
+  Injector,
   input,
+  OnChanges,
+  OnInit,
   signal,
+  SimpleChanges,
   viewChild,
   viewChildren,
 } from '@angular/core';
@@ -25,6 +25,7 @@ import { apiError } from '../../services/api-error';
 import { SeasonalRates } from './seasonal-rates';
 import { isContractExpired } from './contract-expiration';
 import { money, positiveInteger } from './offering-validators';
+
 @Component({
   selector: 'app-offering-panel',
   imports: [ReactiveFormsModule, SeasonalRates],
@@ -32,17 +33,9 @@ import { money, positiveInteger } from './offering-validators';
   styleUrl: './offering-panel.scss',
 })
 export class OfferingPanel implements OnInit, OnChanges {
-  private loadRequest?: Subscription;
-  private saveRequest?: Subscription;
-  private readonly injector = inject(Injector);
-  private readonly editor = viewChild<ElementRef<HTMLElement>>('editor');
   readonly contract = input.required<Contract>();
   readonly focusOfferingId = input<number | null>(null);
-  private readonly offeringCards = viewChildren<ElementRef<HTMLElement>>('offeringCard');
   readonly targetMissing = signal(false);
-  private readonly service = inject(OfferingService);
-  private readonly roomsService = inject(RoomTypeService);
-  private readonly destroyRef = inject(DestroyRef);
   readonly rows = signal<Offering[]>([]);
   readonly rooms = signal<RoomType[]>([]);
   readonly loading = signal(false);
@@ -76,6 +69,15 @@ export class OfferingPanel implements OnInit, OnChanges {
       validators: [Validators.required],
     }),
   });
+  private loadRequest?: Subscription;
+  private saveRequest?: Subscription;
+  private readonly injector = inject(Injector);
+  private readonly editor = viewChild<ElementRef<HTMLElement>>('editor');
+  private readonly offeringCards = viewChildren<ElementRef<HTMLElement>>('offeringCard');
+  private readonly service = inject(OfferingService);
+  private readonly roomsService = inject(RoomTypeService);
+  private readonly destroyRef = inject(DestroyRef);
+
   offeringError(
     field: 'roomTypeId' | 'ratePerPersonPerNight' | 'contractedRoomCount' | 'maxAdults',
   ): string {
@@ -123,45 +125,29 @@ export class OfferingPanel implements OnInit, OnChanges {
         this.focusLinkedOffering();
     }
   }
-  // Scrolls to and focuses the offering selected by a directory link.
-  private focusLinkedOffering() {
-    if (this.loading()) {
-      this.targetMissing.set(false);
-      return;
-    }
-    const target = this.focusOfferingId();
-    this.targetMissing.set(
-      target !== null && !this.rows().some((row) => row.offeringId === target),
-    );
-    if (target !== null && !this.targetMissing())
-      afterNextRender(
-        () => {
-          if (this.focusOfferingId() !== target) return;
-          const card = this.offeringCards().find(
-            (ref) => ref.nativeElement.id === 'offering-' + target,
-          )?.nativeElement;
-          card?.focus({ preventScroll: true });
-          card?.scrollIntoView?.({ block: 'center', behavior: 'auto' });
-        },
-        { injector: this.injector },
-      );
-  }
+
   // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.load();
   }
+
   // Checks whether the contract permits offering status changes.
   canChangeStatus() {
     return !this.isExpired() && this.contract().status !== 'TERMINATED';
   }
+
   isExpired() {
     return isContractExpired(this.contract().validTo);
   }
+
   // Checks whether the contract permits rate and seasonal maintenance.
   canMaintain() {
-    return !this.isExpired() &&
-      (this.contract().status === 'DRAFT' || this.contract().status === 'APPROVED');
+    return (
+      !this.isExpired() &&
+      (this.contract().status === 'DRAFT' || this.contract().status === 'APPROVED')
+    );
   }
+
   // Loads the contract’s offerings and focuses any linked offering.
   load() {
     if (this.loading()) return;
@@ -182,6 +168,7 @@ export class OfferingPanel implements OnInit, OnChanges {
         },
       });
   }
+
   // Loads room type choices and exposes loading failures for retry.
   loadRooms() {
     if (this.roomsLoading()) return;
@@ -201,6 +188,7 @@ export class OfferingPanel implements OnInit, OnChanges {
         },
       });
   }
+
   // Opens the appropriate offering creation or maintenance form.
   open(row: Offering | null = null, mode: 'draft' | 'rate' | 'status' = 'draft') {
     if (
@@ -227,10 +215,12 @@ export class OfferingPanel implements OnInit, OnChanges {
     if (mode === 'draft') this.loadRooms();
     afterNextRender(() => this.editor()?.nativeElement.focus(), { injector: this.injector });
   }
+
   // Closes offering maintenance when no save is pending.
   cancel() {
     if (!this.saving()) this.mode.set(null);
   }
+
   // Validates and saves the selected offering fields or status.
   save() {
     if (this.saving() || (this.mode() === 'status' ? !this.canChangeStatus() : !this.canMaintain()))
@@ -275,5 +265,29 @@ export class OfferingPanel implements OnInit, OnChanges {
         this.failure.set(apiError(e));
       },
     });
+  }
+
+  // Scrolls to and focuses the offering selected by a directory link.
+  private focusLinkedOffering() {
+    if (this.loading()) {
+      this.targetMissing.set(false);
+      return;
+    }
+    const target = this.focusOfferingId();
+    this.targetMissing.set(
+      target !== null && !this.rows().some((row) => row.offeringId === target),
+    );
+    if (target !== null && !this.targetMissing())
+      afterNextRender(
+        () => {
+          if (this.focusOfferingId() !== target) return;
+          const card = this.offeringCards().find(
+            (ref) => ref.nativeElement.id === 'offering-' + target,
+          )?.nativeElement;
+          card?.focus({ preventScroll: true });
+          card?.scrollIntoView?.({ block: 'center', behavior: 'auto' });
+        },
+        { injector: this.injector },
+      );
   }
 }

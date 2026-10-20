@@ -7,5 +7,6 @@ public record AuthenticatedUserResponse(
         String username,
         String fullName,
         UserRole role
-) {
+)
+{
 }

@@ -1,12 +1,13 @@
-import { Injectable, inject } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import {
-  StayPeriod,
   Reservation,
   ReservationPage,
   ReservationQuote,
   ReservationRequest,
+  StayPeriod,
 } from '../models/reservation.model';
+
 @Injectable({ providedIn: 'root' })
 export class ReservationService {
   private readonly http = inject(HttpClient);

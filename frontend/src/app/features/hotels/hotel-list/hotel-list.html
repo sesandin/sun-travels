@@ -5,19 +5,19 @@
       <h1 id="page-title">Hotel Management</h1>
       <p>Manage your hotel partners, details and availability for new sales.</p>
     </div>
-    <button type="button" class="primary" (click)="openEditor()">Register hotel</button>
+    <button (click)="openEditor()" class="primary" type="button">Register hotel</button>
   </header>
   @if (notice()) {
-    <p class="success-message">
-      <output>{{ notice() }}</output>
-    </p>
+  <p class="success-message">
+    <output>{{ notice() }}</output>
+  </p>
   }
-  <div class="stats" aria-label="Hotel overview">
+  <div aria-label="Hotel overview" class="stats">
     <div>
       <span>Registered hotels</span>
       <strong>{{
         loading() || error() ? '—' : $any(directory.summary()['totalRecords'] ?? 0)
-      }}</strong>
+        }}</strong>
     </div>
     <div>
       <span>Active partners</span>
@@ -27,16 +27,16 @@
       <span>Inactive partners</span>
       <strong>{{
         loading() || error() ? '—' : $any(directory.summary()['totalRecords'] ?? 0) - activeCount()
-      }}</strong>
+        }}</strong>
     </div>
   </div>
-  <div class="list-panel" [attr.aria-busy]="loading()">
+  <div [attr.aria-busy]="loading()" class="list-panel">
     <div class="panel-heading">
       <div>
         <h2>Hotel Directory</h2>
         <p>All your accommodation partners in one place.</p>
       </div>
-      <button type="button" class="secondary" [disabled]="loading()" (click)="loadHotels()">
+      <button (click)="loadHotels()" [disabled]="loading()" class="secondary" type="button">
         Refresh
       </button>
     </div>
@@ -44,19 +44,19 @@
       <div>
         <label for="hotel-search">Search hotels</label>
         <input
-          id="hotel-search"
-          type="search"
-          placeholder="Search by name, city or country"
-          [value]="query()"
           (input)="query.set($any($event.target).value); loadHotels(0)"
+          [value]="query()"
+          id="hotel-search"
+          placeholder="Search by name, city or country"
+          type="search"
         />
       </div>
       <div>
         <label for="status-filter">Status</label>
         <select
-          id="status-filter"
-          [value]="filter()"
           (change)="filter.set($any($event.target).value); loadHotels(0)"
+          [value]="filter()"
+          id="status-filter"
         >
           <option value="">All statuses</option>
           <option value="ACTIVE">Active</option>
@@ -65,139 +65,142 @@
       </div>
     </div>
     @if (loading()) {
-      <div class="state" role="status">
-        <span class="spinner" aria-hidden="true"></span>
-        <h3>Loading Hotel Partners...</h3>
-        <p>Retrieving the latest records.</p>
-      </div>
+    <div aria-atomic="true" aria-live="polite" class="state">
+      <span aria-hidden="true" class="spinner"></span>
+      <h3>Loading Hotel Partners...</h3>
+      <p>Retrieving the latest records.</p>
+    </div>
     } @else if (error()) {
-      <div class="state">
-        <p class="error-message" role="alert">{{ error() }}</p>
-        <button type="button" class="primary" (click)="loadHotels()">Retry loading</button>
-      </div>
+    <div class="state">
+      <p class="error-message" role="alert">{{ error() }}</p>
+      <button (click)="loadHotels()" class="primary" type="button">Retry loading</button>
+    </div>
     } @else if (!filtered().length) {
-      <div class="state">
-        <span class="empty-icon" aria-hidden="true"><app-icon name="hotel" /></span>
-        <h3>
-          {{
-            $any(directory.summary()['totalRecords'] ?? 0)
-              ? 'No matching hotels'
-              : 'Your hotel network starts here'
-          }}
-        </h3>
-        <p>
-          {{
-            $any(directory.summary()['totalRecords'] ?? 0)
-              ? 'Try another search or clear your filters.'
-              : 'Register your first hotel partner to get started.'
-          }}
-        </p>
-        @if ($any(directory.summary()['totalRecords'] ?? 0)) {
-          <button
-            class="secondary"
-            (click)="query.set(''); filter.set(''); loadHotels(0); loadHotels(0)"
-          >
-            Clear filters
-          </button>
-        } @else {
-          <button class="primary" (click)="openEditor()">Register hotel</button>
-        }
-      </div>
+    <div class="state">
+      <span aria-hidden="true" class="empty-icon"><app-icon name="hotel"/></span>
+      <h3>
+        {{
+        $any(directory.summary()['totalRecords'] ?? 0)
+        ? 'No matching hotels'
+        : 'Your hotel network starts here'
+        }}
+      </h3>
+      <p>
+        {{
+        $any(directory.summary()['totalRecords'] ?? 0)
+        ? 'Try another search or clear your filters.'
+        : 'Register your first hotel partner to get started.'
+        }}
+      </p>
+      @if ($any(directory.summary()['totalRecords'] ?? 0)) {
+      <button
+        (click)="query.set(''); filter.set(''); loadHotels(0); loadHotels(0)"
+        class="secondary"
+      >
+        Clear filters
+      </button>
+      } @else {
+      <button (click)="openEditor()" class="primary">Register hotel</button>
+      }
+    </div>
     } @else {
-      <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable results">
-        <table>
-          <caption class="sr-only">
-            Hotel partners and management actions
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Hotel</th>
-              <th scope="col">Location</th>
-              <th scope="col">Star rating</th>
-              <th scope="col">Status</th>
-              <th scope="col">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (hotel of filtered(); track hotel.hotelId) {
-              <tr>
-                <td>
-                  <div class="hotel-name">
-                    <span class="hotel-icon" aria-hidden="true"><app-icon name="hotel" /></span>
-                    <div>
-                      <strong>{{ hotel.name }}</strong>
-                      <small>Partner #{{ hotel.hotelId }}</small>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  {{ hotel.city }}<small>{{ hotel.country }}</small>
-                </td>
-                <td><span class="stars" aria-hidden="true"><app-icon name="star" /></span> {{ hotel.starRating }} / 5</td>
-                <td>
+    <section aria-label="Scrollable results" class="table-scroll" tabindex="0">
+      <table>
+        <caption class="sr-only">
+          Hotel partners and management actions
+        </caption>
+        <thead>
+        <tr>
+          <th scope="col">Hotel</th>
+          <th scope="col">Location</th>
+          <th scope="col">Star rating</th>
+          <th scope="col">Status</th>
+          <th scope="col">Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        @for (hotel of filtered(); track hotel.hotelId) {
+        <tr>
+          <td>
+            <div class="hotel-name">
+              <span aria-hidden="true" class="hotel-icon"><app-icon name="hotel"/></span>
+              <div>
+                <strong>{{ hotel.name }}</strong>
+                <small>Partner #{{ hotel.hotelId }}</small>
+              </div>
+            </div>
+          </td>
+          <td>
+            {{ hotel.city }}<small>{{ hotel.country }}</small>
+          </td>
+          <td>
+            <span aria-hidden="true" class="stars"><app-icon name="star"/></span>
+            {{ hotel.starRating }} / 5
+          </td>
+          <td>
                   <span
-                    class="badge status-badge"
                     [attr.data-status]="hotel.status"
                     [class.inactive]="hotel.status === 'INACTIVE'"
-                    >{{ hotel.status === 'ACTIVE' ? 'Active' : 'Inactive' }}</span
+                    class="badge status-badge"
+                  >{{ hotel.status === 'ACTIVE' ? 'Active' : 'Inactive' }}</span
                   >
-                </td>
-                <td>
-                  <div class="actions">
-                    <button
-                      type="button"
-                      class="text-button"
-                      [attr.aria-label]="'Edit ' + hotel.name"
-                      (click)="openEditor(hotel)"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      class="text-button"
-                      [disabled]="statusBusy()"
-                      [attr.aria-label]="
+          </td>
+          <td>
+            <div class="actions">
+              <button
+                (click)="openEditor(hotel)"
+                [attr.aria-label]="'Edit ' + hotel.name"
+                class="text-button"
+                type="button"
+              >
+                Edit
+              </button>
+              <button
+                (click)="requestStatus(hotel)"
+                [attr.aria-label]="
                         (hotel.status === 'ACTIVE' ? 'Deactivate ' : 'Activate ') + hotel.name
                       "
-                      (click)="requestStatus(hotel)"
-                    >
-                      {{ hotel.status === 'ACTIVE' ? 'Deactivate' : 'Activate' }}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
+                [disabled]="statusBusy()"
+                class="text-button"
+                type="button"
+              >
+                {{ hotel.status === 'ACTIVE' ? 'Deactivate' : 'Activate' }}
+              </button>
+            </div>
+          </td>
+        </tr>
+        }
+        </tbody>
+      </table>
+    </section>
     }
   </div>
 </section>
 
 <app-pagination
-  [page]="directory.page()"
-  [totalPages]="directory.totalPages()"
-  [totalElements]="directory.totalElements()"
-  [loading]="loading()"
   (pageChange)="loadHotels($event)"
+  [loading]="loading()"
+  [page]="directory.page()"
+  [totalElements]="directory.totalElements()"
+  [totalPages]="directory.totalPages()"
 />
 <dialog
   #editor
-  aria-labelledby="editor-title"
   (cancel)="saving() ? $event.preventDefault() : closeEditor()"
+  aria-labelledby="editor-title"
 >
   <app-hotel-form
+    (cancelled)="closeEditor()"
+    (submitted)="save($event)"
     [busy]="saving()"
     [error]="submissionError()"
-    (submitted)="save($event)"
-    (cancelled)="closeEditor()"
   />
 </dialog>
 <dialog
   #confirmation
-  aria-labelledby="status-title"
-  aria-describedby="status-description"
   (cancel)="statusBusy() ? $event.preventDefault() : closeStatus()"
+  aria-describedby="status-description"
+  aria-labelledby="status-title"
 >
   <div class="confirmation">
     <h2 id="status-title">
@@ -208,29 +211,29 @@
     </p>
     <p id="status-description">
       {{
-        statusTarget()?.status === 'ACTIVE'
-          ? 'Deactivation prevents new sales but does not cancel existing reservations.'
-          : 'Activation makes this hotel available for new sales.'
+      statusTarget()?.status === 'ACTIVE'
+      ? 'Deactivation prevents new sales but does not cancel existing reservations.'
+      : 'Activation makes this hotel available for new sales.'
       }}
     </p>
     @if (statusError()) {
-      <p class="error-message" role="alert">{{ statusError() }}</p>
+    <p class="error-message" role="alert">{{ statusError() }}</p>
     }
     <div class="actions">
-      <button type="button" class="secondary" [disabled]="statusBusy()" (click)="closeStatus()">
+      <button (click)="closeStatus()" [disabled]="statusBusy()" class="secondary" type="button">
         Cancel
       </button>
       <button
-        type="button"
-        class="primary"
+        (click)="changeStatus()"
         [class.danger]="statusTarget()?.status === 'ACTIVE'"
         [disabled]="statusBusy()"
-        (click)="changeStatus()"
+        class="primary"
+        type="button"
       >
         {{
-          statusBusy()
-            ? 'Updating...'
-            : 'Confirm ' + (statusTarget()?.status === 'ACTIVE' ? 'deactivation' : 'activation')
+        statusBusy()
+        ? 'Updating...'
+        : 'Confirm ' + (statusTarget()?.status === 'ACTIVE' ? 'deactivation' : 'activation')
         }}
       </button>
     </div>

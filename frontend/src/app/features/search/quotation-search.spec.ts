@@ -9,6 +9,7 @@ import {
   SearchLimits,
   UnavailableAccommodation,
 } from '../../models/quotation.model';
+
 const api = '/api';
 const limits: SearchLimits = {
   businessDate: '2026-10-15',

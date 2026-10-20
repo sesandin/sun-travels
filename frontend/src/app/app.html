@@ -1,142 +1,142 @@
 @if (auth.user(); as user) {
-  <a class="skip-link" href="#main-content" [inert]="mobileNavigation() && menuOpen()"
-    >Skip to content</a
+<a [inert]="mobileNavigation() && menuOpen()" class="skip-link" href="#main-content"
+>Skip to content</a
+>
+<div (keydown.escape)="closeNavigation(true)" class="app-shell">
+  <aside
+    #navigation
+    [class.open]="menuOpen()"
+    [inert]="mobileNavigation() && !menuOpen()"
+    class="sidebar"
+    id="main-navigation"
   >
-  <div class="app-shell" (keydown.escape)="closeNavigation(true)">
-    <aside
-      #navigation
-      class="sidebar"
-      [class.open]="menuOpen()"
-      id="main-navigation"
-      [inert]="mobileNavigation() && !menuOpen()"
+    <button
+      (click)="closeNavigation(true)"
+      aria-label="Close menu"
+      class="close-navigation"
+      type="button"
     >
-      <button
-        type="button"
-        class="close-navigation"
-        aria-label="Close navigation"
-        (click)="closeNavigation(true)"
-      >
-        Close menu <span aria-hidden="true"><app-icon name="close" /></span>
-      </button>
+      Close menu <span aria-hidden="true"><app-icon name="close"/></span>
+    </button>
+    <a
+      (click)="closeNavigation()"
+      [routerLink]="user.role === 'ADMIN' ? '/hotels' : '/search'"
+      aria-label="Sun Travels home"
+      class="brand"
+    >
+      <span aria-hidden="true" class="brand-mark"><app-icon name="sun"/></span>
+      <span>Sun Travels<small>STAFF WORKSPACE</small> </span>
+    </a>
+    <p class="nav-label">WORKSPACE</p>
+    <nav aria-label="Main navigation">
+      @if (user.role === 'ADMIN') {
       <a
-        class="brand"
-        [routerLink]="user.role === 'ADMIN' ? '/hotels' : '/search'"
         (click)="closeNavigation()"
-        aria-label="Sun Travels home"
+        ariaCurrentWhenActive="page"
+        routerLink="/hotels"
+        routerLinkActive="selected"
       >
-        <span class="brand-mark" aria-hidden="true"><app-icon name="sun" /></span>
-        <span>Sun Travels<small>STAFF WORKSPACE</small> </span>
-      </a>
-      <p class="nav-label">WORKSPACE</p>
-      <nav aria-label="Main navigation">
-        @if (user.role === 'ADMIN') {
-          <a
-            routerLink="/hotels"
-            routerLinkActive="selected"
-            ariaCurrentWhenActive="page"
-            (click)="closeNavigation()"
-          >
-            <span aria-hidden="true"><app-icon name="hotel" /></span> Hotels</a
-          >
-          <a
-            routerLink="/contracts"
-            routerLinkActive="selected"
-            ariaCurrentWhenActive="page"
-            (click)="closeNavigation()"
-          >
-            <span aria-hidden="true"><app-icon name="contract" /></span> Contracts</a
-          >
-          <a
-            routerLink="/room-types"
-            routerLinkActive="selected"
-            ariaCurrentWhenActive="page"
-            (click)="closeNavigation()"
-          >
-            <span aria-hidden="true"><app-icon name="bed" /></span> Room Types</a
-          >
-        }
-        <a
-          routerLink="/search"
-          routerLinkActive="selected"
-          ariaCurrentWhenActive="page"
-          (click)="closeNavigation()"
-        >
-          <span aria-hidden="true"><app-icon name="search" /></span> Search &amp; Quotations</a
-        >
-        <a
-          routerLink="/customers"
-          routerLinkActive="selected"
-          ariaCurrentWhenActive="page"
-          (click)="closeNavigation()"
-        >
-          <span aria-hidden="true"><app-icon name="customers" /></span> Customers</a
-        >
-        <a
-          routerLink="/reservations"
-          routerLinkActive="selected"
-          ariaCurrentWhenActive="page"
-          (click)="closeNavigation()"
-        >
-          <span aria-hidden="true"><app-icon name="reservation" /></span> Reservations</a
-        >
-      </nav>
-      <div class="sidebar-note">
-        <span aria-hidden="true"><app-icon name="sun" /></span>
-        <strong>Great journeys start here.</strong>
-        <p>Serve hotel partners and travellers with confidence.</p>
-      </div>
-      <div class="sidebar-footer">
-        Sun Travels · {{ user.role === 'ADMIN' ? 'Administration' : 'Reservations' }}
-      </div>
-    </aside>
-    @if (menuOpen()) {
+        <span aria-hidden="true"><app-icon name="hotel"/></span> Hotels</a
+      >
+      <a
+        (click)="closeNavigation()"
+        ariaCurrentWhenActive="page"
+        routerLink="/contracts"
+        routerLinkActive="selected"
+      >
+        <span aria-hidden="true"><app-icon name="contract"/></span> Contracts</a
+      >
+      <a
+        (click)="closeNavigation()"
+        ariaCurrentWhenActive="page"
+        routerLink="/room-types"
+        routerLinkActive="selected"
+      >
+        <span aria-hidden="true"><app-icon name="bed"/></span> Room Types</a
+      >
+      }
+      <a
+        (click)="closeNavigation()"
+        ariaCurrentWhenActive="page"
+        routerLink="/search"
+        routerLinkActive="selected"
+      >
+        <span aria-hidden="true"><app-icon name="search"/></span> Search &amp; Quotations</a
+      >
+      <a
+        (click)="closeNavigation()"
+        ariaCurrentWhenActive="page"
+        routerLink="/customers"
+        routerLinkActive="selected"
+      >
+        <span aria-hidden="true"><app-icon name="customers"/></span> Customers</a
+      >
+      <a
+        (click)="closeNavigation()"
+        ariaCurrentWhenActive="page"
+        routerLink="/reservations"
+        routerLinkActive="selected"
+      >
+        <span aria-hidden="true"><app-icon name="reservation"/></span> Reservations</a
+      >
+    </nav>
+    <div class="sidebar-note">
+      <span aria-hidden="true"><app-icon name="sun"/></span>
+      <strong>Great journeys start here.</strong>
+      <p>Serve hotel partners and travellers with confidence.</p>
+    </div>
+    <div class="sidebar-footer">
+      Sun Travels · {{ user.role === 'ADMIN' ? 'Administration' : 'Reservations' }}
+    </div>
+  </aside>
+  @if (menuOpen()) {
+  <button
+    (click)="closeNavigation(true)"
+    aria-label="Close navigation"
+    class="scrim"
+    type="button"
+  ></button>
+  }
+  <div [inert]="mobileNavigation() && menuOpen()" class="workspace">
+    <header class="topbar">
       <button
-        class="scrim"
+        #navigationToggle
+        (click)="toggleNavigation()"
+        [attr.aria-expanded]="menuOpen()"
+        aria-controls="main-navigation"
+        aria-label="Toggle navigation"
+        class="menu-button"
         type="button"
-        aria-label="Close navigation"
-        (click)="closeNavigation(true)"
-      ></button>
-    }
-    <div class="workspace" [inert]="mobileNavigation() && menuOpen()">
-      <header class="topbar">
-        <button
-          type="button"
-          class="menu-button"
-          #navigationToggle
-          aria-label="Toggle navigation"
-          aria-controls="main-navigation"
-          [attr.aria-expanded]="menuOpen()"
-          (click)="toggleNavigation()"
-        >
-          <app-icon name="menu" />
-        </button>
-        <div class="breadcrumb">
-          Workspace <span aria-hidden="true">/</span>
-          <strong>{{ pageTitle() }}</strong>
-        </div>
-        <div class="account">
+      >
+        <app-icon name="menu"/>
+      </button>
+      <div class="breadcrumb">
+        Workspace <span aria-hidden="true">/</span>
+        <strong>{{ pageTitle() }}</strong>
+      </div>
+      <div class="account">
           <span>
             <strong>{{ user.fullName }}</strong>
             <small>{{ user.role }}</small>
           </span>
-          <button type="button" class="secondary" (click)="logout()" [disabled]="loggingOut()">
-            {{ loggingOut() ? 'Signing out...' : 'Sign out' }}
-          </button>
-        </div>
-      </header>
-      <main id="main-content" tabindex="-1">
-        @if (router.url.includes('forbidden=1')) {
-          <p class="error-message" role="alert">
-            You do not have permission to open that administration page.
-          </p>
-        }
-        <router-outlet />
-      </main>
-      <footer class="page-footer">
-        Sun Travels <span>Hotel contract &amp; accommodation management</span>
-      </footer>
-    </div>
+        <button (click)="logout()" [disabled]="loggingOut()" class="secondary" type="button">
+          {{ loggingOut() ? 'Signing out...' : 'Sign out' }}
+        </button>
+      </div>
+    </header>
+    <main id="main-content" tabindex="-1">
+      @if (router.url.includes('forbidden=1')) {
+      <p class="error-message" role="alert">
+        You do not have permission to open that administration page.
+      </p>
+      }
+      <router-outlet/>
+    </main>
+    <footer class="page-footer">
+      Sun Travels <span>Hotel contract &amp; accommodation management</span>
+    </footer>
   </div>
+</div>
 } @else {
-  <router-outlet />
+<router-outlet/>
 }

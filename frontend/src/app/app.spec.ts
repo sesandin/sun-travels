@@ -6,9 +6,10 @@ import { QuotationSearch } from './features/search/quotation-search';
 import { ContractList } from './features/contracts/contract-list';
 import { routes } from './app.routes';
 import { adminGuard } from './auth.guards';
-import { Router, provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { App } from './app';
 import { AuthState } from './services/auth-state';
+
 const admin = { userId: 1, username: 'admin01', fullName: 'Administrator', role: 'ADMIN' as const };
 describe('App', () => {
   it('removes the standalone offering route and keeps Contracts admin-only', () => {
@@ -55,11 +56,7 @@ describe('App', () => {
   it('activates Contracts navigation and closes the mobile menu', async () => {
     await TestBed.configureTestingModule({
       imports: [App],
-      providers: [
-        provideRouter(routes),
-        provideHttpClient(),
-        provideHttpClientTesting(),
-      ],
+      providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()],
     }).compileComponents();
     const fixture = TestBed.createComponent(App);
     TestBed.inject(AuthState).setUser(admin);
@@ -71,9 +68,7 @@ describe('App', () => {
     http.expectOne('/api/hotels').flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
-    const link: HTMLAnchorElement = fixture.nativeElement.querySelector(
-      'nav a[href="/contracts"]',
-    );
+    const link: HTMLAnchorElement = fixture.nativeElement.querySelector('nav a[href="/contracts"]');
     expect(link.classList.contains('selected')).toBe(true);
     expect(link.getAttribute('aria-current')).toBe('page');
     fixture.componentInstance.menuOpen.set(true);

@@ -3,7 +3,8 @@ package com.suntravels.dto;
 import java.io.Serial;
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.time.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -25,16 +26,20 @@ public record ReservationResponse(
         BigDecimal totalPrice,
         List<Item> rooms,
         List<OperationalWarning> warnings
-) {
+)
+{
     // Initializes the reservation response and its required dependencies.
-    public ReservationResponse(int reservationId, int customerId, String customerName, String phone,
+    public ReservationResponse(
+            int reservationId, int customerId, String customerName, String phone,
             String email, LocalDate checkIn, LocalDate checkOut, long nights, String status,
-            LocalDateTime createdAt, String currencyCode, BigDecimal totalPrice, List<Item> rooms) {
-        this(reservationId, customerId, customerName, phone, email, checkIn, checkOut, nights, status,
-                createdAt, currencyCode, totalPrice, rooms, List.of());
+            LocalDateTime createdAt, String currencyCode, BigDecimal totalPrice, List<Item> rooms )
+    {
+        this( reservationId, customerId, customerName, phone, email, checkIn, checkOut, nights, status,
+                createdAt, currencyCode, totalPrice, rooms, List.of() );
     }
 
-    public enum WarningCode {
+    public enum WarningCode
+    {
         HOTEL_INACTIVE,
         CONTRACT_SUSPENDED,
         OFFERING_SUSPENDED
@@ -48,17 +53,20 @@ public record ReservationResponse(
             Integer contractId,
             Integer offeringId,
             String roomTypeName
-    ) {
+    )
+    {
         // Initializes the reservation response and its required dependencies.
-        public OperationalWarning(int hotelId, String hotelName, WarningCode code, String message) {
-            this(hotelId, hotelName, code, message, null, null, null);
+        public OperationalWarning( int hotelId, String hotelName, WarningCode code, String message )
+        {
+            this( hotelId, hotelName, code, message, null, null, null );
         }
     }
 
     public record Night(
             LocalDate occupiedDate,
             BigDecimal sellingPrice
-    ) implements Serializable {
+    ) implements Serializable
+    {
         @Serial
         private static final long serialVersionUID = 1L;
     }
@@ -68,7 +76,8 @@ public record ReservationResponse(
             BigDecimal sellingPrice,
             BigDecimal bookedRatePerAdult,
             BigDecimal bookedMarkupPercentage
-    ) {
+    )
+    {
     }
 
     public record Item(
@@ -81,7 +90,8 @@ public record ReservationResponse(
             int adults,
             BigDecimal totalPrice,
             List<BookedNight> nightlyPrices
-    ) {
+    )
+    {
     }
 
     public record Page(
@@ -89,7 +99,8 @@ public record ReservationResponse(
             int page,
             int size,
             long totalElements
-    ) {
+    )
+    {
     }
 
     public record Quote(
@@ -102,7 +113,8 @@ public record ReservationResponse(
             String currencyCode,
             BigDecimal totalPrice,
             List<QuotedRoom> rooms
-    ) implements Serializable {
+    ) implements Serializable
+    {
         @Serial
         private static final long serialVersionUID = 1L;
     }
@@ -113,7 +125,8 @@ public record ReservationResponse(
             int adults,
             BigDecimal totalPrice,
             List<Night> nightlyPrices
-    ) implements Serializable {
+    ) implements Serializable
+    {
         @Serial
         private static final long serialVersionUID = 1L;
     }

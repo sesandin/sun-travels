@@ -5,157 +5,161 @@
     <p>Manage hotel agreements and commercial terms.</p>
   </div>
   <button
-    type="button"
-    class="primary"
     (click)="openEditor()"
     [disabled]="saving() || detailsLoading()"
+    class="primary"
+    type="button"
   >
     Create contract
   </button>
 </header>
 @if (linkError()) {
-  <p role="alert" class="error-message">{{ linkError() }}</p>
+<p class="error-message" role="alert">{{ linkError() }}</p>
 }
 @if (notice()) {
-  <p class="success-message">
-    <output>{{ notice() }}</output>
-  </p>
+<p class="success-message">
+  <output>{{ notice() }}</output>
+</p>
 }
-<section class="list-panel" aria-label="Contract directory">
+<section aria-label="Contract directory" class="list-panel">
   <div class="panel-heading">
     <div>
       <h2>Contract Directory</h2>
       <p>{{ $any(directory.summary()['totalRecords'] ?? 0) }} agreements</p>
     </div>
-    <button type="button" (click)="loadContracts()" [disabled]="loading()">Refresh</button>
+    <button (click)="loadContracts()" [disabled]="loading()" type="button">Refresh</button>
   </div>
   <div class="filters">
     <div>
       <label for="contract-search">Search contracts</label>
       <input
-        id="contract-search"
-        type="search"
-        placeholder="Contract code, hotel or currency"
-        [value]="query()"
         (input)="query.set($any($event.target).value); loadContracts(0)"
+        [value]="query()"
+        id="contract-search"
+        placeholder="Contract code, hotel or currency"
+        type="search"
       />
     </div>
     <div>
       <label for="contract-status">Status</label>
       <select
-        id="contract-status"
-        [value]="statusFilter()"
         (change)="statusFilter.set($any($event.target).value); loadContracts(0)"
+        [value]="statusFilter()"
+        id="contract-status"
       >
         <option value="">All statuses</option>
         @for (status of statuses; track status) {
-          <option [value]="status">{{ status }}</option>
+        <option [value]="status">{{ status }}</option>
         }
       </select>
     </div>
   </div>
   @if (loading()) {
-    <div class="state"><output>Loading contracts...</output></div>
+  <div class="state">
+    <output>Loading contracts...</output>
+  </div>
   } @else if (error()) {
-    <div class="state" role="alert">
-      <p class="error-message">{{ error() }}</p>
-      <button type="button" (click)="loadContracts()">Try again</button>
-    </div>
+  <div class="state" role="alert">
+    <p class="error-message">{{ error() }}</p>
+    <button (click)="loadContracts()" type="button">Try again</button>
+  </div>
   } @else if (!$any(directory.summary()['totalRecords'] ?? 0)) {
-    <div class="state">
-      <h2>No Contracts Yet</h2>
-      <p>Create a DRAFT agreement to get started.</p>
-    </div>
+  <div class="state">
+    <h2>No Contracts Yet</h2>
+    <p>Create a DRAFT agreement to get started.</p>
+  </div>
   } @else if (!filtered().length) {
-    <div class="state">No matching contracts</div>
+  <div class="state">No matching contracts</div>
   } @else {
-    <div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable results">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">Contract / Hotel</th>
-            <th scope="col">Validity (inclusive)</th>
-            <th scope="col">Markup</th>
-            <th scope="col">Currency</th>
-            <th scope="col">Status</th>
-            <th scope="col">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of filtered(); track row.contractId) {
-            <tr>
-              <td>
-                <strong>{{ row.contractCode }}</strong>
-                <small>{{ row.hotelName }}</small>
-              </td>
-              <td>{{ row.validFrom }} to {{ row.validTo }}</td>
-              <td>{{ row.markupPercentage }}%</td>
-              <td>{{ row.currencyCode }}</td>
-              <td>
-                <span class="badge status-badge" [attr.data-status]="row.status">{{
+  <section aria-label="Scrollable results" class="table-scroll" tabindex="0">
+    <table>
+      <thead>
+      <tr>
+        <th scope="col">Contract / Hotel</th>
+        <th scope="col">Validity (inclusive)</th>
+        <th scope="col">Markup</th>
+        <th scope="col">Currency</th>
+        <th scope="col">Status</th>
+        <th scope="col">Actions</th>
+      </tr>
+      </thead>
+      <tbody>
+      @for (row of filtered(); track row.contractId) {
+      <tr>
+        <td>
+          <strong>{{ row.contractCode }}</strong>
+          <small>{{ row.hotelName }}</small>
+        </td>
+        <td>{{ row.validFrom }} to {{ row.validTo }}</td>
+        <td>{{ row.markupPercentage }}%</td>
+        <td>{{ row.currencyCode }}</td>
+        <td>
+                <span [attr.data-status]="row.status" class="badge status-badge">{{
                   row.status
                 }}</span>
-                @if (isExpired(row.validTo)) {
-                  <span class="badge expired-badge">Expired</span>
-                }
-              </td>
-              <td>
-                <div class="actions">
-                  <button
-                    type="button"
-                    class="text-button"
-                    (click)="showDetails(row)"
-                    [disabled]="saving() || detailsLoading()"
-                  >
-                    Details
-                  </button>
-                  @if (row.status === 'DRAFT' || (row.status === 'APPROVED' && !isExpired(row.validTo))) {
-                    <button
-                      type="button"
-                      class="text-button"
-                      (click)="openEditor(row)"
-                      [disabled]="saving() || detailsLoading()"
-                    >
-                      {{ row.status === 'DRAFT' ? 'Edit' : 'Edit markup' }}
-                    </button>
-                  }
-                  @if (row.status === 'DRAFT' || row.status === 'SUSPENDED') {
-                    <button
-                      type="button"
-                      class="text-button"
-                      (click)="confirmAction(row, row.status === 'DRAFT' ? 'approve' : 'reapprove')"
-                      [disabled]="saving() || detailsLoading()"
-                    >
-                      {{ row.status === 'DRAFT' ? 'Approve' : 'Reapprove' }}
-                    </button>
-                  }
-                  @if (row.status === 'APPROVED' && !isExpired(row.validTo)) {
-                    <button
-                      type="button"
-                      class="text-button"
-                      (click)="confirmAction(row, 'suspend')"
-                      [disabled]="saving() || detailsLoading()"
-                    >
-                      Suspend
-                    </button>
-                  }
-                  @if (row.status !== 'TERMINATED' && !isExpired(row.validTo)) {
-                    <button
-                      type="button"
-                      class="text-button"
-                      (click)="confirmAction(row, 'terminate')"
-                      [disabled]="saving() || detailsLoading()"
-                    >
-                      Terminate
-                    </button>
-                  }
-                </div>
-              </td>
-            </tr>
+          @if (isExpired(row.validTo)) {
+          <span class="badge expired-badge">Expired</span>
           }
-        </tbody>
-      </table>
-    </div>
+        </td>
+        <td>
+          <div class="actions">
+            <button
+              (click)="showDetails(row)"
+              [disabled]="saving() || detailsLoading()"
+              class="text-button"
+              type="button"
+            >
+              Details
+            </button>
+            @if (
+            row.status === 'DRAFT' || (row.status === 'APPROVED' && !isExpired(row.validTo))
+            ) {
+            <button
+              (click)="openEditor(row)"
+              [disabled]="saving() || detailsLoading()"
+              class="text-button"
+              type="button"
+            >
+              {{ row.status === 'DRAFT' ? 'Edit' : 'Edit markup' }}
+            </button>
+            }
+            @if (row.status === 'DRAFT' || row.status === 'SUSPENDED') {
+            <button
+              (click)="confirmAction(row, row.status === 'DRAFT' ? 'approve' : 'reapprove')"
+              [disabled]="saving() || detailsLoading()"
+              class="text-button"
+              type="button"
+            >
+              {{ row.status === 'DRAFT' ? 'Approve' : 'Reapprove' }}
+            </button>
+            }
+            @if (row.status === 'APPROVED' && !isExpired(row.validTo)) {
+            <button
+              (click)="confirmAction(row, 'suspend')"
+              [disabled]="saving() || detailsLoading()"
+              class="text-button"
+              type="button"
+            >
+              Suspend
+            </button>
+            }
+            @if (row.status !== 'TERMINATED' && !isExpired(row.validTo)) {
+            <button
+              (click)="confirmAction(row, 'terminate')"
+              [disabled]="saving() || detailsLoading()"
+              class="text-button"
+              type="button"
+            >
+              Terminate
+            </button>
+            }
+          </div>
+        </td>
+      </tr>
+      }
+      </tbody>
+    </table>
+  </section>
   }
 </section>
 <p class="availability">
@@ -165,227 +169,231 @@
 </p>
 
 <app-pagination
-  [page]="directory.page()"
-  [totalPages]="directory.totalPages()"
-  [totalElements]="directory.totalElements()"
-  [loading]="loading()"
   (pageChange)="loadContracts($event)"
+  [loading]="loading()"
+  [page]="directory.page()"
+  [totalElements]="directory.totalElements()"
+  [totalPages]="directory.totalPages()"
 />
 @if (mode()) {
-  <section #editor tabindex="-1" class="list-panel editor" aria-labelledby="editor-title">
-    <h2 id="editor-title">
-      {{
-        mode() === 'create'
-          ? 'Create Contract'
-          : mode() === 'edit'
-            ? 'Edit DRAFT Contract'
-            : mode() === 'markup'
-              ? 'Edit Approved Markup'
-              : mode() === 'details'
-                ? 'Contract Details'
-                : mode() === 'approve'
-                  ? 'Approve Contract'
-                  : mode() === 'reapprove'
-                    ? 'Reapprove Contract'
-                    : mode() === 'suspend'
-                      ? 'Suspend Contract'
-                      : 'Terminate Contract'
-      }}
-    </h2>
-    @if (mode() === 'create') {
-      <p>New contracts start as DRAFT. Open contract details to add room offerings.</p>
-    }
-    @if (submissionError()) {
-      <p role="alert" class="error-message">{{ submissionError() }}</p>
-    }
-    @if (mode() === 'create' || mode() === 'edit') {
-      @if (hotelsLoading()) {
-        <p><output>Loading hotels...</output></p>
-      }
-      @if (hotelError()) {
-        <p role="alert" class="error-message">{{ hotelError() }}</p>
-        <button type="button" (click)="loadHotels()">Retry hotels</button>
-      }
-      @if (!hotelsLoading() && !hotelError() && !hotels().length) {
-        <p>No hotels available. Register a hotel first.</p>
-      }
-      <form [formGroup]="form" (ngSubmit)="save()">
-        <fieldset [disabled]="saving()">
-          <div class="form-grid">
-            @if (mode() === 'edit') {
-              <div>
-                <span>Contract code</span>
-                <p>{{ selected()?.contractCode }}</p>
-              </div>
+<section #editor aria-labelledby="editor-title" class="list-panel editor" tabindex="-1">
+  <h2 id="editor-title">
+    {{
+    mode() === 'create'
+    ? 'Create Contract'
+    : mode() === 'edit'
+    ? 'Edit DRAFT Contract'
+    : mode() === 'markup'
+    ? 'Edit Approved Markup'
+    : mode() === 'details'
+    ? 'Contract Details'
+    : mode() === 'approve'
+    ? 'Approve Contract'
+    : mode() === 'reapprove'
+    ? 'Reapprove Contract'
+    : mode() === 'suspend'
+    ? 'Suspend Contract'
+    : 'Terminate Contract'
+    }}
+  </h2>
+  @if (mode() === 'create') {
+  <p>New contracts start as DRAFT. Open contract details to add room offerings.</p>
+  }
+  @if (submissionError()) {
+  <p class="error-message" role="alert">{{ submissionError() }}</p>
+  }
+  @if (mode() === 'create' || mode() === 'edit') {
+  @if (hotelsLoading()) {
+  <p>
+    <output>Loading hotels...</output>
+  </p>
+  }
+  @if (hotelError()) {
+  <p class="error-message" role="alert">{{ hotelError() }}</p>
+  <button (click)="loadHotels()" type="button">Retry hotels</button>
+  }
+  @if (!hotelsLoading() && !hotelError() && !hotels().length) {
+  <p>No hotels available. Register a hotel first.</p>
+  }
+  <form (ngSubmit)="save()" [formGroup]="form">
+    <fieldset [disabled]="saving()">
+      <div class="form-grid">
+        @if (mode() === 'edit') {
+        <div>
+          <span>Contract code</span>
+          <p>{{ selected()?.contractCode }}</p>
+        </div>
+        }
+        <div>
+          <label for="hotel">Hotel</label>
+          <select formControlName="hotelId" id="hotel">
+            <option [ngValue]="null">Select a hotel</option>
+            @for (hotel of hotels(); track hotel.hotelId) {
+            <option [ngValue]="hotel.hotelId">{{ hotel.name }}</option>
             }
-            <div>
-              <label for="hotel">Hotel</label>
-              <select id="hotel" formControlName="hotelId">
-                <option [ngValue]="null">Select a hotel</option>
-                @for (hotel of hotels(); track hotel.hotelId) {
-                  <option [ngValue]="hotel.hotelId">{{ hotel.name }}</option>
-                }
-              </select>
-              @if (form.controls.hotelId.touched && form.controls.hotelId.invalid) {
-                <p class="field-error">Select a hotel.</p>
-              }
-            </div>
-            <div>
-              <label for="from">Valid from</label>
-              <input id="from" type="date" formControlName="validFrom" />
-              @if (form.controls.validFrom.touched && form.controls.validFrom.invalid) {
-                <p class="field-error">Choose a start date.</p>
-              }
-            </div>
-            <div>
-              <label for="to">Valid to</label>
-              <input id="to" type="date" formControlName="validTo" />
-              @if (form.controls.validTo.touched && form.controls.validTo.invalid) {
-                <p class="field-error">Choose an end date.</p>
-              }
-            </div>
-            <div>
-              <label for="markup">Markup percentage</label>
-              <input
-                id="markup"
-                type="number"
-                min="0"
-                max="999.99"
-                step="0.01"
-                formControlName="markupPercentage"
-              />
-              <small>15 means 15%.</small>
-              @if (
-                form.controls.markupPercentage.touched && form.controls.markupPercentage.invalid
-              ) {
-                <p class="field-error">Use 0 to 999.99 with at most two decimal places.</p>
-              }
-            </div>
-            <div>
-              <label for="currency">Currency code</label>
-              <input id="currency" formControlName="currencyCode" maxlength="3" placeholder="USD" />
-              @if (form.controls.currencyCode.touched && form.controls.currencyCode.invalid) {
-                <p class="field-error">Use three uppercase letters.</p>
-              }
-            </div>
-          </div>
-          @if (form.touched && form.hasError('dateRange')) {
-            <p class="field-error">Valid from must not be later than valid to.</p>
+          </select>
+          @if (form.controls.hotelId.touched && form.controls.hotelId.invalid) {
+          <p class="field-error">Select a hotel.</p>
           }
-          <div class="actions">
-            <button type="button" (click)="closeEditor()">Cancel</button>
-            <button
-              class="primary"
-              type="submit"
-              [disabled]="saving() || hotelsLoading() || !!hotelError() || !hotels().length"
-            >
-              {{ saving() ? 'Saving...' : 'Save contract' }}
-            </button>
-          </div>
-        </fieldset>
-      </form>
-    } @else if (mode() === 'markup') {
-      <p>
-        {{ selected()?.contractCode }} - Header details are locked. Existing confirmed prices remain
-        unchanged.
-      </p>
-      <form [formGroup]="markupForm" (ngSubmit)="save()">
-        <fieldset [disabled]="saving()">
-          <label for="approved-markup">Markup percentage</label>
+        </div>
+        <div>
+          <label for="from">Valid from</label>
+          <input formControlName="validFrom" id="from" type="date"/>
+          @if (form.controls.validFrom.touched && form.controls.validFrom.invalid) {
+          <p class="field-error">Choose a start date.</p>
+          }
+        </div>
+        <div>
+          <label for="to">Valid to</label>
+          <input formControlName="validTo" id="to" type="date"/>
+          @if (form.controls.validTo.touched && form.controls.validTo.invalid) {
+          <p class="field-error">Choose an end date.</p>
+          }
+        </div>
+        <div>
+          <label for="markup">Markup percentage</label>
           <input
-            id="approved-markup"
-            type="number"
-            min="0"
-            max="999.99"
-            step="0.01"
             formControlName="markupPercentage"
+            id="markup"
+            max="999.99"
+            min="0"
+            step="0.01"
+            type="number"
           />
-          @if (markupForm.touched && markupForm.invalid) {
-            <p class="field-error">Use 0 to 999.99 with at most two decimal places.</p>
+          <small>15 means 15%.</small>
+          @if (
+          form.controls.markupPercentage.touched && form.controls.markupPercentage.invalid
+          ) {
+          <p class="field-error">Use 0 to 999.99 with at most two decimal places.</p>
           }
-          <div class="actions">
-            <button type="button" (click)="closeEditor()">Cancel</button>
-            <button class="primary" type="submit">
-              {{ saving() ? 'Saving...' : 'Save markup' }}
-            </button>
-          </div>
-        </fieldset>
-      </form>
-    } @else if (mode() === 'details') {
-      @if (detailsLoading()) {
-        <p><output>Loading contract details...</output></p>
-      } @else if (!submissionError()) {
-        <dl>
-          <dt>Contract code</dt>
-          <dd>{{ selected()?.contractCode }}</dd>
-          <dt>Hotel</dt>
-          <dd>{{ selected()?.hotelName }}</dd>
-          <dt>Validity</dt>
-          <dd>{{ selected()?.validFrom }} to {{ selected()?.validTo }} (inclusive)</dd>
-          <dt>Markup</dt>
-          <dd>{{ selected()?.markupPercentage }}%</dd>
-          <dt>Currency</dt>
-          <dd>{{ selected()?.currencyCode }}</dd>
-          <dt>Status</dt>
-          <dd>
-            {{ selected()?.status }}
-            @if (selected(); as contract) {
-              @if (isExpired(contract.validTo)) {
-                <span class="badge expired-badge">Expired</span>
-              }
-            }
-          </dd>
-        </dl>
-        @if (selected(); as contract) {
-          <app-offering-panel [contract]="contract" [focusOfferingId]="linkedOffering()" />
-        }
-      }
-      <div class="actions details-actions">
-        @if (!detailsLoading() && !submissionError() && selected(); as contract) {
-          @if (contract.status === 'DRAFT' || contract.status === 'SUSPENDED') {
-            <button
-              type="button"
-              class="primary"
-              (click)="
-                confirmAction(contract, contract.status === 'DRAFT' ? 'approve' : 'reapprove')
-              "
-              [disabled]="saving()"
-            >
-              {{ contract.status === 'DRAFT' ? 'Approve' : 'Reapprove' }}
-            </button>
+        </div>
+        <div>
+          <label for="currency">Currency code</label>
+          <input formControlName="currencyCode" id="currency" maxlength="3" placeholder="USD"/>
+          @if (form.controls.currencyCode.touched && form.controls.currencyCode.invalid) {
+          <p class="field-error">Use three uppercase letters.</p>
           }
-        }
-        <button type="button" (click)="closeEditor()" [disabled]="detailsLoading()">Close</button>
+        </div>
       </div>
-    } @else {
-      <p>
-        {{
-          mode() === 'terminate'
-            ? 'Termination is permanent and requires no outstanding confirmed stays.'
-            : mode() === 'suspend'
-              ? 'Suspension stops new sales and preserves existing room commitments and booked prices.'
-              : 'Before approving, check that the contract dates, room rates and allocated rooms are correct.'
-        }}
-        Existing confirmed reservations will remain unchanged.
-      </p>
-      <p>
-        {{
-          mode() === 'approve'
-            ? 'Approve contract'
-            : mode() === 'reapprove'
-              ? 'Reapprove contract'
-              : mode() === 'suspend'
-                ? 'Suspend contract'
-                : 'Terminate contract'
-        }}
-        {{ selected()?.contractCode }}?
-      </p>
+      @if (form.touched && form.hasError('dateRange')) {
+      <p class="field-error">Valid from must not be later than valid to.</p>
+      }
       <div class="actions">
-        <button type="button" (click)="closeEditor()" [disabled]="saving()">Cancel</button>
-        <button type="button" class="primary" (click)="save()" [disabled]="saving()">
-          {{ saving() ? 'Saving...' : 'Confirm' }}
+        <button (click)="closeEditor()" type="button">Cancel</button>
+        <button
+          [disabled]="saving() || hotelsLoading() || !!hotelError() || !hotels().length"
+          class="primary"
+          type="submit"
+        >
+          {{ saving() ? 'Saving...' : 'Save contract' }}
         </button>
       </div>
+    </fieldset>
+  </form>
+  } @else if (mode() === 'markup') {
+  <p>
+    {{ selected()?.contractCode }} - Header details are locked. Existing confirmed prices remain
+    unchanged.
+  </p>
+  <form (ngSubmit)="save()" [formGroup]="markupForm">
+    <fieldset [disabled]="saving()">
+      <label for="approved-markup">Markup percentage</label>
+      <input
+        formControlName="markupPercentage"
+        id="approved-markup"
+        max="999.99"
+        min="0"
+        step="0.01"
+        type="number"
+      />
+      @if (markupForm.touched && markupForm.invalid) {
+      <p class="field-error">Use 0 to 999.99 with at most two decimal places.</p>
+      }
+      <div class="actions">
+        <button (click)="closeEditor()" type="button">Cancel</button>
+        <button class="primary" type="submit">
+          {{ saving() ? 'Saving...' : 'Save markup' }}
+        </button>
+      </div>
+    </fieldset>
+  </form>
+  } @else if (mode() === 'details') {
+  @if (detailsLoading()) {
+  <p>
+    <output>Loading contract details...</output>
+  </p>
+  } @else if (!submissionError()) {
+  <dl>
+    <dt>Contract code</dt>
+    <dd>{{ selected()?.contractCode }}</dd>
+    <dt>Hotel</dt>
+    <dd>{{ selected()?.hotelName }}</dd>
+    <dt>Validity</dt>
+    <dd>{{ selected()?.validFrom }} to {{ selected()?.validTo }} (inclusive)</dd>
+    <dt>Markup</dt>
+    <dd>{{ selected()?.markupPercentage }}%</dd>
+    <dt>Currency</dt>
+    <dd>{{ selected()?.currencyCode }}</dd>
+    <dt>Status</dt>
+    <dd>
+      {{ selected()?.status }}
+      @if (selected(); as contract) {
+      @if (isExpired(contract.validTo)) {
+      <span class="badge expired-badge">Expired</span>
+      }
+      }
+    </dd>
+  </dl>
+  @if (selected(); as contract) {
+  <app-offering-panel [contract]="contract" [focusOfferingId]="linkedOffering()"/>
+  }
+  }
+  <div class="actions details-actions">
+    @if (!detailsLoading() && !submissionError() && selected(); as contract) {
+    @if (contract.status === 'DRAFT' || contract.status === 'SUSPENDED') {
+    <button
+      (click)="
+                confirmAction(contract, contract.status === 'DRAFT' ? 'approve' : 'reapprove')
+              "
+      [disabled]="saving()"
+      class="primary"
+      type="button"
+    >
+      {{ contract.status === 'DRAFT' ? 'Approve' : 'Reapprove' }}
+    </button>
     }
-  </section>
+    }
+    <button (click)="closeEditor()" [disabled]="detailsLoading()" type="button">Close</button>
+  </div>
+  } @else {
+  <p>
+    {{
+    mode() === 'terminate'
+    ? 'Termination is permanent and requires no outstanding confirmed stays.'
+    : mode() === 'suspend'
+    ? 'Suspension stops new sales and preserves existing room commitments and booked prices.'
+    : 'Before approving, check that the contract dates, room rates and allocated rooms are correct.'
+    }}
+    Existing confirmed reservations will remain unchanged.
+  </p>
+  <p>
+    {{
+    mode() === 'approve'
+    ? 'Approve contract'
+    : mode() === 'reapprove'
+    ? 'Reapprove contract'
+    : mode() === 'suspend'
+    ? 'Suspend contract'
+    : 'Terminate contract'
+    }}
+    {{ selected()?.contractCode }}?
+  </p>
+  <div class="actions">
+    <button (click)="closeEditor()" [disabled]="saving()" type="button">Cancel</button>
+    <button (click)="save()" [disabled]="saving()" class="primary" type="button">
+      {{ saving() ? 'Saving...' : 'Confirm' }}
+    </button>
+  </div>
+  }
+</section>
 }

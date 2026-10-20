@@ -9,5 +9,6 @@ public record SeasonalRateResponse(
         LocalDate validFrom,
         LocalDate validTo,
         BigDecimal ratePerPersonPerNight
-) {
+)
+{
 }

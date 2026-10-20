@@ -39,15 +39,6 @@ td small {
   padding: 48px 24px;
   text-align: center;
 }
-.editor {
-  margin-top: 24px;
-  padding: 28px;
-}
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
 fieldset {
   border: 0;
   padding: 0;
@@ -101,9 +92,15 @@ dd {
 }
 
 .editor {
+  margin-top: 24px;
+  padding: 28px;
+
   border-top: 3px solid var(--gold);
 }
 .form-grid {
+  display: grid;
+  gap: 20px;
+
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 .editor dl {

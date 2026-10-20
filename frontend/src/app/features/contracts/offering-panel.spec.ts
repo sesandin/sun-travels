@@ -3,6 +3,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Contract } from '../../models/contract.model';
 import { Offering } from '../../models/offering.model';
+import { OfferingPanel } from './offering-panel';
+
 const api = '/api';
 const contract: Contract = {
   contractId: 7,
@@ -26,7 +28,6 @@ const offering: Offering = {
   status: 'ENABLED',
   currencyCode: 'USD',
 };
-import { OfferingPanel } from './offering-panel';
 describe('Contract offerings', () => {
   let http: HttpTestingController;
   let fixture: ReturnType<typeof TestBed.createComponent<OfferingPanel>>;
@@ -50,7 +51,9 @@ describe('Contract offerings', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(2026, 9, 19, 0, 15));
     fixture.componentRef.setInput('contract', {
-      ...contract, status: 'APPROVED', validTo: '2026-10-18',
+      ...contract,
+      status: 'APPROVED',
+      validTo: '2026-10-18',
     });
     load([offering]);
     c.open(offering, 'rate');
@@ -178,7 +181,9 @@ describe('Contract offerings', () => {
       const input: HTMLElement = fixture.nativeElement.querySelector('#' + id);
       expect(input.getAttribute('aria-invalid')).toBe('true');
       expect(input.getAttribute('aria-describedby')).toBe(id + '-error');
-      expect(fixture.nativeElement.querySelector('#' + id + '-error').textContent.trim()).not.toBe('');
+      expect(fixture.nativeElement.querySelector('#' + id + '-error').textContent.trim()).not.toBe(
+        '',
+      );
     }
     fill();
     c.form.controls.ratePerPersonPerNight.setValue(1.001);
@@ -192,7 +197,9 @@ describe('Contract offerings', () => {
     c.form.controls.ratePerPersonPerNight.setValue(125.25);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.validation-notice')).toBeNull();
-    expect(fixture.nativeElement.querySelector('#offering-rate').getAttribute('aria-invalid')).toBe('false');
+    expect(fixture.nativeElement.querySelector('#offering-rate').getAttribute('aria-invalid')).toBe(
+      'false',
+    );
     http.expectNone(api + '/contracts/7/offerings');
   });
   it('retries room type loading and prevents writes while unavailable', () => {
@@ -237,8 +244,9 @@ describe('Contract offerings', () => {
   it('enables a suspended offering through the rendered dropdown and confirm button', () => {
     fixture.componentRef.setInput('contract', { ...contract, status: 'APPROVED' });
     load([{ ...offering, status: 'SUSPENDED' }]);
-    const button = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
-      .find(button => button.textContent?.trim() === 'Change offering status')!;
+    const button = Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    ).find((button) => button.textContent?.trim() === 'Change offering status')!;
     button.click();
     fixture.detectChanges();
     const select: HTMLSelectElement = fixture.nativeElement.querySelector('#maintained-status');
@@ -247,14 +255,17 @@ describe('Contract offerings', () => {
     select.dispatchEvent(new Event('change', { bubbles: true }));
     fixture.detectChanges();
     expect(c.statusForm.controls.status.value).toBe('ENABLED');
-    const confirm = Array.from(fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>)
-      .find(button => button.textContent?.trim() === 'Confirm status')!;
+    const confirm = Array.from(
+      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
+    ).find((button) => button.textContent?.trim() === 'Confirm status')!;
     confirm.click();
     const req = http.expectOne(api + '/offerings/8/status');
     expect(req.request.body).toEqual({ status: 'ENABLED' });
     req.flush({ ...offering, status: 'ENABLED' });
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.status-badge')?.textContent?.trim()).toBe('ENABLED');
+    expect(fixture.nativeElement.querySelector('.status-badge')?.textContent?.trim()).toBe(
+      'ENABLED',
+    );
   });
   for (const status of ['TERMINATED'] as const)
     it(status + ' exposes history with no maintenance actions', () => {

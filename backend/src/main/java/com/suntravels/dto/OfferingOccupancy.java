@@ -5,5 +5,6 @@ public record OfferingOccupancy(
         int roomTypeId,
         String roomTypeName,
         int maxAdults
-) {
+)
+{
 }

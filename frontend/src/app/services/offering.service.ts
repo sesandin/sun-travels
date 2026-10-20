@@ -1,5 +1,5 @@
 import { DirectoryPage } from '../shared/directory-state';
-import { Injectable, inject } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {
   Offering,
@@ -9,8 +9,12 @@ import {
   SeasonalRate,
   SeasonalRateRequest,
 } from '../models/offering.model';
+
 @Injectable({ providedIn: 'root' })
 export class OfferingService {
+  private readonly http = inject(HttpClient);
+  private readonly url = '/api';
+
   // Retrieves one filtered page of room offering directory records.
   page(filters: Record<string, string>, page = 0) {
     return this.http.get<DirectoryPage<OfferingDirectoryEntry>>(this.url + '/offerings' + '/page', {
@@ -18,8 +22,6 @@ export class OfferingService {
     });
   }
 
-  private readonly http = inject(HttpClient);
-  private readonly url = '/api';
   // Lists room offering directory entries with their related details.
   directory() {
     return this.http.get<OfferingDirectoryEntry[]>(this.url + '/offerings');

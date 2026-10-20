@@ -1,12 +1,12 @@
 import {
+  afterNextRender,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
+  inject,
   Injector,
   OnInit,
-  afterNextRender,
-  computed,
-  inject,
   signal,
   viewChild,
 } from '@angular/core';
@@ -21,14 +21,14 @@ import {
   Validators,
 } from '@angular/forms';
 import {
-  QuotationRequest,
-  SelectionOffering,
-  QuotationResponse,
-  QuotationSearchFilters,
-  SearchLimits,
   AccommodationQuotation,
   OfferingOccupancy,
+  QuotationRequest,
+  QuotationResponse,
+  QuotationSearchFilters,
   QuotedRoom,
+  SearchLimits,
+  SelectionOffering,
   UnavailableAccommodation,
 } from '../../models/quotation.model';
 import { QuotationSearchService } from '../../services/quotation-search.service';
@@ -54,16 +54,6 @@ const integer: ValidatorFn = (c) => (Number.isInteger(c.value) ? null : { intege
   styleUrl: './quotation-search.scss',
 })
 export class QuotationSearch implements OnInit {
-  private readonly router = inject(Router);
-  private readonly reservations = inject(ReservationService);
-  // Stores an available quotation and opens the agent’s reservation review.
-  reserve(quote: AccommodationQuotation | UnavailableAccommodation) {
-    if (quote.availabilityStatus !== 'AVAILABLE' || this.edited() || this.searching()) return;
-    this.reservations.saveDraft(quote);
-    void this.router.navigate(['/reservations/new']);
-  }
-  private readonly service = inject(QuotationSearchService);
-  private readonly destroyRef = inject(DestroyRef);
   readonly limits = signal<SearchLimits | null>(null);
   readonly hotels = signal<QuotationSearchFilters['hotels']>([]);
   readonly roomTypes = signal<QuotationSearchFilters['roomTypes']>([]);
@@ -93,13 +83,6 @@ export class QuotationSearch implements OnInit {
       return 'No eligible offering found for these filters and dates. Try another selection.';
     return 'Enter a positive whole number. Actual capacity depends on each selected room type.';
   });
-  // Checks requested adults against the selected offering’s known capacity.
-  private readonly occupancyValidator: ValidatorFn = (control) => {
-    const max = this.occupancyMax();
-    return !this.showUnavailable.value && max !== null && control.value > max
-      ? { occupancyMax: { max } }
-      : null;
-  };
   readonly groupedQuotations = computed(() =>
     (this.response()?.quotations ?? [])
       .filter((quote) => quote.availabilityStatus === 'AVAILABLE')
@@ -130,153 +113,23 @@ export class QuotationSearch implements OnInit {
         return { ...quote, offeringGroups: [...offerings.values()] };
       }),
   );
-  private readonly injector = inject(Injector);
-  private readonly customizeTrigger = viewChild<ElementRef<HTMLButtonElement>>('customizeTrigger');
-  private readonly customTitle = viewChild<ElementRef<HTMLElement>>('customTitle');
   readonly customizationOpen = signal(false);
-  readonly canCustomize = computed(
-    () => !!this.response() && this.requestedRooms() > 1 && !this.edited() && !this.searching(),
-  );
-  // Returns the booking action label for the quotation.
-  bookLabel(quote: AccommodationQuotation) {
-    return quote.rooms.length === 1
-      ? 'Book This Room'
-      : 'Book All ' + quote.rooms.length + ' Rooms as ' + quote.rooms[0].roomTypeName;
-  }
-  // Checks that the supplied stay-wide inventory is a valid nonnegative integer.
-  knownInventory(value: number | undefined) {
-    return Number.isInteger(value) && value! >= 0;
-  }
-  // Opens room selection for the current search results.
-  openCustomization() {
-    if (!this.canCustomize()) return;
-    this.customizationOpen.set(true);
-    afterNextRender(() => this.customTitle()?.nativeElement.focus(), { injector: this.injector });
-  }
-  // Closes room selection and invalidates pending custom quotations.
-  closeCustomization(restoreFocus = true) {
-    this.selectionVersion++;
-    this.customizationOpen.set(false);
-    this.customOptions.set([]);
-    this.selectedIds.set([]);
-    this.customQuote.set(null);
-    this.selectionError.set('');
-    this.selectionLoading.set(false);
-    if (restoreFocus) this.customizeTrigger()?.nativeElement.focus();
-  }
-  // Returns custom offerings that can accommodate the selected room.
-  roomOptions(room: number) {
-    return this.customOptions().filter((o) => !this.optionReason(o, room));
-  }
-
-  // Reads the server-provided selling price for one custom room choice.
-  selectionRoomPrice(room: number, offeringId: number): number | null {
-    // Display the backend's selling quotation; this does not calculate or select a rate.
-    return (
-      this.customOptions().find((offering) => offering.offeringId === offeringId)?.rooms[room]
-        ?.totalPrice ?? null
-    );
-  }
-  private lastRequest: QuotationRequest | null = null;
   readonly selectionError = signal('');
   readonly customOptions = signal<SelectionOffering[]>([]);
   readonly customQuote = signal<AccommodationQuotation | null>(null);
   readonly selectionLoading = signal(false);
   readonly selectedIds = signal<number[]>([]);
-  private selectionVersion = 0;
   readonly customizationGroups = computed(() => [
     ...new Map(
       (this.response()?.selectionOfferings ?? [])
-        .filter(
-          (o) =>
-            this.knownInventory(o.availableRoomsForStay) &&
-            o.availableRoomsForStay > 0,
-        )
+        .filter((o) => this.knownInventory(o.availableRoomsForStay) && o.availableRoomsForStay > 0)
         .map((o) => [o.contractId, o]),
     ).values(),
   ]);
-  // Returns the adult limit of the selected offering.
-  capacity(offeringId: number) {
-    return this.response()?.selectionOfferings?.find((o) => o.offeringId === offeringId)?.maxAdults;
-  }
-  // Initializes custom room choices for the selected hotel and contract.
-  customize(group: { hotelId: number; contractId: number }) {
-    if (!this.lastRequest || !this.canCustomize()) return;
-    this.customizationOpen.set(true);
-    this.selectionVersion++;
-    this.selectionLoading.set(false);
-    this.selectionError.set('');
-    this.customQuote.set(null);
-    this.customOptions.set(
-      (this.response()?.selectionOfferings ?? []).filter(
-        (o) => o.hotelId === group.hotelId && o.contractId === group.contractId,
-      ),
-    );
-    this.selectedIds.set(this.lastRequest.rooms.map(() => 0));
-  }
-  // Explains why an offering cannot be chosen for the requested room.
-  optionReason(option: SelectionOffering, room: number) {
-    if (
-      !option.rooms[room] ||
-      option.rooms[room].adults > option.maxAdults ||
-      option.rooms[room].totalPrice === null
-    )
-      return 'Maximum ' + option.maxAdults + ' adults';
-    if (!this.knownInventory(option.availableRoomsForStay)) return 'Inventory is unavailable';
-    const used = this.selectedIds().filter(
-      (id, i) => i !== room && id === option.offeringId,
-    ).length;
-    return used >= option.availableRoomsForStay ? 'Insufficient shared inventory' : '';
-  }
-  // Updates one room’s offering selection and requests a fresh quotation.
-  choose(room: number, event: Event) {
-    if (!this.customizationOpen() || this.edited() || this.searching()) return;
-    const id = Number((event.target as HTMLSelectElement).value);
-    const option = this.customOptions().find((o) => o.offeringId === id);
-    if (id && (!option || this.optionReason(option, room))) return;
-    const ids = [...this.selectedIds()];
-    ids[room] = Number((event.target as HTMLSelectElement).value);
-    this.selectedIds.set(ids);
-    this.requote();
-  }
-  // Requests an exact quotation for the current custom room choices.
-  private requote() {
-    const version = ++this.selectionVersion;
-    this.customQuote.set(null);
-    this.selectionError.set('');
-    this.selectionLoading.set(false);
-    const options = this.customOptions(),
-      request = this.lastRequest;
-    if (!request || !options.length || this.selectedIds().some((id) => !id)) return;
-    this.selectionLoading.set(true);
-    this.service
-      .customize({
-        hotelId: options[0].hotelId,
-        contractId: options[0].contractId,
-        checkIn: request.checkIn,
-        checkOut: request.checkOut,
-        rooms: request.rooms.map((r, i) => ({
-          adults: r.adults,
-          offeringId: this.selectedIds()[i],
-        })),
-      })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (q) => {
-          if (version === this.selectionVersion) {
-            this.customQuote.set(q);
-            this.selectionLoading.set(false);
-          }
-        },
-        error: (e) => {
-          if (version === this.selectionVersion) {
-            this.selectionError.set(apiError(e));
-            this.selectionLoading.set(false);
-          }
-        },
-      });
-  }
   readonly edited = signal(false);
+  readonly canCustomize = computed(
+    () => !!this.response() && this.requestedRooms() > 1 && !this.edited() && !this.searching(),
+  );
   readonly latestCheckIn = computed(() => {
     const l = this.limits();
     if (!l) return '';
@@ -314,21 +167,121 @@ export class QuotationSearch implements OnInit {
       },
     },
   );
+  private readonly router = inject(Router);
+  private readonly reservations = inject(ReservationService);
+  private readonly service = inject(QuotationSearchService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+  private readonly customizeTrigger = viewChild<ElementRef<HTMLButtonElement>>('customizeTrigger');
+  private readonly customTitle = viewChild<ElementRef<HTMLElement>>('customTitle');
+  private lastRequest: QuotationRequest | null = null;
+  private selectionVersion = 0;
+
   // Returns the form array containing the requested rooms.
   get rooms() {
     return this.form.controls.rooms;
   }
-  // Creates a requested-room form group with adult-count validation.
-  private room() {
-    return new FormGroup({
-      adults: new FormControl<number | null>(1, [
-        Validators.required,
-        Validators.min(1),
-        adultInteger,
-        this.occupancyValidator,
-      ]),
-    });
+
+  // Stores an available quotation and opens the agent’s reservation review.
+  reserve(quote: AccommodationQuotation | UnavailableAccommodation) {
+    if (quote.availabilityStatus !== 'AVAILABLE' || this.edited() || this.searching()) return;
+    this.reservations.saveDraft(quote);
+    void this.router.navigate(['/reservations/new']);
   }
+
+  // Returns the booking action label for the quotation.
+  bookLabel(quote: AccommodationQuotation) {
+    return quote.rooms.length === 1
+      ? 'Book This Room'
+      : 'Book All ' + quote.rooms.length + ' Rooms as ' + quote.rooms[0].roomTypeName;
+  }
+
+  // Checks that the supplied stay-wide inventory is a valid nonnegative integer.
+  knownInventory(value: number | undefined) {
+    return Number.isInteger(value) && value! >= 0;
+  }
+
+  // Opens room selection for the current search results.
+  openCustomization() {
+    if (!this.canCustomize()) return;
+    this.customizationOpen.set(true);
+    afterNextRender(() => this.customTitle()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  // Closes room selection and invalidates pending custom quotations.
+  closeCustomization(restoreFocus = true) {
+    this.selectionVersion++;
+    this.customizationOpen.set(false);
+    this.customOptions.set([]);
+    this.selectedIds.set([]);
+    this.customQuote.set(null);
+    this.selectionError.set('');
+    this.selectionLoading.set(false);
+    if (restoreFocus) this.customizeTrigger()?.nativeElement.focus();
+  }
+
+  // Returns custom offerings that can accommodate the selected room.
+  roomOptions(room: number) {
+    return this.customOptions().filter((o) => !this.optionReason(o, room));
+  }
+
+  // Reads the server-provided selling price for one custom room choice.
+  selectionRoomPrice(room: number, offeringId: number): number | null {
+    // Display the backend's selling quotation; this does not calculate or select a rate.
+    return (
+      this.customOptions().find((offering) => offering.offeringId === offeringId)?.rooms[room]
+        ?.totalPrice ?? null
+    );
+  }
+
+  // Returns the adult limit of the selected offering.
+  capacity(offeringId: number) {
+    return this.response()?.selectionOfferings?.find((o) => o.offeringId === offeringId)?.maxAdults;
+  }
+
+  // Initializes custom room choices for the selected hotel and contract.
+  customize(group: { hotelId: number; contractId: number }) {
+    if (!this.lastRequest || !this.canCustomize()) return;
+    this.customizationOpen.set(true);
+    this.selectionVersion++;
+    this.selectionLoading.set(false);
+    this.selectionError.set('');
+    this.customQuote.set(null);
+    this.customOptions.set(
+      (this.response()?.selectionOfferings ?? []).filter(
+        (o) => o.hotelId === group.hotelId && o.contractId === group.contractId,
+      ),
+    );
+    this.selectedIds.set(this.lastRequest.rooms.map(() => 0));
+  }
+
+  // Explains why an offering cannot be chosen for the requested room.
+  optionReason(option: SelectionOffering, room: number) {
+    if (
+      !option.rooms[room] ||
+      option.rooms[room].adults > option.maxAdults ||
+      option.rooms[room].totalPrice === null
+    )
+      return 'Maximum ' + option.maxAdults + ' adults';
+    if (!this.knownInventory(option.availableRoomsForStay)) return 'Inventory is unavailable';
+    const used = this.selectedIds().filter(
+      (id, i) => i !== room && id === option.offeringId,
+    ).length;
+    return used >= option.availableRoomsForStay ? 'Insufficient shared inventory' : '';
+  }
+
+  // Updates one room’s offering selection and requests a fresh quotation.
+  choose(room: number, event: Event) {
+    if (!this.customizationOpen() || this.edited() || this.searching()) return;
+    const id = Number((event.target as HTMLSelectElement).value);
+    const option = this.customOptions().find((o) => o.offeringId === id);
+    if (id && (!option || this.optionReason(option, room))) return;
+    const ids = [...this.selectedIds()];
+    ids[room] = Number((event.target as HTMLSelectElement).value);
+    this.selectedIds.set(ids);
+    this.requote();
+  }
+
   // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.form.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
@@ -408,12 +361,7 @@ export class QuotationSearch implements OnInit {
     });
     this.loadSetup();
   }
-  // Rechecks adult controls when the available occupancy guidance changes.
-  private revalidateOccupancy() {
-    this.rooms.controls.forEach((room) =>
-      room.controls.adults.updateValueAndValidity({ emitEvent: false }),
-    );
-  }
+
   // Loads search limits, reference filters, and occupancy guidance.
   loadSetup() {
     if (this.setupLoading()) return;
@@ -446,6 +394,7 @@ export class QuotationSearch implements OnInit {
         },
       });
   }
+
   // Adds a requested room within the search room limit.
   addRoom() {
     const l = this.limits();
@@ -459,10 +408,12 @@ export class QuotationSearch implements OnInit {
     ]);
     this.rooms.push(r);
   }
+
   // Removes a requested room and clears stale custom selections.
   removeRoom(index: number) {
     if (!this.searching() && this.rooms.length > 1) this.rooms.removeAt(index);
   }
+
   // Validates the stay request and loads available and unavailable quotations.
   search() {
     if (
@@ -508,6 +459,71 @@ export class QuotationSearch implements OnInit {
           this.searching.set(false);
         },
       });
+  }
+
+  // Checks requested adults against the selected offering’s known capacity.
+  private readonly occupancyValidator: ValidatorFn = (control) => {
+    const max = this.occupancyMax();
+    return !this.showUnavailable.value && max !== null && control.value > max
+      ? { occupancyMax: { max } }
+      : null;
+  };
+
+  // Requests an exact quotation for the current custom room choices.
+  private requote() {
+    const version = ++this.selectionVersion;
+    this.customQuote.set(null);
+    this.selectionError.set('');
+    this.selectionLoading.set(false);
+    const options = this.customOptions(),
+      request = this.lastRequest;
+    if (!request || !options.length || this.selectedIds().some((id) => !id)) return;
+    this.selectionLoading.set(true);
+    this.service
+      .customize({
+        hotelId: options[0].hotelId,
+        contractId: options[0].contractId,
+        checkIn: request.checkIn,
+        checkOut: request.checkOut,
+        rooms: request.rooms.map((r, i) => ({
+          adults: r.adults,
+          offeringId: this.selectedIds()[i],
+        })),
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (q) => {
+          if (version === this.selectionVersion) {
+            this.customQuote.set(q);
+            this.selectionLoading.set(false);
+          }
+        },
+        error: (e) => {
+          if (version === this.selectionVersion) {
+            this.selectionError.set(apiError(e));
+            this.selectionLoading.set(false);
+          }
+        },
+      });
+  }
+
+  // Creates a requested-room form group with adult-count validation.
+  private room() {
+    return new FormGroup({
+      adults: new FormControl<number | null>(1, [
+        Validators.required,
+        Validators.min(1),
+        adultInteger,
+        this.occupancyValidator,
+      ]),
+    });
+  }
+
+  // Rechecks adult controls when the available occupancy guidance changes.
+  private revalidateOccupancy() {
+    this.rooms.controls.forEach((room) =>
+      room.controls.adults.updateValueAndValidity({ emitEvent: false }),
+    );
   }
 }
 // Accepts an empty optional filter or a whole-number reference.

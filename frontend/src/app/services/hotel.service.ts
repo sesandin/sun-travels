@@ -1,24 +1,23 @@
 import { DirectoryPage } from '../shared/directory-state';
-import { Injectable, inject } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
-import { Hotel, HotelCreateRequest, HotelUpdateRequest, HotelStatus } from '../models/hotel.model';
+import { Hotel, HotelCreateRequest, HotelStatus, HotelUpdateRequest } from '../models/hotel.model';
 
 @Injectable({
   providedIn: 'root',
 })
 export class HotelService {
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = '/api/hotels';
+
   // Retrieves one filtered page of hotel directory records.
   page(query = '', status = '', page = 0) {
     return this.http.get<DirectoryPage<Hotel>>(this.apiUrl + '/page', {
       params: { query, status, page },
     });
   }
-
-  private readonly http = inject(HttpClient);
-
-  private readonly apiUrl = '/api/hotels';
 
   // Returns the all hotels.
   getAllHotels(): Observable<Hotel[]> {

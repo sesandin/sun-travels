@@ -1,13 +1,13 @@
 import { DatePipe } from '@angular/common';
 import {
+  afterNextRender,
   Component,
   DestroyRef,
   ElementRef,
-  Injector,
-  OnInit,
-  afterNextRender,
   inject,
+  Injector,
   input,
+  OnInit,
   signal,
   viewChild,
 } from '@angular/core';
@@ -19,6 +19,7 @@ import { OfferingService } from '../../services/offering.service';
 import { apiError } from '../../services/api-error';
 import { money, period } from './offering-validators';
 import { isContractExpired } from './contract-expiration';
+
 @Component({
   selector: 'app-seasonal-rates',
   imports: [ReactiveFormsModule, DatePipe],
@@ -26,12 +27,8 @@ import { isContractExpired } from './contract-expiration';
   styleUrl: './offering-panel.scss',
 })
 export class SeasonalRates implements OnInit {
-  private readonly injector = inject(Injector);
-  private readonly editor = viewChild<ElementRef<HTMLElement>>('editor');
   readonly contract = input.required<Contract>();
   readonly offering = input.required<Offering>();
-  private readonly service = inject(OfferingService);
-  private readonly destroyRef = inject(DestroyRef);
   readonly rows = signal<SeasonalRate[]>([]);
   readonly loading = signal(false);
   readonly error = signal('');
@@ -48,14 +45,21 @@ export class SeasonalRates implements OnInit {
     },
     { validators: period },
   );
+  private readonly injector = inject(Injector);
+  private readonly editor = viewChild<ElementRef<HTMLElement>>('editor');
+  private readonly service = inject(OfferingService);
+  private readonly destroyRef = inject(DestroyRef);
+
   // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.load();
   }
   // Checks whether the contract permits rate and seasonal maintenance.
   canMaintain() {
-    return !isContractExpired(this.contract().validTo) &&
-      (this.contract().status === 'DRAFT' || this.contract().status === 'APPROVED');
+    return (
+      !isContractExpired(this.contract().validTo) &&
+      (this.contract().status === 'DRAFT' || this.contract().status === 'APPROVED')
+    );
   }
   // Loads the offering’s seasonal rate periods.
   load() {

@@ -1,56 +1,69 @@
 package com.suntravels.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "customer")
-public class Customer {
+@Table( name = "customer" )
+public class Customer
+{
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "customer_id")
+    @GeneratedValue( strategy = GenerationType.IDENTITY )
+    @Column( name = "customer_id" )
     private Integer customerId;
 
-    @Column(name = "name", nullable = false, length = 150)
+    @Column( name = "name", nullable = false, length = 150 )
     private String name;
 
-    @Column(name = "phone", length = 20)
+    @Column( name = "phone", length = 20 )
     private String phone;
 
-    @Column(name = "email", length = 150)
+    @Column( name = "email", length = 150 )
     private String email;
 
     // Returns the customer id.
-    public Integer getCustomerId() {
+    public Integer getCustomerId()
+    {
         return customerId;
     }
 
     // Returns the name.
-    public String getName() {
+    public String getName()
+    {
         return name;
     }
 
     // Updates the name.
-    public void setName(String name) {
+    public void setName( String name )
+    {
         this.name = name;
     }
 
     // Returns the phone.
-    public String getPhone() {
+    public String getPhone()
+    {
         return phone;
     }
 
     // Updates the phone.
-    public void setPhone(String phone) {
+    public void setPhone( String phone )
+    {
         this.phone = phone;
     }
 
     // Returns the email.
-    public String getEmail() {
+    public String getEmail()
+    {
         return email;
     }
 
     // Updates the email.
-    public void setEmail(String email) {
+    public void setEmail( String email )
+    {
         this.email = email;
     }
 }

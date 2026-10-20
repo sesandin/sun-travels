@@ -8,14 +8,16 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.Map;
 
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler
+{
 
     // Returns a not-found response for the requested hotel.
-    @ExceptionHandler(HotelNotFoundException.class)
-    public ResponseEntity<Map<String, String>> handleHotelNotFound(HotelNotFoundException exception) {
+    @ExceptionHandler( HotelNotFoundException.class )
+    public ResponseEntity<Map<String,String>> handleHotelNotFound( HotelNotFoundException exception )
+    {
 
-        Map<String, String> error = Map.of("message", exception.getMessage());
+        Map<String,String> error = Map.of( "message", exception.getMessage() );
 
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        return ResponseEntity.status( HttpStatus.NOT_FOUND ).body( error );
     }
 }

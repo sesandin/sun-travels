@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { RoomTypeService } from './room-type.service';
+
 describe('RoomTypeService', () => {
   it('retrieves a room type by ID from the backend', () => {
     TestBed.configureTestingModule({

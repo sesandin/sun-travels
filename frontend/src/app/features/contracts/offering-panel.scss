@@ -8,11 +8,6 @@
   padding: 1rem;
   margin: 1rem 0;
 }
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1rem;
-}
 label {
   display: block;
   margin-bottom: 0.4rem;
@@ -210,6 +205,9 @@ dd {
   }
 }
 .form-grid {
+  display: grid;
+  gap: 1rem;
+
   grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
 }
 @media (max-width: 640px) {

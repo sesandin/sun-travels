@@ -2,18 +2,19 @@ import {
   Component,
   DestroyRef,
   ElementRef,
-  OnInit,
   inject,
+  OnInit,
   signal,
   viewChild,
 } from '@angular/core';
-import { DecimalPipe, DatePipe } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Reservation } from '../../models/reservation.model';
 import { BookedPriceBreakdown } from './booked-price-breakdown';
 import { ReservationService } from '../../services/reservation.service';
 import { apiError } from '../../services/api-error';
+
 @Component({
   selector: 'app-reservation-detail',
   imports: [RouterLink, DecimalPipe, DatePipe, BookedPriceBreakdown],
@@ -21,20 +22,22 @@ import { apiError } from '../../services/api-error';
   styleUrl: './reservations.scss',
 })
 export class ReservationDetail implements OnInit {
-  private readonly service = inject(ReservationService);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  // Returns to the reservation directory.
-  back() {
-    if (!this.cancelling()) void this.router.navigate(['/reservations']);
-  }
-  private readonly destroyRef = inject(DestroyRef);
   readonly reservation = signal<Reservation | null>(null);
   readonly loading = signal(false);
   readonly cancelling = signal(false);
   readonly error = signal('');
   readonly notice = signal(history.state?.confirmed ? 'Reservation confirmed successfully.' : '');
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('cancelDialog');
+  private readonly service = inject(ReservationService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+
+  // Returns to the reservation directory.
+  back() {
+    if (!this.cancelling()) void this.router.navigate(['/reservations']);
+  }
+
   // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.load();

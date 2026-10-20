@@ -1,34 +1,56 @@
 package com.suntravels.integration;
 
-import com.suntravels.dto.*;
+import com.suntravels.dto.QuotationSearchRequest;
 import com.suntravels.dto.QuotationSearchRequest.RequestedRoom;
-import com.suntravels.entity.*;
+import com.suntravels.dto.QuotationSelectionRequest;
+import com.suntravels.dto.ReservationRequest;
+import com.suntravels.entity.Contract;
+import com.suntravels.entity.ContractRoomOffering;
+import com.suntravels.entity.ContractStatus;
+import com.suntravels.entity.Hotel;
+import com.suntravels.entity.HotelStatus;
+import com.suntravels.entity.OfferingSeasonalRate;
+import com.suntravels.entity.OfferingStatus;
+import com.suntravels.entity.RoomType;
 import com.suntravels.exception.QuotationSearchException;
-import com.suntravels.repository.*;
+import com.suntravels.repository.ContractRepository;
+import com.suntravels.repository.HotelRepository;
+import com.suntravels.repository.OfferingRepository;
+import com.suntravels.repository.RoomTypeRepository;
+import com.suntravels.repository.SeasonalRateRepository;
 import com.suntravels.service.QuotationSearchService;
-
-import java.math.BigDecimal;
-import java.time.*;
-import java.util.*;
-
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.*;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.UUID;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Explicit opt-in AND _test database suffix. Fixtures rollback; never use operational data.
  */
 @SpringBootTest
 @Transactional
-@EnabledIfEnvironmentVariable(named = "SUNTRAVELS_SEARCH_MYSQL_TESTS", matches = "true")
-class QuotationSearchMySqlIntegrationTest {
+@EnabledIfEnvironmentVariable( named = "SUNTRAVELS_SEARCH_MYSQL_TESTS", matches = "true" )
+class QuotationSearchMySqlIntegrationTest
+{
     @Autowired
     QuotationSearchService search;
     @Autowired
@@ -54,290 +76,312 @@ class QuotationSearchMySqlIntegrationTest {
 
     // Creates isolated database fixtures for the test.
     @BeforeEach
-    void seed() {
-        assertTrue(jdbc.queryForObject("select database()", String.class).endsWith("_test"),
-                "Use a disposable database whose name ends _test");
-        assertTrue(jdbc.queryForObject("select version()", String.class).startsWith("8."));
-        in = LocalDate.now(clock).plusDays(10);
-        out = in.plusDays(3);
+    void seed()
+    {
+        assertTrue( jdbc.queryForObject( "select database()", String.class ).endsWith( "_test" ),
+                "Use a disposable database whose name ends _test" );
+        assertTrue( jdbc.queryForObject( "select version()", String.class ).startsWith( "8." ) );
+        in = LocalDate.now( clock ).plusDays( 10 );
+        out = in.plusDays( 3 );
         city = "SearchCity-" + UUID.randomUUID();
         hotel = new Hotel();
-        hotel.setName("Search fixture " + UUID.randomUUID());
-        hotel.setCity(city);
-        hotel.setStatus(HotelStatus.ACTIVE);
-        hotel = hotels.saveAndFlush(hotel);
+        hotel.setName( "Search fixture " + UUID.randomUUID() );
+        hotel.setCity( city );
+        hotel.setStatus( HotelStatus.ACTIVE );
+        hotel = hotels.saveAndFlush( hotel );
         type = new RoomType();
-        type.setName("Search Double " + UUID.randomUUID());
-        type = types.saveAndFlush(type);
-        contract = newContract(ContractStatus.APPROVED, in.minusDays(3), out.plusDays(30));
-        offer = newOffering(contract, type, 3, 2, "100");
+        type.setName( "Search Double " + UUID.randomUUID() );
+        type = types.saveAndFlush( type );
+        contract = newContract( ContractStatus.APPROVED, in.minusDays( 3 ), out.plusDays( 30 ) );
+        offer = newOffering( contract, type, 3, 2, "100" );
     }
 
     // Creates a contract fixture with the requested status and validity.
-    Contract newContract(ContractStatus status, LocalDate from, LocalDate to) {
+    Contract newContract( ContractStatus status, LocalDate from, LocalDate to )
+    {
         Contract c = new Contract();
-        c.setHotel(hotel);
-        c.setContractCode("S-" + UUID.randomUUID());
-        c.setStatus(status);
-        c.setValidFrom(from);
-        c.setValidTo(to);
-        c.setCurrencyCode("USD");
-        c.setMarkupPercentage(new BigDecimal("15.00"));
-        return contracts.saveAndFlush(c);
+        c.setHotel( hotel );
+        c.setContractCode( "S-" + UUID.randomUUID() );
+        c.setStatus( status );
+        c.setValidFrom( from );
+        c.setValidTo( to );
+        c.setCurrencyCode( "USD" );
+        c.setMarkupPercentage( new BigDecimal( "15.00" ) );
+        return contracts.saveAndFlush( c );
     }
 
     // Creates an offering fixture with the requested rate and inventory.
-    ContractRoomOffering newOffering(Contract c, RoomType room, int count, int adults, String rate) {
+    ContractRoomOffering newOffering( Contract c, RoomType room, int count, int adults, String rate )
+    {
         ContractRoomOffering o = new ContractRoomOffering();
-        o.setContract(c);
-        o.setRoomType(room);
-        o.setStatus(OfferingStatus.ENABLED);
-        o.setRatePerPersonPerNight(new BigDecimal(rate));
-        o.setContractedRoomCount(count);
-        o.setMaxAdults(adults);
-        return offerings.saveAndFlush(o);
+        o.setContract( c );
+        o.setRoomType( room );
+        o.setStatus( OfferingStatus.ENABLED );
+        o.setRatePerPersonPerNight( new BigDecimal( rate ) );
+        o.setContractedRoomCount( count );
+        o.setMaxAdults( adults );
+        return offerings.saveAndFlush( o );
     }
 
     // Builds a valid request fixture for the tested operation.
-    QuotationSearchRequest request(int... adults) {
-        return new QuotationSearchRequest(in, out,
-                Arrays.stream(adults).mapToObj(RequestedRoom::new).toList(), null, hotel.getHotelId(), null);
+    QuotationSearchRequest request( int... adults )
+    {
+        return new QuotationSearchRequest( in, out,
+                Arrays.stream( adults ).mapToObj( RequestedRoom::new ).toList(), null, hotel.getHotelId(), null );
     }
 
     // Creates reservation commitments for inventory checks.
-    Integer booking(ContractRoomOffering o, String status, int start, int end, int items) {
-        jdbc.update("insert into customer(name) values (?)", "Search customer " + UUID.randomUUID());
-        Integer customer = jdbc.queryForObject("select last_insert_id()", Integer.class);
+    Integer booking( ContractRoomOffering o, String status, int start, int end, int items )
+    {
+        jdbc.update( "insert into customer(name) values (?)", "Search customer " + UUID.randomUUID() );
+        Integer customer = jdbc.queryForObject( "select last_insert_id()", Integer.class );
         jdbc.update(
                 "insert into reservation(check_in_date,check_out_date,status,customer_id,currency_code) values (?,?,?,?,?)",
-                in.plusDays(start), in.plusDays(end), status, customer, "USD");
-        Integer reservation = jdbc.queryForObject("select last_insert_id()", Integer.class);
-        for (int i = 0; i < items; i++)
+                in.plusDays( start ), in.plusDays( end ), status, customer, "USD" );
+        Integer reservation = jdbc.queryForObject( "select last_insert_id()", Integer.class );
+        for( int i = 0; i < items; i++ )
             jdbc.update(
                     "insert into reservation_item(number_of_adults,offering_id,reservation_id,booked_rate_per_person_per_night,booked_markup_percentage,booked_selling_price) values (?,?,?,?,?,?)",
-                    2, o.getOfferingId(), reservation, new BigDecimal("100"), new BigDecimal("15"),
-                    new BigDecimal("230"));
+                    2, o.getOfferingId(), reservation, new BigDecimal( "100" ), new BigDecimal( "15" ),
+                    new BigDecimal( "230" ) );
         return reservation;
     }
 
     // Creates a seasonal rate fixture for the selected offering.
-    void season(LocalDate from, LocalDate to, String rate) {
+    void season( LocalDate from, LocalDate to, String rate )
+    {
         OfferingSeasonalRate s = new OfferingSeasonalRate();
-        s.setOffering(offer);
-        s.setValidFrom(from);
-        s.setValidTo(to);
-        s.setRatePerPersonPerNight(new BigDecimal(rate));
-        seasons.saveAndFlush(s);
+        s.setOffering( offer );
+        s.setValidFrom( from );
+        s.setValidTo( to );
+        s.setRatePerPersonPerNight( new BigDecimal( rate ) );
+        seasons.saveAndFlush( s );
     }
 
     // Verifies actual sql applies hotel contract and offering eligibility.
     @ParameterizedTest
-    @CsvSource({"ACTIVE,APPROVED,ENABLED,true", "INACTIVE,APPROVED,ENABLED,false",
+    @CsvSource( { "ACTIVE,APPROVED,ENABLED,true", "INACTIVE,APPROVED,ENABLED,false",
             "ACTIVE,DRAFT,ENABLED,false", "ACTIVE,SUSPENDED,ENABLED,false", "ACTIVE,TERMINATED,ENABLED,false",
-            "ACTIVE,APPROVED,SUSPENDED,false"})
-    void actualSqlAppliesHotelContractAndOfferingEligibility(String h, String c, String o, boolean match) {
-        hotel.setStatus(HotelStatus.valueOf(h));
-        hotels.saveAndFlush(hotel);
-        contract.setStatus(ContractStatus.valueOf(c));
-        contracts.saveAndFlush(contract);
-        offer.setStatus(OfferingStatus.valueOf(o));
-        offerings.saveAndFlush(offer);
-        var result = search.search(request(2));
-        assertEquals(match, !result.quotations().isEmpty());
-        assertTrue(result.unavailableOptions().isEmpty());
+            "ACTIVE,APPROVED,SUSPENDED,false" } )
+    void actualSqlAppliesHotelContractAndOfferingEligibility( String h, String c, String o, boolean match )
+    {
+        hotel.setStatus( HotelStatus.valueOf( h ) );
+        hotels.saveAndFlush( hotel );
+        contract.setStatus( ContractStatus.valueOf( c ) );
+        contracts.saveAndFlush( contract );
+        offer.setStatus( OfferingStatus.valueOf( o ) );
+        offerings.saveAndFlush( offer );
+        var result = search.search( request( 2 ) );
+        assertEquals( match, !result.quotations().isEmpty() );
+        assertTrue( result.unavailableOptions().isEmpty() );
     }
 
     // Verifies full stay contract validity is inclusive for nights and exclusive for checkout.
     @Test
-    void fullStayContractValidityIsInclusiveForNightsAndExclusiveForCheckout() {
-        contract.setValidTo(out.minusDays(1));
-        contracts.saveAndFlush(contract);
-        assertEquals(1, search.search(request(2)).quotations().size());
-        contract.setValidTo(out.minusDays(2));
-        contracts.saveAndFlush(contract);
-        assertTrue(search.search(request(2)).quotations().isEmpty());
-        assertTrue(search.search(request(2)).unavailableOptions().isEmpty());
+    void fullStayContractValidityIsInclusiveForNightsAndExclusiveForCheckout()
+    {
+        contract.setValidTo( out.minusDays( 1 ) );
+        contracts.saveAndFlush( contract );
+        assertEquals( 1, search.search( request( 2 ) ).quotations().size() );
+        contract.setValidTo( out.minusDays( 2 ) );
+        contracts.saveAndFlush( contract );
+        assertTrue( search.search( request( 2 ) ).quotations().isEmpty() );
+        assertTrue( search.search( request( 2 ) ).unavailableOptions().isEmpty() );
     }
 
     // Verifies occupancy uses approved enabled full stay offerings and returns changed limits.
     @Test
-    void occupancyUsesApprovedEnabledFullStayOfferingsAndReturnsChangedLimits() {
-        assertEquals(2,
-                search.occupancy(hotel.getHotelId(), type.getRoomTypeId(), in, out, null).get(0).maxAdults());
-        offer.setMaxAdults(4);
-        offerings.saveAndFlush(offer);
-        assertEquals(4,
-                search.occupancy(hotel.getHotelId(), type.getRoomTypeId(), in, out, null).get(0).maxAdults());
-        contract.setValidTo(out.minusDays(2));
-        contracts.saveAndFlush(contract);
-        assertTrue(search.occupancy(hotel.getHotelId(), type.getRoomTypeId(), in, out, null).isEmpty());
-        contract.setValidTo(out);
-        contract.setStatus(ContractStatus.DRAFT);
-        contracts.saveAndFlush(contract);
-        assertTrue(search.occupancy(hotel.getHotelId(), type.getRoomTypeId(), in, out, null).isEmpty());
-        contract.setStatus(ContractStatus.APPROVED);
-        contracts.saveAndFlush(contract);
-        offer.setStatus(OfferingStatus.SUSPENDED);
-        offerings.saveAndFlush(offer);
-        assertTrue(search.occupancy(hotel.getHotelId(), type.getRoomTypeId(), in, out, null).isEmpty());
+    void occupancyUsesApprovedEnabledFullStayOfferingsAndReturnsChangedLimits()
+    {
+        assertEquals( 2,
+                search.occupancy( hotel.getHotelId(), type.getRoomTypeId(), in, out, null ).get( 0 ).maxAdults() );
+        offer.setMaxAdults( 4 );
+        offerings.saveAndFlush( offer );
+        assertEquals( 4,
+                search.occupancy( hotel.getHotelId(), type.getRoomTypeId(), in, out, null ).get( 0 ).maxAdults() );
+        contract.setValidTo( out.minusDays( 2 ) );
+        contracts.saveAndFlush( contract );
+        assertTrue( search.occupancy( hotel.getHotelId(), type.getRoomTypeId(), in, out, null ).isEmpty() );
+        contract.setValidTo( out );
+        contract.setStatus( ContractStatus.DRAFT );
+        contracts.saveAndFlush( contract );
+        assertTrue( search.occupancy( hotel.getHotelId(), type.getRoomTypeId(), in, out, null ).isEmpty() );
+        contract.setStatus( ContractStatus.APPROVED );
+        contracts.saveAndFlush( contract );
+        offer.setStatus( OfferingStatus.SUSPENDED );
+        offerings.saveAndFlush( offer );
+        assertTrue( search.occupancy( hotel.getHotelId(), type.getRoomTypeId(), in, out, null ).isEmpty() );
     }
 
     // Verifies administrative exclusions never appear as unavailable inventory.
     @Test
-    void administrativeExclusionsNeverAppearAsUnavailableInventory() {
-        for (ContractStatus status : List.of(ContractStatus.DRAFT, ContractStatus.SUSPENDED,
-                ContractStatus.TERMINATED)) {
-            contract.setStatus(status);
-            contracts.saveAndFlush(contract);
-            var result = search.search(request(1));
-            assertTrue(result.quotations().isEmpty());
-            assertTrue(result.unavailableOptions().isEmpty());
+    void administrativeExclusionsNeverAppearAsUnavailableInventory()
+    {
+        for( ContractStatus status : List.of( ContractStatus.DRAFT, ContractStatus.SUSPENDED,
+                ContractStatus.TERMINATED ) )
+        {
+            contract.setStatus( status );
+            contracts.saveAndFlush( contract );
+            var result = search.search( request( 1 ) );
+            assertTrue( result.quotations().isEmpty() );
+            assertTrue( result.unavailableOptions().isEmpty() );
         }
-        contract.setStatus(ContractStatus.APPROVED);
-        contracts.saveAndFlush(contract);
-        hotel.setStatus(HotelStatus.INACTIVE);
-        hotels.saveAndFlush(hotel);
-        assertTrue(search.search(request(1)).unavailableOptions().isEmpty());
-        hotel.setStatus(HotelStatus.ACTIVE);
-        hotels.saveAndFlush(hotel);
-        offer.setStatus(OfferingStatus.SUSPENDED);
-        offerings.saveAndFlush(offer);
-        assertTrue(search.search(request(1)).unavailableOptions().isEmpty());
+        contract.setStatus( ContractStatus.APPROVED );
+        contracts.saveAndFlush( contract );
+        hotel.setStatus( HotelStatus.INACTIVE );
+        hotels.saveAndFlush( hotel );
+        assertTrue( search.search( request( 1 ) ).unavailableOptions().isEmpty() );
+        hotel.setStatus( HotelStatus.ACTIVE );
+        hotels.saveAndFlush( hotel );
+        offer.setStatus( OfferingStatus.SUSPENDED );
+        offerings.saveAndFlush( offer );
+        assertTrue( search.search( request( 1 ) ).unavailableOptions().isEmpty() );
     }
 
     // Verifies non confirmed reservations do not consume inventory.
     @ParameterizedTest
-    @ValueSource(strings = {"PENDING", "CANCELLED"})
-    void nonConfirmedReservationsDoNotConsumeInventory(String status) {
-        booking(offer, status, 0, 3, 3);
-        assertEquals(3, search.search(request(1)).quotations().get(0).rooms().get(0).availableRoomsForStay());
+    @ValueSource( strings = { "PENDING", "CANCELLED" } )
+    void nonConfirmedReservationsDoNotConsumeInventory( String status )
+    {
+        booking( offer, status, 0, 3, 3 );
+        assertEquals( 3, search.search( request( 1 ) ).quotations().get( 0 ).rooms().get( 0 ).availableRoomsForStay() );
     }
 
     // Verifies one item is one room and peak night is not sum across nights.
     @Test
-    void oneItemIsOneRoomAndPeakNightIsNotSumAcrossNights() {
-        booking(offer, "CONFIRMED", 0, 1, 1);
-        booking(offer, "CONFIRMED", 1, 3, 1);
-        assertEquals(2,
-                search.search(request(2, 1)).quotations().get(0).rooms().get(0).availableRoomsForStay());
+    void oneItemIsOneRoomAndPeakNightIsNotSumAcrossNights()
+    {
+        booking( offer, "CONFIRMED", 0, 1, 1 );
+        booking( offer, "CONFIRMED", 1, 3, 1 );
+        assertEquals( 2,
+                search.search( request( 2, 1 ) ).quotations().get( 0 ).rooms().get( 0 ).availableRoomsForStay() );
     }
 
     // Verifies multiple items and exclusive checkouts are counted per night.
     @Test
-    void multipleItemsAndExclusiveCheckoutsAreCountedPerNight() {
-        booking(offer, "CONFIRMED", -3, 0, 3);
-        booking(offer, "CONFIRMED", 3, 5, 3);
-        booking(offer, "CONFIRMED", 0, 3, 2);
-        assertEquals(1, search.search(request(2)).quotations().get(0).rooms().get(0).availableRoomsForStay());
-        assertTrue(search.search(request(2, 1)).quotations().isEmpty());
+    void multipleItemsAndExclusiveCheckoutsAreCountedPerNight()
+    {
+        booking( offer, "CONFIRMED", -3, 0, 3 );
+        booking( offer, "CONFIRMED", 3, 5, 3 );
+        booking( offer, "CONFIRMED", 0, 3, 2 );
+        assertEquals( 1, search.search( request( 2 ) ).quotations().get( 0 ).rooms().get( 0 ).availableRoomsForStay() );
+        assertTrue( search.search( request( 2, 1 ) ).quotations().isEmpty() );
     }
 
     // Verifies fully booked and overbooked have different outcomes.
     @Test
-    void fullyBookedAndOverbookedHaveDifferentOutcomes() {
-        booking(offer, "CONFIRMED", 0, 3, 3);
-        assertTrue(search.search(request(1)).quotations().isEmpty());
-        booking(offer, "CONFIRMED", 1, 2, 1);
-        var requestForAssertion1 = request(1);
-        assertEquals(409, assertThrows(QuotationSearchException.class,
-                () -> search.search(requestForAssertion1)).getStatus());
+    void fullyBookedAndOverbookedHaveDifferentOutcomes()
+    {
+        booking( offer, "CONFIRMED", 0, 3, 3 );
+        assertTrue( search.search( request( 1 ) ).quotations().isEmpty() );
+        booking( offer, "CONFIRMED", 1, 2, 1 );
+        var requestForAssertion1 = request( 1 );
+        assertEquals( 409, assertThrows( QuotationSearchException.class,
+                () -> search.search( requestForAssertion1 ) ).getStatus() );
     }
 
     // Verifies unrelated offering consumption does not reduce requested room inventory.
     @Test
-    void unrelatedOfferingConsumptionDoesNotReduceRequestedRoomInventory() {
+    void unrelatedOfferingConsumptionDoesNotReduceRequestedRoomInventory()
+    {
         RoomType other = new RoomType();
-        other.setName("Other " + UUID.randomUUID());
-        other = types.saveAndFlush(other);
-        ContractRoomOffering o = newOffering(contract, other, 3, 2, "150");
-        booking(o, "CONFIRMED", 0, 3, 3);
+        other.setName( "Other " + UUID.randomUUID() );
+        other = types.saveAndFlush( other );
+        ContractRoomOffering o = newOffering( contract, other, 3, 2, "150" );
+        booking( o, "CONFIRMED", 0, 3, 3 );
         var result = search.search(
-                new QuotationSearchRequest(in, out, List.of(new RequestedRoom(2)), null, hotel.getHotelId(),
-                        type.getRoomTypeId()));
-        assertEquals(3, result.quotations().get(0).rooms().get(0).availableRoomsForStay());
+                new QuotationSearchRequest( in, out, List.of( new RequestedRoom( 2 ) ), null, hotel.getHotelId(),
+                        type.getRoomTypeId() ) );
+        assertEquals( 3, result.quotations().get( 0 ).rooms().get( 0 ).availableRoomsForStay() );
     }
 
     // Verifies explicit mixed room selection uses actual capacity and seasonal pricing.
     @Test
-    void explicitMixedRoomSelectionUsesActualCapacityAndSeasonalPricing() {
-        offer.setContractedRoomCount(1);
-        offerings.saveAndFlush(offer);
+    void explicitMixedRoomSelectionUsesActualCapacityAndSeasonalPricing()
+    {
+        offer.setContractedRoomCount( 1 );
+        offerings.saveAndFlush( offer );
         RoomType other = new RoomType();
-        other.setName("Single " + UUID.randomUUID());
-        other = types.saveAndFlush(other);
-        var single = newOffering(contract, other, 1, 1, "50");
-        season(in.plusDays(1), in.plusDays(1), "150");
+        other.setName( "Single " + UUID.randomUUID() );
+        other = types.saveAndFlush( other );
+        var single = newOffering( contract, other, 1, 1, "50" );
+        season( in.plusDays( 1 ), in.plusDays( 1 ), "150" );
         var q = search.customize(
-                new QuotationSelectionRequest(hotel.getHotelId(), contract.getContractId(), in, out,
-                        List.of(new ReservationRequest.Room(offer.getOfferingId(), 2),
-                                new ReservationRequest.Room(single.getOfferingId(), 1))));
-        assertEquals(new BigDecimal("977.50"), q.totalPrice());
-        assertEquals(offer.getOfferingId(), q.rooms().get(0).offeringId());
-        assertEquals(other.getRoomTypeId(), q.rooms().get(1).roomTypeId());
+                new QuotationSelectionRequest( hotel.getHotelId(), contract.getContractId(), in, out,
+                        List.of( new ReservationRequest.Room( offer.getOfferingId(), 2 ),
+                                new ReservationRequest.Room( single.getOfferingId(), 1 ) ) ) );
+        assertEquals( new BigDecimal( "977.50" ), q.totalPrice() );
+        assertEquals( offer.getOfferingId(), q.rooms().get( 0 ).offeringId() );
+        assertEquals( other.getRoomTypeId(), q.rooms().get( 1 ).roomTypeId() );
     }
 
     // Verifies city and reference filters use real existing records.
     @Test
-    void cityAndReferenceFiltersUseRealExistingRecords() {
-        assertEquals(1, search.search(new QuotationSearchRequest(in, out, List.of(new RequestedRoom(1)),
-                " " + city.toLowerCase(Locale.ROOT) + " ", hotel.getHotelId(),
-                type.getRoomTypeId())).quotations().size());
-        assertTrue(search.search(
-                new QuotationSearchRequest(in, out, List.of(new RequestedRoom(1)), "No matching city",
-                        hotel.getHotelId(), null)).quotations().isEmpty());
+    void cityAndReferenceFiltersUseRealExistingRecords()
+    {
+        assertEquals( 1, search.search( new QuotationSearchRequest( in, out, List.of( new RequestedRoom( 1 ) ),
+                " " + city.toLowerCase( Locale.ROOT ) + " ", hotel.getHotelId(),
+                type.getRoomTypeId() ) ).quotations().size() );
+        assertTrue( search.search(
+                new QuotationSearchRequest( in, out, List.of( new RequestedRoom( 1 ) ), "No matching city",
+                        hotel.getHotelId(), null ) ).quotations().isEmpty() );
     }
 
     // Verifies old contract commitments outside old validity cannot become extra inventory.
     @ParameterizedTest
-    @EnumSource(value = ContractStatus.class, names = {"SUSPENDED", "TERMINATED"})
-    void oldContractCommitmentsOutsideOldValidityCannotBecomeExtraInventory(ContractStatus status) {
-        Contract old = newContract(status, in.minusDays(100), in.minusDays(50));
-        ContractRoomOffering prior = newOffering(old, type, 3, 2, "100");
-        booking(prior, "CONFIRMED", 0, 3, 1);
-        var requestForAssertion2 = request(1);
+    @EnumSource( value = ContractStatus.class, names = { "SUSPENDED", "TERMINATED" } )
+    void oldContractCommitmentsOutsideOldValidityCannotBecomeExtraInventory( ContractStatus status )
+    {
+        Contract old = newContract( status, in.minusDays( 100 ), in.minusDays( 50 ) );
+        ContractRoomOffering prior = newOffering( old, type, 3, 2, "100" );
+        booking( prior, "CONFIRMED", 0, 3, 1 );
+        var requestForAssertion2 = request( 1 );
 
-        assertEquals(409, assertThrows(QuotationSearchException.class,
-                () -> search.search(requestForAssertion2)).getStatus());
+        assertEquals( 409, assertThrows( QuotationSearchException.class,
+                () -> search.search( requestForAssertion2 ) ).getStatus() );
     }
 
     // Verifies malformed or duplicate approval data fails closed.
     @Test
-    void malformedOrDuplicateApprovalDataFailsClosed() {
-        newContract(ContractStatus.APPROVED, in.minusDays(1), out);
-        var requestForAssertion3 = request(1);
-        assertEquals(409, assertThrows(QuotationSearchException.class,
-                () -> search.search(requestForAssertion3)).getStatus());
+    void malformedOrDuplicateApprovalDataFailsClosed()
+    {
+        newContract( ContractStatus.APPROVED, in.minusDays( 1 ), out );
+        var requestForAssertion3 = request( 1 );
+        assertEquals( 409, assertThrows( QuotationSearchException.class,
+                () -> search.search( requestForAssertion3 ) ).getStatus() );
     }
 
     // Verifies overlapping seasonal data is never arbitrarily selected.
     @Test
-    void overlappingSeasonalDataIsNeverArbitrarilySelected() {
-        season(in, in.plusDays(1), "120");
-        season(in.plusDays(1), out, "130");
-        var requestForAssertion4 = request(1);
-        assertEquals(409, assertThrows(QuotationSearchException.class,
-                () -> search.search(requestForAssertion4)).getStatus());
+    void overlappingSeasonalDataIsNeverArbitrarilySelected()
+    {
+        season( in, in.plusDays( 1 ), "120" );
+        season( in.plusDays( 1 ), out, "130" );
+        var requestForAssertion4 = request( 1 );
+        assertEquals( 409, assertThrows( QuotationSearchException.class,
+                () -> search.search( requestForAssertion4 ) ).getStatus() );
     }
 
     // Verifies search does not mutate confirmed reservation or snapshot rows.
     @Test
-    void searchDoesNotMutateConfirmedReservationOrSnapshotRows() {
-        Integer reservation = booking(offer, "CONFIRMED", 0, 3, 1);
+    void searchDoesNotMutateConfirmedReservationOrSnapshotRows()
+    {
+        Integer reservation = booking( offer, "CONFIRMED", 0, 3, 1 );
         Integer item = jdbc.queryForObject(
                 "select reservation_item_id from reservation_item where reservation_id=?", Integer.class,
-                reservation);
+                reservation );
         jdbc.update(
                 "insert into reservation_item_nightly_rate(reservation_item_id,occupied_date,hotelier_rate,markup_percentage,selling_price) values (?,?,?,?,?)",
-                item, in, new BigDecimal("100"), new BigDecimal("15"), new BigDecimal("230"));
-        var r = jdbc.queryForMap("select * from reservation where reservation_id=?", reservation);
-        var i = jdbc.queryForMap("select * from reservation_item where reservation_item_id=?", item);
-        var n = jdbc.queryForMap("select * from reservation_item_nightly_rate where reservation_item_id=?",
-                item);
-        search.search(request(2));
-        assertEquals(r, jdbc.queryForMap("select * from reservation where reservation_id=?", reservation));
-        assertEquals(i, jdbc.queryForMap("select * from reservation_item where reservation_item_id=?", item));
-        assertEquals(n,
-                jdbc.queryForMap("select * from reservation_item_nightly_rate where reservation_item_id=?",
-                        item));
+                item, in, new BigDecimal( "100" ), new BigDecimal( "15" ), new BigDecimal( "230" ) );
+        var r = jdbc.queryForMap( "select * from reservation where reservation_id=?", reservation );
+        var i = jdbc.queryForMap( "select * from reservation_item where reservation_item_id=?", item );
+        var n = jdbc.queryForMap( "select * from reservation_item_nightly_rate where reservation_item_id=?",
+                item );
+        search.search( request( 2 ) );
+        assertEquals( r, jdbc.queryForMap( "select * from reservation where reservation_id=?", reservation ) );
+        assertEquals( i, jdbc.queryForMap( "select * from reservation_item where reservation_item_id=?", item ) );
+        assertEquals( n,
+                jdbc.queryForMap( "select * from reservation_item_nightly_rate where reservation_item_id=?",
+                        item ) );
     }
 }

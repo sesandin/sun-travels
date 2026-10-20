@@ -27,10 +27,6 @@
   color: #1a6047;
   background: #e8f4ef;
 }
-.unavailable-option {
-  background: #fafbfb;
-  border-style: dashed;
-}
 .unavailable-heading {
   display: flex;
   flex-wrap: wrap;
@@ -55,10 +51,6 @@
   font-size: 12px;
   margin-top: 5px;
 }
-.unavailable-reasons {
-  padding-left: 20px;
-  line-height: 1.6;
-}
 .indicative-price {
   margin: 16px 0 0;
   color: var(--muted);
@@ -70,7 +62,6 @@ small {
   color: var(--muted);
   line-height: 1.6;
 }
-
 
 h2 {
   font-size: 20px;
@@ -103,11 +94,6 @@ fieldset {
   border-color: var(--danger);
   background: #fff3f1;
 }
-.room-requests {
-  margin-top: 24px;
-  border-top: 1px solid var(--border);
-  padding-top: 20px;
-}
 .requested-room {
   display: grid;
   grid-template-columns: minmax(150px, 260px) auto;
@@ -139,27 +125,14 @@ fieldset {
 .quote-heading p {
   color: var(--muted);
 }
-.quote-heading {
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
-}
 .quote-heading h3 {
   font-size: 21px;
-}
-.quote-total {
-  text-align: right;
 }
 .quote-total span,
 .quote-total small {
   display: block;
   color: var(--muted);
   font-size: 12px;
-}
-.quote-total strong {
-  display: block;
-  font-size: 24px;
-  margin: 7px 0;
-  color: var(--primary);
 }
 .offering-group {
   padding: 20px 0;
@@ -190,22 +163,11 @@ fieldset {
   margin-top: 8px;
   border-top: 1px solid var(--border);
 }
-.quote-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 20px;
-}
 .quote-actions button {
   max-width: 100%;
   white-space: normal;
   overflow-wrap: anywhere;
   line-height: 1.5;
-}
-.room-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px 24px;
 }
 .room-info {
   min-width: 0;
@@ -324,12 +286,6 @@ summary {
 .selection-panel > button {
   margin: 8px 12px 8px 0;
 }
-.selection-panel .requested-room {
-  display: grid;
-  grid-template-columns: minmax(150px, 1fr) minmax(220px, 3fr);
-  align-items: center;
-  gap: 12px;
-}
 @media (max-width: 640px) {
   .selection-panel .requested-room {
     grid-template-columns: 1fr;
@@ -348,13 +304,6 @@ summary {
 }
 .quotation {
   border-left: 3px solid var(--primary);
-}
-.customization-action {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  margin-bottom: 20px;
 }
 .selection-heading {
   display: flex;
@@ -409,6 +358,10 @@ summary {
   border-top: 1px solid var(--border);
 }
 .room-requests {
+  margin-top: 24px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
@@ -443,6 +396,9 @@ summary {
   padding: 6px;
 }
 .quote-heading {
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+
   align-items: center;
 }
 .quote-heading h3.room-type-title {
@@ -453,9 +409,15 @@ summary {
   margin-bottom: 8px;
 }
 .quote-total {
+  text-align: right;
+
   max-width: 320px;
 }
 .quote-total strong {
+  display: block;
+  margin: 7px 0;
+  color: var(--primary);
+
   font-size: clamp(24px, 2.2vw, 30px);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.5px;
@@ -464,6 +426,10 @@ summary {
   max-width: 32ch;
 }
 .quote-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+
   padding-top: 20px;
   border-top: 1px solid var(--border);
 }
@@ -476,17 +442,34 @@ summary {
   font-size: 15px;
 }
 .room-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+
   background: var(--surface-soft);
   border-radius: 8px;
   padding: 12px 16px;
 }
 .unavailable-option {
+  background: #fafbfb;
+  border-style: dashed;
+
   border-left: 3px solid #a7b7b7;
 }
 .unavailable-reasons {
+  padding-left: 20px;
+  line-height: 1.6;
+
   color: var(--ink);
 }
 .customization-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-bottom: 20px;
+
   padding: 20px 0;
   border-top: 1px solid var(--border);
   margin-top: 24px;
@@ -495,6 +478,10 @@ summary {
   border-top: 3px solid var(--gold);
 }
 .selection-panel .requested-room {
+  display: grid;
+  align-items: center;
+  gap: 12px;
+
   grid-template-columns: minmax(150px, 1fr) minmax(180px, 2fr) minmax(120px, auto);
   padding: 16px;
   border: 1px solid var(--border);

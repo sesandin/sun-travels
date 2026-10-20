@@ -4,28 +4,34 @@ import {
   Component,
   DestroyRef,
   ElementRef,
-  OnInit,
   inject,
+  OnInit,
   signal,
   viewChild,
 } from '@angular/core';
-import { Subscription, debounceTime, tap } from 'rxjs';
+import { debounceTime, Subscription, tap } from 'rxjs';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { StayPeriod, Reservation, ReservationPage } from '../../models/reservation.model';
+import { Reservation, ReservationPage, StayPeriod } from '../../models/reservation.model';
 import { ReservationService } from '../../services/reservation.service';
 import { apiError } from '../../services/api-error';
+
 @Component({
   selector: 'app-reservation-directory',
-  imports: [Pagination, ReactiveFormsModule, RouterLink, DecimalPipe, DatePipe, BookedPriceBreakdown],
+  imports: [
+    Pagination,
+    ReactiveFormsModule,
+    RouterLink,
+    DecimalPipe,
+    DatePipe,
+    BookedPriceBreakdown,
+  ],
   templateUrl: './reservation-directory.html',
   styleUrl: './reservations.scss',
 })
 export class ReservationDirectory implements OnInit {
-  private readonly service = inject(ReservationService);
-  private readonly destroyRef = inject(DestroyRef);
   readonly result = signal<ReservationPage | null>(null);
   readonly loading = signal(false);
   readonly error = signal('');
@@ -61,19 +67,8 @@ export class ReservationDirectory implements OnInit {
   );
   readonly selected = signal<Reservation | null>(null);
   readonly detailsDialog = viewChild.required<ElementRef<HTMLDialogElement>>('detailsDialog');
-  // Opens the selected reservation in the details dialog.
-  openDetails(reservation: Reservation) {
-    this.selected.set(reservation);
-    this.detailsDialog().nativeElement.showModal();
-  }
-  // Retries the failed reservation directory request.
-  retry() {
-    this.load(this.requestedPage);
-  }
-  // Closes the reservation details dialog.
-  closeDetails() {
-    this.detailsDialog().nativeElement.close();
-  }
+  private readonly service = inject(ReservationService);
+  private readonly destroyRef = inject(DestroyRef);
   private appliedQuery = '';
   private appliedStatus = '';
   private appliedStayFrom = '';
@@ -82,6 +77,23 @@ export class ReservationDirectory implements OnInit {
   private appliedPeriod: StayPeriod = '';
   private appliedFilters = '';
   private requestedPage = 0;
+
+  // Opens the selected reservation in the details dialog.
+  openDetails(reservation: Reservation) {
+    this.selected.set(reservation);
+    this.detailsDialog().nativeElement.showModal();
+  }
+
+  // Retries the failed reservation directory request.
+  retry() {
+    this.load(this.requestedPage);
+  }
+
+  // Closes the reservation details dialog.
+  closeDetails() {
+    this.detailsDialog().nativeElement.close();
+  }
+
   // Calculates the number of reservation directory pages.
   totalPages() {
     const r = this.result();

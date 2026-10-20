@@ -2,8 +2,12 @@ import { DirectoryPage } from '../shared/directory-state';
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Contract, ContractRequest } from '../models/contract.model';
+
 @Injectable({ providedIn: 'root' })
 export class ContractService {
+  private readonly http = inject(HttpClient);
+  private readonly url = '/api/contracts';
+
   // Retrieves one filtered page of contract directory records.
   page(query = '', status = '', page = 0) {
     return this.http.get<DirectoryPage<Contract>>(this.url + '/page', {
@@ -11,8 +15,6 @@ export class ContractService {
     });
   }
 
-  private readonly http = inject(HttpClient);
-  private readonly url = '/api/contracts';
   // Returns the all contracts.
   getAllContracts() {
     return this.http.get<Contract[]>(this.url);

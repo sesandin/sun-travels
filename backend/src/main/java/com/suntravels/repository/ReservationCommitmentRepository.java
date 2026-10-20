@@ -1,15 +1,15 @@
 package com.suntravels.repository;
 
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Read-only data access: no reservation entities or booking CRUD.
@@ -20,10 +20,9 @@ import org.springframework.transaction.annotation.Transactional;
  * The joins may return an ID more than once; any matching commitment blocks.
  */
 @Repository
-@Transactional(propagation = Propagation.MANDATORY)
-public class ReservationCommitmentRepository {
-    private final JdbcTemplate jdbc;
-    private final NamedParameterJdbcTemplate named;
+@Transactional( propagation = Propagation.MANDATORY )
+public class ReservationCommitmentRepository
+{
     private static final String SELECT = """
             select r.reservation_id
             from reservation r
@@ -31,54 +30,62 @@ public class ReservationCommitmentRepository {
             join contract_room_offering o on o.offering_id = ri.offering_id
             join contract c on c.contract_id = o.contract_id
             """;
+    private final JdbcTemplate jdbc;
+    private final NamedParameterJdbcTemplate named;
 
     // Initializes the reservation commitment repository and its required dependencies.
-    public ReservationCommitmentRepository(JdbcTemplate jdbc) {
+    public ReservationCommitmentRepository( JdbcTemplate jdbc )
+    {
         this.jdbc = jdbc;
-        this.named = new NamedParameterJdbcTemplate(jdbc);
+        this.named = new NamedParameterJdbcTemplate( jdbc );
     }
 
     // Finds and locks confirmed reservations with ongoing or future stays.
-    public List<Integer> outstanding(Integer contractId, LocalDate today) {
+    public List<Integer> outstanding( Integer contractId, LocalDate today )
+    {
         // Keep a current locking join read: scalar lookups before the hotel lock may have opened a snapshot.
-        return jdbc.queryForList(SELECT + """
+        return jdbc.queryForList( SELECT + """
                 where c.contract_id = ? and r.status = 'CONFIRMED'
                   and r.check_out_date > ?
                 order by r.reservation_id for update
-                """, Integer.class, contractId, today).stream().distinct().toList();
+                """, Integer.class, contractId, today ).stream().distinct().toList();
     }
 
     // Finds confirmed contract reservations with invalid dates or adult counts.
-    public List<Integer> invalidForContract(Integer contractId) {
-        return jdbc.queryForList(SELECT + """
+    public List<Integer> invalidForContract( Integer contractId )
+    {
+        return jdbc.queryForList( SELECT + """
                 where c.contract_id = ? and r.status = 'CONFIRMED'
                   and (r.check_out_date <= r.check_in_date or ri.number_of_adults <= 0)
                 order by r.reservation_id for update
-                """, Integer.class, contractId);
+                """, Integer.class, contractId );
     }
 
     // Finds confirmed stays that conflict with replacing a contract for the same room types.
-    public List<Integer> replacementConflicts(Integer hotelId, Integer candidateId, LocalDate from,
-            LocalDate to, LocalDate today, Set<Integer> roomIds) {
-        return named.queryForList(SELECT + """
-                where c.hotel_id = :hotel and c.contract_id <> :candidate
-                  and r.status = 'CONFIRMED' and r.check_out_date > :today
-                  and r.check_in_date <= :to and r.check_out_date > :from
-                  and o.room_type_id in (:rooms)
-                order by r.reservation_id for update
-                """,
-                Map.of("hotel", hotelId, "candidate", candidateId, "today", today, "to", to, "from", from,
-                        "rooms", roomIds), Integer.class);
+    public List<Integer> replacementConflicts(
+            Integer hotelId, Integer candidateId, LocalDate from,
+            LocalDate to, LocalDate today, Set<Integer> roomIds )
+    {
+        return named.queryForList( SELECT + """
+                        where c.hotel_id = :hotel and c.contract_id <> :candidate
+                          and r.status = 'CONFIRMED' and r.check_out_date > :today
+                          and r.check_in_date <= :to and r.check_out_date > :from
+                          and o.room_type_id in (:rooms)
+                        order by r.reservation_id for update
+                        """,
+                Map.of( "hotel", hotelId, "candidate", candidateId, "today", today, "to", to, "from", from,
+                        "rooms", roomIds ), Integer.class );
     }
 
     // Finds malformed confirmed stays that prevent safe contract replacement.
-    public List<Integer> invalidForReplacement(Integer hotelId, Integer candidateId, Set<Integer> roomIds) {
-        return named.queryForList(SELECT + """
+    public List<Integer> invalidForReplacement( Integer hotelId, Integer candidateId, Set<Integer> roomIds )
+    {
+        return named.queryForList( SELECT + """
                 where c.hotel_id = :hotel and c.contract_id <> :candidate
                   and r.status = 'CONFIRMED'
                   and (r.check_out_date <= r.check_in_date or ri.number_of_adults <= 0)
                   and o.room_type_id in (:rooms)
                 order by r.reservation_id for update
-                """, Map.of("hotel", hotelId, "candidate", candidateId, "rooms", roomIds), Integer.class);
+                """, Map.of( "hotel", hotelId, "candidate", candidateId, "rooms", roomIds ), Integer.class );
     }
 }

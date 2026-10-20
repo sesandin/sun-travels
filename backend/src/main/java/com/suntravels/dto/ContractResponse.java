@@ -15,5 +15,6 @@ public record ContractResponse(
         BigDecimal markupPercentage,
         String currencyCode,
         ContractStatus status
-) {
+)
+{
 }

@@ -1,23 +1,45 @@
 package com.suntravels.service;
 
-import com.suntravels.dto.*;
-import com.suntravels.entity.*;
-import com.suntravels.exception.*;
-import com.suntravels.repository.*;
+import com.suntravels.dto.ContractMarkupRequest;
+import com.suntravels.dto.ContractRequest;
+import com.suntravels.dto.ContractResponse;
+import com.suntravels.dto.OfferingRequest;
+import com.suntravels.dto.SeasonalRateRequest;
+import com.suntravels.entity.Contract;
+import com.suntravels.entity.ContractRoomOffering;
+import com.suntravels.entity.ContractStatus;
+import com.suntravels.entity.Hotel;
+import com.suntravels.entity.HotelStatus;
+import com.suntravels.entity.OfferingSeasonalRate;
+import com.suntravels.entity.OfferingStatus;
+import com.suntravels.exception.ContractException;
+import com.suntravels.exception.HotelNotFoundException;
+import com.suntravels.repository.ContractRepository;
+import com.suntravels.repository.HotelRepository;
+import com.suntravels.repository.OfferingRepository;
+import com.suntravels.repository.ReservationCommitmentRepository;
+import com.suntravels.repository.SeasonalRateRepository;
 import jakarta.validation.Validator;
-
-import java.time.Clock;
-import java.time.LocalDate;
-import java.util.*;
-
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+
 @Service
-@Transactional(readOnly = true)
-public class ContractService {
+@Transactional( readOnly = true )
+public class ContractService
+{
     private final ContractRepository repository;
     private final HotelRepository hotels;
     private final Validator validator;
@@ -27,9 +49,11 @@ public class ContractService {
     private final Clock clock;
 
     // Initializes the contract service and its required dependencies.
-    public ContractService(ContractRepository repository, HotelRepository hotels, Validator validator,
+    public ContractService(
+            ContractRepository repository, HotelRepository hotels, Validator validator,
             SeasonalRateRepository seasons, OfferingRepository offerings,
-            ReservationCommitmentRepository commitments, Clock clock) {
+            ReservationCommitmentRepository commitments, Clock clock )
+    {
         this.repository = repository;
         this.hotels = hotels;
         this.validator = validator;
@@ -39,82 +63,95 @@ public class ContractService {
         this.clock = clock;
     }
 
+    // Formats the permanent contract code from its generated database ID.
+    static String generatedCode( Integer id )
+    {
+        if( id == null || id <= 0 )
+        {
+            throw ContractException.conflict( "A valid database contract ID could not be allocated" );
+        }
+        return "C" + String.format( Locale.ROOT, "%03d", id );
+    }
+
     // Returns the all contracts.
-    public List<ContractResponse> getAllContracts() {
-        return repository.findAll(Sort.by("contractId").descending()).stream().map(this::response).toList();
+    public List<ContractResponse> getAllContracts()
+    {
+        return repository.findAll( Sort.by( "contractId" ).descending() ).stream().map( this::response ).toList();
     }
 
     // Returns the contract by id.
-    public ContractResponse getContractById(Integer id) {
-        return response(repository.findById(id).orElseThrow(() -> ContractException.missing(id)));
+    public ContractResponse getContractById( Integer id )
+    {
+        return response( repository.findById( id ).orElseThrow( () -> ContractException.missing( id ) ) );
     }
 
     // Creates the contract.
     @Transactional
-    public ContractResponse createContract(ContractRequest request) {
-        validate(request);
-        Hotel hotel = lockedHotel(request.hotelId());
+    public ContractResponse createContract( ContractRequest request )
+    {
+        validate( request );
+        Hotel hotel = lockedHotel( request.hotelId() );
         Contract contract = new Contract();
-        apply(contract, request, hotel);
-        contract.setStatus(ContractStatus.DRAFT);
+        apply( contract, request, hotel );
+        contract.setStatus( ContractStatus.DRAFT );
         // Satisfy NOT NULL/UNIQUE before MySQL IDENTITY assigns the business ID.
         // Both flushes share this transaction. No temporary reference is returned.
-        contract.setContractCode("TMP-" + UUID.randomUUID());
-        try {
-            contract = repository.saveAndFlush(contract);
-            String code = generatedCode(contract.getContractId());
-            if (repository.existsByContractCodeAndContractIdNot(code, contract.getContractId())) {
+        contract.setContractCode( "TMP-" + UUID.randomUUID() );
+        try
+        {
+            contract = repository.saveAndFlush( contract );
+            String code = generatedCode( contract.getContractId() );
+            if( repository.existsByContractCodeAndContractIdNot( code, contract.getContractId() ) )
+            {
                 throw ContractException.conflict(
-                        "Generated contract code " + code + " already exists. No contract was created.");
+                        "Generated contract code " + code + " already exists. No contract was created." );
             }
-            contract.setContractCode(code);
-            return response(repository.saveAndFlush(contract));
-        } catch (DataIntegrityViolationException ex) {
+            contract.setContractCode( code );
+            return response( repository.saveAndFlush( contract ) );
+        }
+        catch( DataIntegrityViolationException ex )
+        {
             throw ContractException.conflict(
-                    "Contract creation conflicts with an existing code or referenced record. No contract was created.");
+                    "Contract creation conflicts with an existing code or referenced record. No contract was created." );
         }
-    }
-
-    // Formats the permanent contract code from its generated database ID.
-    static String generatedCode(Integer id) {
-        if (id == null || id <= 0) {
-            throw ContractException.conflict("A valid database contract ID could not be allocated");
-        }
-        return "C" + String.format(Locale.ROOT, "%03d", id);
     }
 
     // Updates the contract.
     @Transactional
-    public ContractResponse updateContract(Integer id, ContractRequest request) {
-        validate(request);
-        Contract contract = coordinated(id, request.hotelId());
-        requireStatus(contract, ContractStatus.DRAFT, "Only DRAFT contracts allow header editing");
-        if (seasons.countOutsideContract(id, request.validFrom(), request.validTo()) > 0) {
-            throw ContractException.conflict("Contract dates would exclude existing seasonal rates");
+    public ContractResponse updateContract( Integer id, ContractRequest request )
+    {
+        validate( request );
+        Contract contract = coordinated( id, request.hotelId() );
+        requireStatus( contract, ContractStatus.DRAFT, "Only DRAFT contracts allow header editing" );
+        if( seasons.countOutsideContract( id, request.validFrom(), request.validTo() ) > 0 )
+        {
+            throw ContractException.conflict( "Contract dates would exclude existing seasonal rates" );
         }
-        apply(contract, request, lockedHotel(request.hotelId()));
-        return persist(contract);
+        apply( contract, request, lockedHotel( request.hotelId() ) );
+        return persist( contract );
     }
 
     // Updates the markup.
     @Transactional
-    public ContractResponse updateMarkup(Integer id, ContractMarkupRequest request) {
-        Contract contract = coordinated(id, null);
-        requireStatus(contract, ContractStatus.APPROVED, "Only APPROVED contracts allow markup updates");
-        validate(request);
-        contract.setMarkupPercentage(request.markupPercentage());
-        return persist(contract);
+    public ContractResponse updateMarkup( Integer id, ContractMarkupRequest request )
+    {
+        Contract contract = coordinated( id, null );
+        requireStatus( contract, ContractStatus.APPROVED, "Only APPROVED contracts allow markup updates" );
+        validate( request );
+        contract.setMarkupPercentage( request.markupPercentage() );
+        return persist( contract );
     }
 
     /**
      * Stops new sales under the contract without changing confirmed commitments or saved prices.
      */
     @Transactional
-    public ContractResponse suspendContract(Integer id) {
-        Contract contract = coordinated(id, null);
-        requireStatus(contract, ContractStatus.APPROVED, "Only APPROVED contracts may be suspended");
-        contract.setStatus(ContractStatus.SUSPENDED);
-        return persist(contract);
+    public ContractResponse suspendContract( Integer id )
+    {
+        Contract contract = coordinated( id, null );
+        requireStatus( contract, ContractStatus.APPROVED, "Only APPROVED contracts may be suspended" );
+        contract.setStatus( ContractStatus.SUSPENDED );
+        return persist( contract );
     }
 
     /**
@@ -126,36 +163,41 @@ public class ContractService {
      * @throws ContractException if already terminated, commitments are invalid, or a stay remains outstanding
      */
     @Transactional
-    public ContractResponse terminateContract(Integer id) {
-        Contract contract = coordinated(id, null);
-        if (contract.getStatus() == ContractStatus.TERMINATED) {
-            throw ContractException.conflict("TERMINATED is a terminal status");
+    public ContractResponse terminateContract( Integer id )
+    {
+        Contract contract = coordinated( id, null );
+        if( contract.getStatus() == ContractStatus.TERMINATED )
+        {
+            throw ContractException.conflict( "TERMINATED is a terminal status" );
         }
         // Preserve tested DRAFT termination, with the same defensive commitment guard.
-        offerings.findAllForUpdate(id);
-        invalidCommitments(commitments.invalidForContract(id));
-        List<Integer> outstanding = commitments.outstanding(id, LocalDate.now(clock));
-        if (!outstanding.isEmpty()) {
+        offerings.findAllForUpdate( id );
+        invalidCommitments( commitments.invalidForContract( id ) );
+        List<Integer> outstanding = commitments.outstanding( id, LocalDate.now( clock ) );
+        if( !outstanding.isEmpty() )
+        {
             long count = outstanding.stream().distinct().count();
-            throw ContractException.conflict("Cannot terminate this contract because it has " + count +
-                    (count == 1 ? " ongoing or upcoming confirmed reservation. " :
-                            " ongoing or upcoming confirmed reservations. ") +
-                    "Wait until these stays are completed or resolve them through the existing cancellation process. Suspend the contract to stop new sales.");
+            throw ContractException.conflict( "Cannot terminate this contract because it has " + count +
+                                                      ( count == 1 ? " ongoing or upcoming confirmed reservation. " :
+                                                                " ongoing or upcoming confirmed reservations. " ) +
+                                                      "Wait until these stays are completed or resolve them through the existing cancellation process. Suspend the contract to stop new sales." );
         }
-        contract.setStatus(ContractStatus.TERMINATED);
-        return persist(contract);
+        contract.setStatus( ContractStatus.TERMINATED );
+        return persist( contract );
     }
 
     // Approves the contract.
     @Transactional
-    public ContractResponse approveContract(Integer id) {
-        return approve(id, ContractStatus.DRAFT);
+    public ContractResponse approveContract( Integer id )
+    {
+        return approve( id, ContractStatus.DRAFT );
     }
 
     // Reapproves the contract.
     @Transactional
-    public ContractResponse reapproveContract(Integer id) {
-        return approve(id, ContractStatus.SUSPENDED);
+    public ContractResponse reapproveContract( Integer id )
+    {
+        return approve( id, ContractStatus.SUSPENDED );
     }
 
     /**
@@ -163,168 +205,203 @@ public class ContractService {
      * Suspended predecessors can still hold confirmed inventory, so status alone cannot
      * establish that an overlapping replacement contract is safe to approve.
      */
-    private ContractResponse approve(Integer id, ContractStatus expected) {
-        Contract contract = coordinated(id, null);
-        requireStatus(contract, expected,
+    private ContractResponse approve( Integer id, ContractStatus expected )
+    {
+        Contract contract = coordinated( id, null );
+        requireStatus( contract, expected,
                 expected == ContractStatus.DRAFT ? "Only DRAFT contracts may be approved" :
-                        "Only SUSPENDED contracts may be reapproved");
+                        "Only SUSPENDED contracts may be reapproved" );
         Hotel hotel = contract.getHotel();
-        if (hotel.getStatus() != HotelStatus.ACTIVE) {
+        if( hotel.getStatus() != HotelStatus.ACTIVE )
+        {
             throw ContractException.conflict(
-                    "Hotel must be ACTIVE for contract approval. Approval never activates a hotel.");
+                    "Hotel must be ACTIVE for contract approval. Approval never activates a hotel." );
         }
-        if (contract.getContractCode() == null || contract.getContractCode().isBlank() ||
-                contract.getContractCode().length() > 45) {
-            throw ContractException.conflict("Persisted contract code is invalid");
+        if( contract.getContractCode() == null || contract.getContractCode().isBlank() ||
+                    contract.getContractCode().length() > 45 )
+        {
+            throw ContractException.conflict( "Persisted contract code is invalid" );
         }
         validatePersisted(
-                new ContractRequest(hotel.getHotelId(), contract.getValidFrom(), contract.getValidTo(),
-                        contract.getMarkupPercentage(), contract.getCurrencyCode()));
-        List<ContractRoomOffering> rows = offerings.findAllForUpdate(id);
-        if (rows.isEmpty()) {
-            throw ContractException.conflict("At least one valid ENABLED offering is required");
+                new ContractRequest( hotel.getHotelId(), contract.getValidFrom(), contract.getValidTo(),
+                        contract.getMarkupPercentage(), contract.getCurrencyCode() ) );
+        List<ContractRoomOffering> rows = offerings.findAllForUpdate( id );
+        if( rows.isEmpty() )
+        {
+            throw ContractException.conflict( "At least one valid ENABLED offering is required" );
         }
         boolean enabled = false;
         Set<Integer> roomIds = new HashSet<>();
-        for (ContractRoomOffering row : rows) {
-            if (row.getRoomType() == null) {
-                throw ContractException.conflict("Offering has no room type");
+        for( ContractRoomOffering row : rows )
+        {
+            if( row.getRoomType() == null )
+            {
+                throw ContractException.conflict( "Offering has no room type" );
             }
             validatePersisted(
-                    new OfferingRequest(row.getRoomType().getRoomTypeId(), row.getRatePerPersonPerNight(),
-                            row.getContractedRoomCount(), row.getMaxAdults(), row.getStatus()));
-            if (!roomIds.add(row.getRoomType().getRoomTypeId())) {
-                throw ContractException.conflict("Duplicate room type in persisted contract offerings");
+                    new OfferingRequest( row.getRoomType().getRoomTypeId(), row.getRatePerPersonPerNight(),
+                            row.getContractedRoomCount(), row.getMaxAdults(), row.getStatus() ) );
+            if( !roomIds.add( row.getRoomType().getRoomTypeId() ) )
+            {
+                throw ContractException.conflict( "Duplicate room type in persisted contract offerings" );
             }
             enabled |= row.getStatus() == OfferingStatus.ENABLED;
         }
-        if (!enabled) {
-            throw ContractException.conflict("At least one valid ENABLED offering is required");
+        if( !enabled )
+        {
+            throw ContractException.conflict( "At least one valid ENABLED offering is required" );
         }
-        validateSeasons(contract, seasons.findContractRatesForUpdate(id));
-        List<Contract> overlaps = repository.approvedOverlaps(hotel.getHotelId(), id, contract.getValidFrom(),
-                contract.getValidTo());
-        if (!overlaps.isEmpty()) {
-            Contract other = overlaps.get(0);
+        validateSeasons( contract, seasons.findContractRatesForUpdate( id ) );
+        List<Contract> overlaps = repository.approvedOverlaps( hotel.getHotelId(), id, contract.getValidFrom(),
+                contract.getValidTo() );
+        if( !overlaps.isEmpty() )
+        {
+            Contract other = overlaps.get( 0 );
             throw ContractException.conflict(
                     "Validity overlaps APPROVED contract " + other.getContractCode() + " (ID " +
-                            other.getContractId() + ") for this hotel");
+                            other.getContractId() + ") for this hotel" );
         }
-        invalidCommitments(commitments.invalidForContract(id));
-        invalidCommitments(commitments.invalidForReplacement(hotel.getHotelId(), id, roomIds));
-        List<Integer> conflicts = commitments.replacementConflicts(hotel.getHotelId(), id,
-                contract.getValidFrom(), contract.getValidTo(), LocalDate.now(clock), roomIds);
-        if (!conflicts.isEmpty()) {
-            throw ContractException.conflict("Approval blocked by CONFIRMED reservation " + conflicts.get(0) +
-                    " under another contract for the same hotel and room type");
+        invalidCommitments( commitments.invalidForContract( id ) );
+        invalidCommitments( commitments.invalidForReplacement( hotel.getHotelId(), id, roomIds ) );
+        List<Integer> conflicts = commitments.replacementConflicts( hotel.getHotelId(), id,
+                contract.getValidFrom(), contract.getValidTo(), LocalDate.now( clock ), roomIds );
+        if( !conflicts.isEmpty() )
+        {
+            throw ContractException.conflict( "Approval blocked by CONFIRMED reservation " + conflicts.get( 0 ) +
+                                                      " under another contract for the same hotel and room type" );
         }
-        contract.setStatus(ContractStatus.APPROVED);
-        return persist(contract);
+        contract.setStatus( ContractStatus.APPROVED );
+        return persist( contract );
     }
 
     // Rejects invalid or conflicting seasonal periods before using the contract.
-    private void validateSeasons(Contract contract, List<OfferingSeasonalRate> rates) {
-        Map<Integer, LocalDate> latestEnd = new HashMap<>();
-        for (OfferingSeasonalRate rate : rates) {
-            validatePersisted(new SeasonalRateRequest(rate.getValidFrom(), rate.getValidTo(),
-                    rate.getRatePerPersonPerNight()));
-            if (rate.getValidFrom().isBefore(contract.getValidFrom()) ||
-                    rate.getValidTo().isAfter(contract.getValidTo())) {
-                throw ContractException.conflict("Persisted seasonal dates are outside contract validity");
+    private void validateSeasons( Contract contract, List<OfferingSeasonalRate> rates )
+    {
+        Map<Integer,LocalDate> latestEnd = new HashMap<>();
+        for( OfferingSeasonalRate rate : rates )
+        {
+            validatePersisted( new SeasonalRateRequest( rate.getValidFrom(), rate.getValidTo(),
+                    rate.getRatePerPersonPerNight() ) );
+            if( rate.getValidFrom().isBefore( contract.getValidFrom() ) ||
+                        rate.getValidTo().isAfter( contract.getValidTo() ) )
+            {
+                throw ContractException.conflict( "Persisted seasonal dates are outside contract validity" );
             }
             Integer offeringId = rate.getOffering().getOfferingId();
-            LocalDate prior = latestEnd.put(offeringId, rate.getValidTo());
-            if (prior != null && !rate.getValidFrom().isAfter(prior)) {
-                throw ContractException.conflict("Persisted seasonal periods overlap");
+            LocalDate prior = latestEnd.put( offeringId, rate.getValidTo() );
+            if( prior != null && !rate.getValidFrom().isAfter( prior ) )
+            {
+                throw ContractException.conflict( "Persisted seasonal periods overlap" );
             }
         }
     }
 
     // Rejects lifecycle changes when confirmed reservation data is malformed.
-    private void invalidCommitments(List<Integer> invalid) {
-        if (!invalid.isEmpty()) {
-            throw ContractException.conflict("CONFIRMED reservation " + invalid.get(0) +
-                    " has invalid stay or occupancy data. Correct it before changing lifecycle status.");
+    private void invalidCommitments( List<Integer> invalid )
+    {
+        if( !invalid.isEmpty() )
+        {
+            throw ContractException.conflict( "CONFIRMED reservation " + invalid.get( 0 ) +
+                                                      " has invalid stay or occupancy data. Correct it before changing lifecycle status." );
         }
     }
 
     // HOTEL(s ascending ID) -> CONTRACT -> OFFERING -> seasonal/reservation reads.
     // Never retain a managed contract from before the hotel lock. Hotel reassignment
     // is rechecked after locking so a stale scalar lookup cannot use the wrong lock.
-    private Contract coordinated(Integer id, Integer targetHotel) {
-        Integer currentHotel = repository.findHotelId(id).orElseThrow(() -> ContractException.missing(id));
+    private Contract coordinated( Integer id, Integer targetHotel )
+    {
+        Integer currentHotel = repository.findHotelId( id ).orElseThrow( () -> ContractException.missing( id ) );
         TreeSet<Integer> hotelIds = new TreeSet<>();
-        hotelIds.add(currentHotel);
-        if (targetHotel != null) {
-            hotelIds.add(targetHotel);
+        hotelIds.add( currentHotel );
+        if( targetHotel != null )
+        {
+            hotelIds.add( targetHotel );
         }
-        hotelIds.forEach(this::lockedHotel);
-        Contract contract = repository.findForUpdate(id).orElseThrow(() -> ContractException.missing(id));
-        if (!currentHotel.equals(contract.getHotel().getHotelId())) {
-            throw ContractException.conflict("Contract hotel changed concurrently. Reload and try again.");
+        hotelIds.forEach( this::lockedHotel );
+        Contract contract = repository.findForUpdate( id ).orElseThrow( () -> ContractException.missing( id ) );
+        if( !currentHotel.equals( contract.getHotel().getHotelId() ) )
+        {
+            throw ContractException.conflict( "Contract hotel changed concurrently. Reload and try again." );
         }
         return contract;
     }
 
     // Retrieves and locks the hotel or reports that it does not exist.
-    private Hotel lockedHotel(Integer id) {
-        return hotels.findForUpdate(id).orElseThrow(() -> new HotelNotFoundException(id));
+    private Hotel lockedHotel( Integer id )
+    {
+        return hotels.findForUpdate( id ).orElseThrow( () -> new HotelNotFoundException( id ) );
     }
 
     // Rejects an operation unless the contract has the required status.
-    private void requireStatus(Contract contract, ContractStatus status, String message) {
-        if (contract.getStatus() != status) {
-            throw ContractException.conflict(message);
+    private void requireStatus( Contract contract, ContractStatus status, String message )
+    {
+        if( contract.getStatus() != status )
+        {
+            throw ContractException.conflict( message );
         }
     }
 
     // Validates contract input and reports field errors before writing.
-    private void validate(Object request) {
-        if (request == null) {
-            throw ContractException.invalid("Contract details are required");
+    private void validate( Object request )
+    {
+        if( request == null )
+        {
+            throw ContractException.invalid( "Contract details are required" );
         }
-        var violations = validator.validate(request);
-        if (!violations.isEmpty()) {
+        var violations = validator.validate( request );
+        if( !violations.isEmpty() )
+        {
             throw ContractException.invalid(
-                    violations.stream().map(v -> v.getPropertyPath() + ": " + v.getMessage()).sorted().reduce(
-                            (a, b) -> a + "; " + b).orElseThrow());
+                    violations.stream().map( v -> v.getPropertyPath() + ": " + v.getMessage() ).sorted().reduce(
+                            ( a, b ) -> a + "; " + b ).orElseThrow() );
         }
     }
 
     // Checks stored commercial terms and reports invalid data as a conflict.
-    private void validatePersisted(Object request) {
-        try {
-            validate(request);
-        } catch (ContractException ex) {
-            throw ContractException.conflict("Persisted commercial terms are invalid: " + ex.getMessage());
+    private void validatePersisted( Object request )
+    {
+        try
+        {
+            validate( request );
+        }
+        catch( ContractException ex )
+        {
+            throw ContractException.conflict( "Persisted commercial terms are invalid: " + ex.getMessage() );
         }
     }
 
     // Copies editable contract terms without changing its permanent contract code.
-    private void apply(Contract contract, ContractRequest request, Hotel hotel) {
+    private void apply( Contract contract, ContractRequest request, Hotel hotel )
+    {
         // Code is assigned only at creation; never changed by header edits.
-        contract.setHotel(hotel);
-        contract.setValidFrom(request.validFrom());
-        contract.setValidTo(request.validTo());
-        contract.setMarkupPercentage(request.markupPercentage());
-        contract.setCurrencyCode(request.currencyCode());
+        contract.setHotel( hotel );
+        contract.setValidFrom( request.validFrom() );
+        contract.setValidTo( request.validTo() );
+        contract.setMarkupPercentage( request.markupPercentage() );
+        contract.setCurrencyCode( request.currencyCode() );
     }
 
     // Saves the contract and translates database conflicts into a business error.
-    private ContractResponse persist(Contract contract) {
-        try {
-            return response(repository.saveAndFlush(contract));
-        } catch (DataIntegrityViolationException ex) {
+    private ContractResponse persist( Contract contract )
+    {
+        try
+        {
+            return response( repository.saveAndFlush( contract ) );
+        }
+        catch( DataIntegrityViolationException ex )
+        {
             throw ContractException.conflict(
-                    "Contract could not be saved because referenced records conflict. Refresh and try again.");
+                    "Contract could not be saved because referenced records conflict. Refresh and try again." );
         }
     }
 
     // Maps the stored record to its API response fields.
-    ContractResponse response(Contract contract) {
-        return new ContractResponse(contract.getContractId(), contract.getContractCode(),
+    ContractResponse response( Contract contract )
+    {
+        return new ContractResponse( contract.getContractId(), contract.getContractCode(),
                 contract.getHotel().getHotelId(), contract.getHotel().getName(), contract.getValidFrom(),
                 contract.getValidTo(), contract.getMarkupPercentage(), contract.getCurrencyCode(),
-                contract.getStatus());
+                contract.getStatus() );
     }
 }

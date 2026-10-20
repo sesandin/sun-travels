@@ -74,12 +74,7 @@ export class HotelForm {
       status: hotel?.status ?? 'ACTIVE',
     });
   }
-  // Returns the configured length limit for a hotel form field.
-  private maximumLength(key: string): number {
-    if (key === 'address') return 255;
-    if (key === 'phone') return 20;
-    return 100;
-  }
+
   // Returns a readable validation message for the selected form control.
   validationMessage(key: keyof typeof this.form.controls): string {
     const control = this.form.controls[key];
@@ -90,6 +85,7 @@ export class HotelForm {
     if (control.hasError('email')) return 'Enter a valid email address.';
     return 'Choose a valid value.';
   }
+
   // Validates hotel fields and emits the create or update request.
   submit(): void {
     this.form.markAllAsTouched();
@@ -105,5 +101,12 @@ export class HotelForm {
       starRating: raw.starRating,
       ...(this.editing ? {} : { status: raw.status }),
     });
+  }
+
+  // Returns the configured length limit for a hotel form field.
+  private maximumLength(key: string): number {
+    if (key === 'address') return 255;
+    if (key === 'phone') return 20;
+    return 100;
   }
 }

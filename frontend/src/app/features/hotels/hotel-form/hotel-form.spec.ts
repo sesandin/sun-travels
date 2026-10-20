@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HotelForm } from './hotel-form';
 import { Hotel } from '../../../models/hotel.model';
+
 const hotel: Hotel = {
   hotelId: 7,
   name: 'Coastal Hotel',

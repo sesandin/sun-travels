@@ -5,269 +5,281 @@
     per night.
   </p>
   @if (targetMissing()) {
-    <p role="alert" class="error-message">
-      The linked offering is not part of this contract. The current contract offerings are shown
-      below.
-    </p>
+  <p class="error-message" role="alert">
+    The linked offering is not part of this contract. The current contract offerings are shown
+    below.
+  </p>
   }
   @if (loading()) {
-    <p><output>Loading offerings...</output></p>
+  <p>
+    <output>Loading offerings...</output>
+  </p>
   } @else if (error()) {
-    <p role="alert" class="error-message">{{ error() }}</p>
-    <button type="button" (click)="load()">Retry offerings</button>
+  <p class="error-message" role="alert">{{ error() }}</p>
+  <button (click)="load()" type="button">Retry offerings</button>
   } @else {
-    @if (!rows().length) {
-      <p>No offerings for this contract.</p>
-    }
-    @for (row of rows(); track row.offeringId) {
-      <article
-        #offeringCard
-        tabindex="-1"
-        [id]="'offering-' + row.offeringId"
-        class="offering"
-        [class.linked-offering]="focusOfferingId() === row.offeringId"
-        [attr.aria-label]="row.roomTypeName + ' offering'"
-      >
-        <header class="offering-header">
-          <h4>{{ row.roomTypeName }}</h4>
-          <div class="offering-status" aria-label="Offering status">
-            <span class="status-badge" [attr.data-status]="row.status">{{ row.status }}</span>
-          </div>
-        </header>
-        <dl class="offering-metrics">
-          <div class="rate-metric">
-            <dt>Base rate</dt>
-            <dd>
-              {{ row.ratePerPersonPerNight }} <span>{{ contract().currencyCode }}</span>
-            </dd>
-            <span class="metric-note">per adult per night</span>
-          </div>
-          <div>
-            <dt>Allocated rooms</dt>
-            <dd>{{ row.contractedRoomCount }}</dd>
-            <span class="metric-note">shared across all rates</span>
-          </div>
-          <div>
-            <dt>Maximum adults per room</dt>
-            <dd>{{ row.maxAdults }}</dd>
-            <span class="metric-note">adults per room</span>
-          </div>
-        </dl>
-        <div class="actions">
-          @if (contract().status === 'DRAFT' && canMaintain()) {
-            <button type="button" (click)="open(row)" [disabled]="saving()">Edit offering</button>
-          }
-          @if (contract().status === 'APPROVED' && canMaintain()) {
-            <button type="button" (click)="open(row, 'rate')" [disabled]="saving()">
-              Edit base rate
-            </button>
-          }
-          @if (canChangeStatus()) {
-            <button type="button" (click)="open(row, 'status')" [disabled]="saving()">
-              Change offering status
-            </button>
-          }
-        </div>
-        <app-seasonal-rates [contract]="contract()" [offering]="row" />
-      </article>
-    }
-    @if (contract().status === 'DRAFT' && canMaintain()) {
-      <div class="actions offering-actions">
-        <button class="primary" type="button" (click)="open()" [disabled]="saving()">
-          Add Offering
-        </button>
+  @if (!rows().length) {
+  <p>No offerings for this contract.</p>
+  }
+  @for (row of rows(); track row.offeringId) {
+  <article
+    #offeringCard
+    [attr.aria-label]="row.roomTypeName + ' offering'"
+    [class.linked-offering]="focusOfferingId() === row.offeringId"
+    [id]="'offering-' + row.offeringId"
+    class="offering"
+    tabindex="-1"
+  >
+    <header class="offering-header">
+      <h4>{{ row.roomTypeName }}</h4>
+      <div aria-label="Offering status" class="offering-status">
+        <span [attr.data-status]="row.status" class="status-badge">{{ row.status }}</span>
       </div>
-    }
+    </header>
+    <dl class="offering-metrics">
+      <div class="rate-metric">
+        <dt>Base rate</dt>
+        <dd>
+          {{ row.ratePerPersonPerNight }} <span>{{ contract().currencyCode }}</span>
+        </dd>
+        <span class="metric-note">per adult per night</span>
+      </div>
+      <div>
+        <dt>Allocated rooms</dt>
+        <dd>{{ row.contractedRoomCount }}</dd>
+        <span class="metric-note">shared across all rates</span>
+      </div>
+      <div>
+        <dt>Maximum adults per room</dt>
+        <dd>{{ row.maxAdults }}</dd>
+        <span class="metric-note">adults per room</span>
+      </div>
+    </dl>
+    <div class="actions">
+      @if (contract().status === 'DRAFT' && canMaintain()) {
+      <button (click)="open(row)" [disabled]="saving()" type="button">Edit offering</button>
+      }
+      @if (contract().status === 'APPROVED' && canMaintain()) {
+      <button (click)="open(row, 'rate')" [disabled]="saving()" type="button">
+        Edit base rate
+      </button>
+      }
+      @if (canChangeStatus()) {
+      <button (click)="open(row, 'status')" [disabled]="saving()" type="button">
+        Change offering status
+      </button>
+      }
+    </div>
+    <app-seasonal-rates [contract]="contract()" [offering]="row"/>
+  </article>
+  }
+  @if (contract().status === 'DRAFT' && canMaintain()) {
+  <div class="actions offering-actions">
+    <button (click)="open()" [disabled]="saving()" class="primary" type="button">
+      Add Offering
+    </button>
+  </div>
+  }
   }
   @if (!canMaintain()) {
-    @if (contract().status === 'SUSPENDED' && !isExpired()) {
-      <p>
-        Offering status can still be changed. ENABLED offerings remain unavailable for new sales
-        until the contract is APPROVED and the hotel is ACTIVE.
-      </p>
-    }
-    <p>
-      Historical offerings are preserved. Rate and seasonal maintenance is unavailable for
-      {{ isExpired() ? 'expired' : contract().status }} contracts.
-    </p>
+  @if (contract().status === 'SUSPENDED' && !isExpired()) {
+  <p>
+    Offering status can still be changed. ENABLED offerings remain unavailable for new sales
+    until the contract is APPROVED and the hotel is ACTIVE.
+  </p>
+  }
+  <p>
+    Historical offerings are preserved. Rate and seasonal maintenance is unavailable for
+    {{ isExpired() ? 'expired' : contract().status }} contracts.
+  </p>
   }
   @if (notice()) {
-    <p class="success-message">
-      <output>{{ notice() }}</output>
-    </p>
+  <p class="success-message">
+    <output>{{ notice() }}</output>
+  </p>
   }
   @if (mode() && (mode() === 'status' ? canChangeStatus() : canMaintain())) {
-    <section #editor tabindex="-1" class="editor" aria-label="Offering editor">
-      @if (mode() === 'draft') {
-        @if (roomsLoading()) {
-          <p><output>Loading room types...</output></p>
+  <section #editor aria-label="Offering editor" class="editor" tabindex="-1">
+    @if (mode() === 'draft') {
+    @if (roomsLoading()) {
+    <p>
+      <output>Loading room types...</output>
+    </p>
+    }
+    @if (roomsError()) {
+    <p class="error-message" role="alert">{{ roomsError() }}</p>
+    <button (click)="loadRooms()" type="button">Retry room types</button>
+    }
+    @if (!roomsLoading() && !roomsError() && !rooms().length) {
+    <p>Register a room type before adding an offering.</p>
+    }
+    <form (ngSubmit)="save()" [formGroup]="form">
+      <fieldset [disabled]="saving()">
+        <legend>{{ selected() ? 'Edit DRAFT offering' : 'Add offering' }}</legend>
+        @if (form.touched && form.invalid) {
+        <div class="validation-notice" role="alert">
+          <span aria-hidden="true" class="validation-icon">!</span>
+          <div>
+            <strong>A few details need your attention</strong>
+            <p>Please check the highlighted fields before saving.</p>
+          </div>
+        </div>
         }
-        @if (roomsError()) {
-          <p role="alert" class="error-message">{{ roomsError() }}</p>
-          <button type="button" (click)="loadRooms()">Retry room types</button>
-        }
-        @if (!roomsLoading() && !roomsError() && !rooms().length) {
-          <p>Register a room type before adding an offering.</p>
-        }
-        <form [formGroup]="form" (ngSubmit)="save()">
-          <fieldset [disabled]="saving()">
-            <legend>{{ selected() ? 'Edit DRAFT offering' : 'Add offering' }}</legend>
-            @if (form.touched && form.invalid) {
-              <div class="validation-notice" role="alert">
-                <span class="validation-icon" aria-hidden="true">!</span>
-                <div>
-                  <strong>A few details need your attention</strong>
-                  <p>Please check the highlighted fields before saving.</p>
-                </div>
-              </div>
-            }
-            <div class="form-grid">
-              <div>
-                <label for="offering-room">Room type</label>
-                <select
-                  id="offering-room"
-                  formControlName="roomTypeId"
-                  [attr.aria-invalid]="!!offeringError('roomTypeId')"
-                  [attr.aria-describedby]="offeringError('roomTypeId') ? 'offering-room-error' : null"
-                >
-                  <option [ngValue]="null">Select a room type</option>
-                  @for (room of rooms(); track room.roomTypeId) {
-                    <option [ngValue]="room.roomTypeId">{{ room.name }}</option>
-                  }
-                </select>
-                @if (offeringError('roomTypeId'); as message) {
-                  <p class="field-error" id="offering-room-error">{{ message }}</p>
-                }
-              </div>
-              <div>
-                <label for="offering-rate">Base rate ({{ contract().currencyCode }})</label>
-                <input
-                  id="offering-rate"
-                  type="number"
-                  min="0.01"
-                  max="99999999.99"
-                  step="0.01"
-                  formControlName="ratePerPersonPerNight"
-                  [attr.aria-invalid]="!!offeringError('ratePerPersonPerNight')"
-                  [attr.aria-describedby]="offeringError('ratePerPersonPerNight') ? 'offering-rate-error' : null"
-                />
-                @if (offeringError('ratePerPersonPerNight'); as message) {
-                  <p class="field-error" id="offering-rate-error">{{ message }}</p>
-                }
-              </div>
-              <div>
-                <label for="offering-rooms">Allocated rooms</label>
-                <input
-                  id="offering-rooms"
-                  type="number"
-                  min="1"
-                  step="1"
-                  formControlName="contractedRoomCount"
-                  [attr.aria-invalid]="!!offeringError('contractedRoomCount')"
-                  [attr.aria-describedby]="offeringError('contractedRoomCount') ? 'offering-rooms-error' : null"
-                />
-                @if (offeringError('contractedRoomCount'); as message) {
-                  <p class="field-error" id="offering-rooms-error">{{ message }}</p>
-                }
-              </div>
-              <div>
-                <label for="offering-adults">Maximum adults per room</label>
-                <input
-                  id="offering-adults"
-                  type="number"
-                  min="1"
-                  step="1"
-                  formControlName="maxAdults"
-                  [attr.aria-invalid]="!!offeringError('maxAdults')"
-                  [attr.aria-describedby]="offeringError('maxAdults') ? 'offering-adults-error' : null"
-                />
-                @if (offeringError('maxAdults'); as message) {
-                  <p class="field-error" id="offering-adults-error">{{ message }}</p>
-                }
-              </div>
-              <div>
-                <label for="offering-status">Status</label>
-                <select id="offering-status" formControlName="status">
-                  <option>ENABLED</option>
-                  <option>SUSPENDED</option>
-                </select>
-              </div>
-            </div>
-            <div class="editor-actions">
-              <button class="secondary" type="button" (click)="cancel()" [disabled]="saving()">
-                Cancel
-              </button>
-              <button
-                class="primary"
-                type="submit"
-                [disabled]="roomsLoading() || !!roomsError() || !rooms().length"
-              >
-                {{ saving() ? 'Saving...' : 'Save offering' }}
-              </button>
-            </div>
-          </fieldset>
-        </form>
-      } @else if (mode() === 'rate') {
-        <form [formGroup]="rateForm" (ngSubmit)="save()">
-          <fieldset [disabled]="saving()">
-            <legend>Edit approved base rate</legend>
-            <label for="approved-base-rate"
-              >Rate per adult per night ({{ contract().currencyCode }})</label
+        <div class="form-grid">
+          <div>
+            <label for="offering-room">Room type</label>
+            <select
+              [attr.aria-describedby]="
+                    offeringError('roomTypeId') ? 'offering-room-error' : null
+                  "
+              [attr.aria-invalid]="!!offeringError('roomTypeId')"
+              formControlName="roomTypeId"
+              id="offering-room"
             >
-            <input
-              id="approved-base-rate"
-              type="number"
-              min="0.01"
-              max="99999999.99"
-              step="0.01"
-              formControlName="ratePerPersonPerNight"
-            />
-            @if (rateForm.touched && rateForm.invalid) {
-              <p class="field-error">
-                Use a positive rate up to 99999999.99 with at most two decimal places.
-              </p>
+              <option [ngValue]="null">Select a room type</option>
+              @for (room of rooms(); track room.roomTypeId) {
+              <option [ngValue]="room.roomTypeId">{{ room.name }}</option>
+              }
+            </select>
+            @if (offeringError('roomTypeId'); as message) {
+            <p class="field-error" id="offering-room-error">{{ message }}</p>
             }
-            <p>
-              Room type, allocated rooms and maximum adults remain locked. Confirmed pricing remains
-              unchanged.
-            </p>
-            <div class="editor-actions">
-              <button class="secondary" type="button" (click)="cancel()" [disabled]="saving()">
-                Cancel
-              </button>
-              <button class="primary" type="submit">
-                {{ saving() ? 'Saving...' : 'Save base rate' }}
-              </button>
-            </div>
-          </fieldset>
-        </form>
-      } @else {
-        <form [formGroup]="statusForm" (ngSubmit)="save()">
-          <fieldset [disabled]="saving()">
-            <legend>Change offering status</legend>
-            <label for="maintained-status">Status</label>
-            <select id="maintained-status" formControlName="status">
+          </div>
+          <div>
+            <label for="offering-rate">Base rate ({{ contract().currencyCode }})</label>
+            <input
+              [attr.aria-describedby]="
+                    offeringError('ratePerPersonPerNight') ? 'offering-rate-error' : null
+                  "
+              [attr.aria-invalid]="!!offeringError('ratePerPersonPerNight')"
+              formControlName="ratePerPersonPerNight"
+              id="offering-rate"
+              max="99999999.99"
+              min="0.01"
+              step="0.01"
+              type="number"
+            />
+            @if (offeringError('ratePerPersonPerNight'); as message) {
+            <p class="field-error" id="offering-rate-error">{{ message }}</p>
+            }
+          </div>
+          <div>
+            <label for="offering-rooms">Allocated rooms</label>
+            <input
+              [attr.aria-describedby]="
+                    offeringError('contractedRoomCount') ? 'offering-rooms-error' : null
+                  "
+              [attr.aria-invalid]="!!offeringError('contractedRoomCount')"
+              formControlName="contractedRoomCount"
+              id="offering-rooms"
+              min="1"
+              step="1"
+              type="number"
+            />
+            @if (offeringError('contractedRoomCount'); as message) {
+            <p class="field-error" id="offering-rooms-error">{{ message }}</p>
+            }
+          </div>
+          <div>
+            <label for="offering-adults">Maximum adults per room</label>
+            <input
+              [attr.aria-describedby]="
+                    offeringError('maxAdults') ? 'offering-adults-error' : null
+                  "
+              [attr.aria-invalid]="!!offeringError('maxAdults')"
+              formControlName="maxAdults"
+              id="offering-adults"
+              min="1"
+              step="1"
+              type="number"
+            />
+            @if (offeringError('maxAdults'); as message) {
+            <p class="field-error" id="offering-adults-error">{{ message }}</p>
+            }
+          </div>
+          <div>
+            <label for="offering-status">Status</label>
+            <select formControlName="status" id="offering-status">
               <option>ENABLED</option>
               <option>SUSPENDED</option>
             </select>
-            <p>
-              Suspension prevents this offering being used for new business. Existing confirmed
-              reservations remain unchanged.
-            </p>
-            <div class="editor-actions">
-              <button class="secondary" type="button" (click)="cancel()" [disabled]="saving()">
-                Cancel
-              </button>
-              <button class="primary" type="submit">
-                {{ saving() ? 'Saving...' : 'Confirm status' }}
-              </button>
-            </div>
-          </fieldset>
-        </form>
-      }
-      @if (failure()) {
-        <p role="alert" class="error-message">{{ failure() }}</p>
-      }
-    </section>
+          </div>
+        </div>
+        <div class="editor-actions">
+          <button (click)="cancel()" [disabled]="saving()" class="secondary" type="button">
+            Cancel
+          </button>
+          <button
+            [disabled]="roomsLoading() || !!roomsError() || !rooms().length"
+            class="primary"
+            type="submit"
+          >
+            {{ saving() ? 'Saving...' : 'Save offering' }}
+          </button>
+        </div>
+      </fieldset>
+    </form>
+    } @else if (mode() === 'rate') {
+    <form (ngSubmit)="save()" [formGroup]="rateForm">
+      <fieldset [disabled]="saving()">
+        <legend>Edit approved base rate</legend>
+        <label for="approved-base-rate"
+        >Rate per adult per night ({{ contract().currencyCode }})</label
+        >
+        <input
+          formControlName="ratePerPersonPerNight"
+          id="approved-base-rate"
+          max="99999999.99"
+          min="0.01"
+          step="0.01"
+          type="number"
+        />
+        @if (rateForm.touched && rateForm.invalid) {
+        <p class="field-error">
+          Use a positive rate up to 99999999.99 with at most two decimal places.
+        </p>
+        }
+        <p>
+          Room type, allocated rooms and maximum adults remain locked. Confirmed pricing remains
+          unchanged.
+        </p>
+        <div class="editor-actions">
+          <button (click)="cancel()" [disabled]="saving()" class="secondary" type="button">
+            Cancel
+          </button>
+          <button class="primary" type="submit">
+            {{ saving() ? 'Saving...' : 'Save base rate' }}
+          </button>
+        </div>
+      </fieldset>
+    </form>
+    } @else {
+    <form (ngSubmit)="save()" [formGroup]="statusForm">
+      <fieldset [disabled]="saving()">
+        <legend>Change offering status</legend>
+        <label for="maintained-status">Status</label>
+        <select formControlName="status" id="maintained-status">
+          <option>ENABLED</option>
+          <option>SUSPENDED</option>
+        </select>
+        <p>
+          Suspension prevents this offering being used for new business. Existing confirmed
+          reservations remain unchanged.
+        </p>
+        <div class="editor-actions">
+          <button (click)="cancel()" [disabled]="saving()" class="secondary" type="button">
+            Cancel
+          </button>
+          <button class="primary" type="submit">
+            {{ saving() ? 'Saving...' : 'Confirm status' }}
+          </button>
+        </div>
+      </fieldset>
+    </form>
+    }
+    @if (failure()) {
+    <p class="error-message" role="alert">{{ failure() }}</p>
+    }
+  </section>
   }
 </section>

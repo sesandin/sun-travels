@@ -1,13 +1,13 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { catchError, firstValueFrom, map, of, switchMap, tap } from 'rxjs';
 import { AuthenticatedUser, LoginRequest } from '../models/auth.model';
 import { AuthState } from './auth-state';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly http = inject(HttpClient);
   readonly state = inject(AuthState);
+  private readonly http = inject(HttpClient);
   private restorePromise?: Promise<void>;
 
   // Restores the current staff session once and marks authentication state ready.

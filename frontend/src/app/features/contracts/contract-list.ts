@@ -1,13 +1,13 @@
 import { DirectoryState } from '../../shared/directory-state';
 import { Pagination } from '../../shared/pagination';
 import {
+  afterNextRender,
   Component,
   DestroyRef,
   ElementRef,
+  inject,
   Injector,
   OnInit,
-  afterNextRender,
-  inject,
   signal,
   viewChild,
 } from '@angular/core';
@@ -44,20 +44,8 @@ const dateRange: ValidatorFn = (group) => {
   styleUrl: './contract-list.scss',
 })
 export class ContractList implements OnInit {
-  private readonly route = inject(ActivatedRoute, { optional: true });
-  private detailRequest?: Subscription;
   readonly linkedOffering = signal<number | null>(null);
   readonly linkError = signal('');
-  private readonly service = inject(ContractService);
-  private readonly hotelService = inject(HotelService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly injector = inject(Injector);
-  private readonly editor = viewChild<ElementRef<HTMLElement>>('editor');
-  readonly directory = new DirectoryState<Contract>(
-    (page) => this.service.page(this.query(), this.statusFilter(), page),
-    this.destroyRef,
-    () => [this.query(), this.statusFilter()],
-  );
   readonly contracts = this.directory.items;
   readonly hotels = signal<Hotel[]>([]);
   readonly loading = this.directory.loading;
@@ -84,11 +72,6 @@ export class ContractList implements OnInit {
   >(null);
   readonly detailsLoading = signal(false);
   readonly filtered = this.contracts;
-
-  isExpired(validTo: string): boolean {
-    return isContractExpired(validTo);
-  }
-
   readonly form = new FormGroup(
     {
       hotelId: new FormControl<number | null>(null, [Validators.required, Validators.min(1)]),
@@ -105,6 +88,23 @@ export class ContractList implements OnInit {
   readonly markupForm = new FormGroup({
     markupPercentage: new FormControl<number | null>(0, [Validators.required, decimal]),
   });
+  private readonly route = inject(ActivatedRoute, { optional: true });
+  private detailRequest?: Subscription;
+  private readonly service = inject(ContractService);
+  private readonly hotelService = inject(HotelService);
+  private readonly destroyRef = inject(DestroyRef);
+  readonly directory = new DirectoryState<Contract>(
+    (page) => this.service.page(this.query(), this.statusFilter(), page),
+    this.destroyRef,
+    () => [this.query(), this.statusFilter()],
+  );
+  private readonly injector = inject(Injector);
+  private readonly editor = viewChild<ElementRef<HTMLElement>>('editor');
+
+  isExpired(validTo: string): boolean {
+    return isContractExpired(validTo);
+  }
+
   // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.loadContracts();
@@ -162,54 +162,12 @@ export class ContractList implements OnInit {
     this.linkError.set('');
     this.fetchDetails(row.contractId, row);
   }
-  // Reads linked contract and offering references from route parameters.
-  private openLink(params: ParamMap) {
-    if (!params.has('contractId') && !params.has('offeringId')) return;
-    // Parses a valid positive record ID from a route value.
-    const parseId = (value: string | null) =>
-      value && /^[1-9]\d*$/.test(value) && Number(value) <= 2147483647 ? Number(value) : null;
-    const contractId = parseId(params.get('contractId')),
-      offeringId = parseId(params.get('offeringId'));
-    if (!contractId || (params.has('offeringId') && !offeringId)) {
-      this.linkError.set(
-        'Invalid contract or offering link. Select a contract from Contracts to view its room offerings.',
-      );
-      return;
-    }
-    if (this.saving()) {
-      this.linkError.set('Finish the current save before opening another contract.');
-      return;
-    }
-    this.linkError.set('');
-    this.linkedOffering.set(offeringId);
-    this.fetchDetails(contractId);
-  }
-  // Loads the selected contract details while preventing stale responses.
-  private fetchDetails(id: number, row: Contract | null = null) {
-    this.detailRequest?.unsubscribe();
-    this.selected.set(row);
-    this.mode.set('details');
-    this.submissionError.set('');
-    this.detailsLoading.set(true);
-    this.focusEditor();
-    this.detailRequest = this.service
-      .getContractById(id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (detail) => {
-          this.selected.set(detail);
-          this.detailsLoading.set(false);
-        },
-        error: (e) => {
-          this.submissionError.set(apiError(e));
-          this.detailsLoading.set(false);
-        },
-      });
-  }
+
   // Closes the editor and clears its selection when no save is pending.
   closeEditor() {
     if (!this.saving() && !this.detailsLoading()) this.mode.set(null);
   }
+
   // Opens confirmation for the selected contract lifecycle action.
   confirmAction(row: Contract, action: 'approve' | 'reapprove' | 'suspend' | 'terminate') {
     if (this.saving() || this.detailsLoading()) return;
@@ -225,10 +183,7 @@ export class ContractList implements OnInit {
     this.notice.set('');
     this.focusEditor();
   }
-  // Moves keyboard focus to the editor after it is rendered.
-  private focusEditor() {
-    afterNextRender(() => this.editor()?.nativeElement.focus(), { injector: this.injector });
-  }
+
   // Submits validated contract changes or the selected lifecycle action.
   save() {
     if (this.saving() || this.detailsLoading()) return;
@@ -273,6 +228,57 @@ export class ContractList implements OnInit {
         this.submissionError.set(apiError(e));
       },
     });
+  }
+
+  // Reads linked contract and offering references from route parameters.
+  private openLink(params: ParamMap) {
+    if (!params.has('contractId') && !params.has('offeringId')) return;
+    // Parses a valid positive record ID from a route value.
+    const parseId = (value: string | null) =>
+      value && /^[1-9]\d*$/.test(value) && Number(value) <= 2147483647 ? Number(value) : null;
+    const contractId = parseId(params.get('contractId')),
+      offeringId = parseId(params.get('offeringId'));
+    if (!contractId || (params.has('offeringId') && !offeringId)) {
+      this.linkError.set(
+        'Invalid contract or offering link. Select a contract from Contracts to view its room offerings.',
+      );
+      return;
+    }
+    if (this.saving()) {
+      this.linkError.set('Finish the current save before opening another contract.');
+      return;
+    }
+    this.linkError.set('');
+    this.linkedOffering.set(offeringId);
+    this.fetchDetails(contractId);
+  }
+
+  // Loads the selected contract details while preventing stale responses.
+  private fetchDetails(id: number, row: Contract | null = null) {
+    this.detailRequest?.unsubscribe();
+    this.selected.set(row);
+    this.mode.set('details');
+    this.submissionError.set('');
+    this.detailsLoading.set(true);
+    this.focusEditor();
+    this.detailRequest = this.service
+      .getContractById(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (detail) => {
+          this.selected.set(detail);
+          this.detailsLoading.set(false);
+        },
+        error: (e) => {
+          this.submissionError.set(apiError(e));
+          this.detailsLoading.set(false);
+        },
+      });
+  }
+
+  // Moves keyboard focus to the editor after it is rendered.
+  private focusEditor() {
+    afterNextRender(() => this.editor()?.nativeElement.focus(), { injector: this.injector });
   }
 
   // Selects the API request for the requested contract lifecycle action.

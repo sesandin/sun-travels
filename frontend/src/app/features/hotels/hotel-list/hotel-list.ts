@@ -16,6 +16,7 @@ import { HotelService } from '../../../services/hotel.service';
 import { Hotel, HotelStatus, HotelUpdateRequest } from '../../../models/hotel.model';
 import { apiError } from '../../../services/api-error';
 import { HotelForm } from '../hotel-form/hotel-form';
+
 @Component({
   selector: 'app-hotel-list',
   standalone: true,
@@ -24,13 +25,6 @@ import { HotelForm } from '../hotel-form/hotel-form';
   styleUrl: './hotel-list.scss',
 })
 export class HotelList implements OnInit {
-  private readonly service = inject(HotelService);
-  private readonly destroyRef = inject(DestroyRef);
-  readonly directory = new DirectoryState<Hotel>(
-    (page) => this.service.page(this.query(), this.filter(), page),
-    this.destroyRef,
-    () => [this.query(), this.filter()],
-  );
   readonly hotels = this.directory.items;
   readonly loading = this.directory.loading;
   readonly error = this.directory.error;
@@ -48,6 +42,13 @@ export class HotelList implements OnInit {
   readonly form = viewChild.required(HotelForm);
   readonly activeCount = computed(() => Number(this.directory.summary()['activeRecords'] ?? 0));
   readonly filtered = this.hotels;
+  private readonly service = inject(HotelService);
+  private readonly destroyRef = inject(DestroyRef);
+  readonly directory = new DirectoryState<Hotel>(
+    (page) => this.service.page(this.query(), this.filter(), page),
+    this.destroyRef,
+    () => [this.query(), this.filter()],
+  );
 
   // Loads the initial data and subscriptions needed by this component.
   ngOnInit(): void {

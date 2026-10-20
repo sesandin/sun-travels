@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { HotelList } from './hotel-list';
 import { Hotel } from '../../../models/hotel.model';
+
 const url = '/api/hotels';
 const hotel: Hotel = {
   hotelId: 7,

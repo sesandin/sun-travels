@@ -10,122 +10,126 @@
   <a routerLink="/search">Back to search</a>
 </header>
 @if (quote(); as q) {
-  <section class="panel" aria-labelledby="booking-accommodation-title">
-    <span class="workflow-step" data-step="1">Review accommodation</span>
-    <h2 id="booking-accommodation-title">{{ q.hotelName }}</h2>
-    <dl class="stay-facts">
-      <div>
-        <dt>Check-in</dt>
-        <dd>
-          <time [attr.datetime]="q.checkIn">{{ q.checkIn }}</time>
-        </dd>
-      </div>
-      <div>
-        <dt>Checkout (exclusive)</dt>
-        <dd>
-          <time [attr.datetime]="q.checkOut">{{ q.checkOut }}</time>
-        </dd>
-      </div>
-      <div>
-        <dt>Nights</dt>
-        <dd>{{ q.nights }}</dd>
-      </div>
-      <div>
-        <dt>Rooms</dt>
-        <dd>{{ q.rooms.length }}</dd>
-      </div>
-    </dl>
-    @for (room of q.rooms; track $index) {
-      <article class="room">
-        <h3>Room {{ $index + 1 }} · {{ room.roomTypeName }} · {{ room.adults }} Adults</h3>
-        <p class="money room-selling-total">
-          {{ room.totalPrice | number: '1.2-2' }} {{ q.currencyCode }}
-        </p>
-        <details>
-          <summary>Nightly selling prices</summary>
-          <div class="table-scroll" tabindex="0" role="region" aria-label="Nightly selling prices">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Occupied date</th>
-                  <th scope="col">Selling price</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (night of room.nightlyPrices; track night.occupiedDate) {
-                  <tr>
-                    <td>{{ night.occupiedDate }}</td>
-                    <td>{{ night.sellingPrice | number: '1.2-2' }} {{ q.currencyCode }}</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </details>
-      </article>
-    }
-    <div class="quoted-total">
-      <p class="total">
-        Stay total: <strong>{{ q.totalPrice | number: '1.2-2' }} {{ q.currencyCode }}</strong>
-      </p>
-      <small>Customer selling price for all selected rooms and occupied nights.</small>
+<section aria-labelledby="booking-accommodation-title" class="panel">
+  <span class="workflow-step" data-step="1">Review accommodation</span>
+  <h2 id="booking-accommodation-title">{{ q.hotelName }}</h2>
+  <dl class="stay-facts">
+    <div>
+      <dt>Check-in</dt>
+      <dd>
+        <time [attr.datetime]="q.checkIn">{{ q.checkIn }}</time>
+      </dd>
     </div>
-  </section>
-  <section class="panel" aria-labelledby="booking-customer-title">
-    <span class="workflow-step" data-step="2">Select the customer</span>
-    <h2 id="booking-customer-title">Customer</h2>
-    @if (selected(); as c) {
-      <div class="selected-customer" role="status">
-        <div class="customer-identity">
-          <span class="selection-label">Customer selected</span>
-          <h3>{{ c.name }}</h3>
-          <div class="customer-contact">
-            <span>Customer #{{ c.customerId }}</span>
-            @if (c.phone) {
-              <span>{{ c.phone }}</span>
-            }
-            @if (c.email) {
-              <span>{{ c.email }}</span>
-            }
-          </div>
-        </div>
-        <button
-          type="button"
-          class="secondary"
-          (click)="changeCustomer()"
-          [disabled]="busy() || customerBusy()"
-        >
-          Change customer
-        </button>
+    <div>
+      <dt>Checkout (exclusive)</dt>
+      <dd>
+        <time [attr.datetime]="q.checkOut">{{ q.checkOut }}</time>
+      </dd>
+    </div>
+    <div>
+      <dt>Nights</dt>
+      <dd>{{ q.nights }}</dd>
+    </div>
+    <div>
+      <dt>Rooms</dt>
+      <dd>{{ q.rooms.length }}</dd>
+    </div>
+  </dl>
+  @for (room of q.rooms; track $index) {
+  <article class="room">
+    <h3>Room {{ $index + 1 }} · {{ room.roomTypeName }} · {{ room.adults }} Adults</h3>
+    <p class="money room-selling-total">
+      {{ room.totalPrice | number: '1.2-2' }} {{ q.currencyCode }}
+    </p>
+    <details>
+      <summary>Nightly selling prices</summary>
+      <section aria-label="Nightly selling prices" class="table-scroll" tabindex="0">
+        <table>
+          <thead>
+          <tr>
+            <th scope="col">Occupied date</th>
+            <th scope="col">Selling price</th>
+          </tr>
+          </thead>
+          <tbody>
+          @for (night of room.nightlyPrices; track night.occupiedDate) {
+          <tr>
+            <td>{{ night.occupiedDate }}</td>
+            <td>{{ night.sellingPrice | number: '1.2-2' }} {{ q.currencyCode }}</td>
+          </tr>
+          }
+          </tbody>
+        </table>
+      </section>
+    </details>
+  </article>
+  }
+  <div class="quoted-total">
+    <p class="total">
+      Stay total: <strong>{{ q.totalPrice | number: '1.2-2' }} {{ q.currencyCode }}</strong>
+    </p>
+    <small>Customer selling price for all selected rooms and occupied nights.</small>
+  </div>
+</section>
+<section aria-labelledby="booking-customer-title" class="panel">
+  <span class="workflow-step" data-step="2">Select the customer</span>
+  <h2 id="booking-customer-title">Customer</h2>
+  @if (selected(); as c) {
+  <div aria-atomic="true" aria-live="polite" class="selected-customer">
+    <div class="customer-identity">
+      <span class="selection-label">Customer selected</span>
+      <h3>{{ c.name }}</h3>
+      <div class="customer-contact">
+        <span>Customer #{{ c.customerId }}</span>
+        @if (c.phone) {
+        <span>{{ c.phone }}</span>
+        }
+        @if (c.email) {
+        <span>{{ c.email }}</span>
+        }
       </div>
-    } @else {
-      <form [formGroup]="customerSearch" (ngSubmit)="searchCustomers()" class="filters">
-        <label
-          >Find by name, phone, email or ID<input formControlName="query" maxlength="150" />
-        </label>
-        <button type="submit" class="secondary" [disabled]="customerBusy() || busy()">
-          Find customers
-        </button>
-      </form>
-      @if (customerBusy()) {
-        <p><output>Loading customer…</output></p>
-      }
-      @if (customerError()) {
-        <p role="alert" class="error-message">{{ customerError() }}</p>
-      }
-      @if (customerSearched() && !customerBusy() && !customerError() && !customers().length) {
-        <p><output>No customers found. Try another search or register a new customer.</output></p>
-      }
-      @for (customer of customers(); track customer.customerId) {
-        <button
-          class="customer-choice secondary"
-          type="button"
-          (click)="select(customer)"
-          [disabled]="busy() || customerBusy()"
-        >
-          <strong>{{ customer.name }}</strong>
-          <span class="customer-contact"
-            >#{{ customer.customerId }}
+    </div>
+    <button
+      (click)="changeCustomer()"
+      [disabled]="busy() || customerBusy()"
+      class="secondary"
+      type="button"
+    >
+      Change customer
+    </button>
+  </div>
+  } @else {
+  <form (ngSubmit)="searchCustomers()" [formGroup]="customerSearch" class="filters">
+    <label
+    >Find by name, phone, email or ID<input formControlName="query" maxlength="150"/>
+    </label>
+    <button [disabled]="customerBusy() || busy()" class="secondary" type="submit">
+      Find customers
+    </button>
+  </form>
+  @if (customerBusy()) {
+  <p>
+    <output>Loading customer…</output>
+  </p>
+  }
+  @if (customerError()) {
+  <p class="error-message" role="alert">{{ customerError() }}</p>
+  }
+  @if (customerSearched() && !customerBusy() && !customerError() && !customers().length) {
+  <p>
+    <output>No customers found. Try another search or register a new customer.</output>
+  </p>
+  }
+  @for (customer of customers(); track customer.customerId) {
+  <button
+    (click)="select(customer)"
+    [disabled]="busy() || customerBusy()"
+    class="customer-choice secondary"
+    type="button"
+  >
+    <strong>{{ customer.name }}</strong>
+    <span class="customer-contact"
+    >#{{ customer.customerId }}
             @if (customer.phone) {
               <span>{{ customer.phone }}</span>
             }
@@ -133,109 +137,110 @@
               <span>{{ customer.email }}</span>
             }
           </span>
-          <span class="selection-label">Select customer</span>
-        </button>
+    <span class="selection-label">Select customer</span>
+  </button>
+  }
+  <button
+    (click)="showRegistration.set(!showRegistration())"
+    [class.primary]="!showRegistration()"
+    [class.secondary]="showRegistration()"
+    [disabled]="busy() || customerBusy()"
+    type="button"
+  >
+    {{ showRegistration() ? 'Close registration' : 'Register a new customer' }}
+  </button>
+  @if (showRegistration()) {
+  <form (ngSubmit)="register()" [formGroup]="registration">
+    <fieldset [disabled]="customerBusy() || busy()">
+      <legend>New customer</legend>
+      <label>Name<input autocomplete="name" formControlName="name" maxlength="150"/> </label>
+      <label>Phone<input autocomplete="tel" formControlName="phone" maxlength="20"/> </label>
+      <label
+      >Email<input
+        autocomplete="email"
+        formControlName="email"
+        maxlength="150"
+        type="email"
+      />
+      </label>
+      <p>Provide a name and at least a valid phone number or email address.</p>
+      @if (registration.touched && registration.invalid) {
+      <p class="error-message" role="alert">
+        Check the name (up to 150 characters), phone (5–20 international phone characters),
+        and email.
+      </p>
       }
-      <button
-        type="button"
-        [class.primary]="!showRegistration()"
-        [class.secondary]="showRegistration()"
-        (click)="showRegistration.set(!showRegistration())"
-        [disabled]="busy() || customerBusy()"
-      >
-        {{ showRegistration() ? 'Close registration' : 'Register a new customer' }}
+      <button [disabled]="registration.invalid || customerBusy() || busy()" class="primary">
+        Register and select customer
       </button>
-      @if (showRegistration()) {
-        <form [formGroup]="registration" (ngSubmit)="register()">
-          <fieldset [disabled]="customerBusy() || busy()">
-            <legend>New customer</legend>
-            <label>Name<input formControlName="name" maxlength="150" autocomplete="name" /> </label>
-            <label>Phone<input formControlName="phone" maxlength="20" autocomplete="tel" /> </label>
-            <label
-              >Email<input
-                formControlName="email"
-                maxlength="150"
-                type="email"
-                autocomplete="email"
-              />
-            </label>
-            <p>Provide a name and at least a valid phone number or email address.</p>
-            @if (registration.touched && registration.invalid) {
-              <p role="alert" class="error-message">
-                Check the name (up to 150 characters), phone (5–20 international phone characters),
-                and email.
-              </p>
-            }
-            <button class="primary" [disabled]="registration.invalid || customerBusy() || busy()">
-              Register and select customer
-            </button>
-          </fieldset>
-        </form>
-      }
-    }
-  </section>
-  <section class="panel confirmation-panel" aria-labelledby="booking-confirm-title">
-    <span class="workflow-step" data-step="3">Confirm with the customer</span>
-    <h2 id="booking-confirm-title">Final Review</h2>
-    @if (error()) {
-      <p class="error-message" role="alert">{{ error() }}</p>
-    }
-    @if (previous(); as old) {
-      <div class="price-change" role="alert">
-        <h2>Price Changed — Customer Acknowledgment Required</h2>
-        <p>Previously: {{ old.totalPrice | number: '1.2-2' }} {{ old.currencyCode }}</p>
-        <p>Current: {{ q.totalPrice | number: '1.2-2' }} {{ q.currencyCode }}</p>
-        <p>
-          Review the updated amount with the customer and accept it below. No reservation was
-          created by the price-change response.
-        </p>
-      </div>
-    }
-    <label class="check">
-      <input type="checkbox" [formControl]="accepted" [attr.disabled]="busy() ? '' : null" /><span
-        >I have reviewed the selected customer, dates, rooms and current total of
+    </fieldset>
+  </form>
+  }
+  }
+</section>
+<section aria-labelledby="booking-confirm-title" class="panel confirmation-panel">
+  <span class="workflow-step" data-step="3">Confirm with the customer</span>
+  <h2 id="booking-confirm-title">Final Review</h2>
+  @if (error()) {
+  <p class="error-message" role="alert">{{ error() }}</p>
+  }
+  @if (previous(); as old) {
+  <div class="price-change" role="alert">
+    <h2>Price Changed — Customer Acknowledgment Required</h2>
+    <p>Previously: {{ old.totalPrice | number: '1.2-2' }} {{ old.currencyCode }}</p>
+    <p>Current: {{ q.totalPrice | number: '1.2-2' }} {{ q.currencyCode }}</p>
+    <p>
+      Review the updated amount with the customer and accept it below. No reservation was
+      created by the price-change response.
+    </p>
+  </div>
+  }
+  <label class="check">
+    <input [attr.disabled]="busy() ? '' : null" [formControl]="accepted" type="checkbox"/><span
+  >I have reviewed the selected customer, dates, rooms and current total of
         {{ q.totalPrice | number: '1.2-2' }} {{ q.currencyCode }} with the customer and accept this
         quotation.</span
-      ></label
-    >
-    <p id="confirmation-guidance" class="muted">
-      {{
-        !selected()
-          ? 'Select a customer before confirming this reservation.'
-          : !accepted.value
-            ? 'Review the selected accommodation and total with the customer, then tick the acknowledgment above.'
-            : 'Availability and the accepted price will be checked again when you confirm.'
-      }}
-    </p>
-    <div class="actions">
-      <button
-        type="button"
-        class="primary"
-        (click)="confirm()"
-        aria-describedby="confirmation-guidance"
-        [disabled]="busy() || customerBusy() || !selected() || !accepted.value"
-      >
-        {{ busy() ? 'Confirming…' : 'Confirm Reservation' }}
-      </button>
-      <button
-        type="button"
-        class="secondary"
-        (click)="cancelBooking()"
-        [disabled]="busy() || customerBusy()"
-      >
-        Cancel
-      </button>
-    </div>
-    <p>
-      If confirmation is interrupted, check the
-      <a routerLink="/reservations">reservation directory</a> before trying again.
-    </p>
-  </section>
-} @else {
-  <p class="panel">
-    <output
-      >Choose an accommodation quotation from <a routerLink="/search">Search &amp; Quotations</a> to
-      start a booking.</output
-    >
+  ></label
+  >
+  <p class="muted" id="confirmation-guidance">
+    {{
+    !selected()
+    ? 'Select a customer before confirming this reservation.'
+    : !accepted.value
+    ? 'Review the selected accommodation and total with the customer, then tick the acknowledgment above.'
+    : 'Availability and the accepted price will be checked again when you confirm.'
+    }}
   </p>
+  <div class="actions">
+    <button
+      (click)="confirm()"
+      [disabled]="busy() || customerBusy() || !selected() || !accepted.value"
+      aria-describedby="confirmation-guidance"
+      class="primary"
+      type="button"
+    >
+      {{ busy() ? 'Confirming…' : 'Confirm Reservation' }}
+    </button>
+    <button
+      (click)="cancelBooking()"
+      [disabled]="busy() || customerBusy()"
+      class="secondary"
+      type="button"
+    >
+      Cancel
+    </button>
+  </div>
+  <p>
+    If confirmation is interrupted, check the
+    <a routerLink="/reservations">reservation directory</a> before trying again.
+  </p>
+</section>
+} @else {
+<p class="panel">
+  <output
+  >Choose an accommodation quotation from <a routerLink="/search">Search &amp; Quotations</a> to
+    start a booking.
+  </output
+  >
+</p>
 }

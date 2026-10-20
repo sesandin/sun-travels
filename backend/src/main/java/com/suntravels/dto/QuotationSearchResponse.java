@@ -18,23 +18,40 @@ public record QuotationSearchResponse(
         int matchingUnavailableOptions,
         boolean unavailableTruncated,
         List<SelectionOffering> selectionOfferings
-) {
+)
+{
     // Initializes the quotation search response and its required dependencies.
-    public QuotationSearchResponse(LocalDate businessDate, LocalDate checkIn, LocalDate checkOut, int nights,
+    public QuotationSearchResponse(
+            LocalDate businessDate, LocalDate checkIn, LocalDate checkOut, int nights,
             List<Quotation> quotations, int matchingOptions, boolean truncated, String allocationPolicy,
-            String notice) {
-        this(businessDate, checkIn, checkOut, nights, quotations, matchingOptions, truncated,
-                allocationPolicy, notice, List.of(), 0, false);
+            String notice )
+    {
+        this( businessDate, checkIn, checkOut, nights, quotations, matchingOptions, truncated,
+                allocationPolicy, notice, List.of(), 0, false );
     }
 
     // Initializes the quotation search response and its required dependencies.
-    public QuotationSearchResponse(LocalDate businessDate, LocalDate checkIn, LocalDate checkOut, int nights,
+    public QuotationSearchResponse(
+            LocalDate businessDate, LocalDate checkIn, LocalDate checkOut, int nights,
             List<Quotation> quotations, int matchingOptions, boolean truncated, String allocationPolicy,
             String notice, List<UnavailableOption> unavailableOptions, int matchingUnavailableOptions,
-            boolean unavailableTruncated) {
-        this(businessDate, checkIn, checkOut, nights, quotations, matchingOptions, truncated,
+            boolean unavailableTruncated )
+    {
+        this( businessDate, checkIn, checkOut, nights, quotations, matchingOptions, truncated,
                 allocationPolicy, notice, unavailableOptions, matchingUnavailableOptions,
-                unavailableTruncated, List.of());
+                unavailableTruncated, List.of() );
+    }
+
+    public enum AvailabilityStatus
+    {
+        AVAILABLE,
+        NOT_AVAILABLE
+    }
+
+    public enum ReasonCode
+    {
+        INSUFFICIENT_INVENTORY,
+        MAX_ADULT_OCCUPANCY
     }
 
     public record SelectionOffering(
@@ -47,30 +64,23 @@ public record QuotationSearchResponse(
             int availableRoomsForStay,
             String currencyCode,
             List<SelectionRoom> rooms
-    ) {
+    )
+    {
     }
 
     public record SelectionRoom(
             int roomNumber,
             int adults,
             BigDecimal totalPrice
-    ) {
-    }
-
-    public enum AvailabilityStatus {
-        AVAILABLE,
-        NOT_AVAILABLE
-    }
-
-    public enum ReasonCode {
-        INSUFFICIENT_INVENTORY,
-        MAX_ADULT_OCCUPANCY
+    )
+    {
     }
 
     public record UnavailabilityReason(
             ReasonCode code,
             String message
-    ) {
+    )
+    {
     }
 
     public record UnavailableOffering(
@@ -79,7 +89,8 @@ public record QuotationSearchResponse(
             String roomTypeName,
             int maxAdults,
             int availableRoomsForStay
-    ) {
+    )
+    {
     }
 
     public record UnavailableOption(
@@ -93,7 +104,8 @@ public record QuotationSearchResponse(
             List<UnavailableOffering> offerings,
             List<UnavailabilityReason> reasons,
             BigDecimal indicativeTotalPrice
-    ) {
+    )
+    {
     }
 
     public record Quotation(
@@ -110,13 +122,16 @@ public record QuotationSearchResponse(
             BigDecimal totalPrice,
             String eligibility,
             AvailabilityStatus availabilityStatus
-    ) {
+    )
+    {
         // Initializes the quotation search response and its required dependencies.
-        public Quotation(Integer hotelId, String hotelName, String city, Integer contractId,
+        public Quotation(
+                Integer hotelId, String hotelName, String city, Integer contractId,
                 String contractCode, String currencyCode, LocalDate checkIn, LocalDate checkOut, int nights,
-                List<RoomAllocation> rooms, BigDecimal totalPrice, String eligibility) {
-            this(hotelId, hotelName, city, contractId, contractCode, currencyCode, checkIn, checkOut, nights,
-                    rooms, totalPrice, eligibility, AvailabilityStatus.AVAILABLE);
+                List<RoomAllocation> rooms, BigDecimal totalPrice, String eligibility )
+        {
+            this( hotelId, hotelName, city, contractId, contractCode, currencyCode, checkIn, checkOut, nights,
+                    rooms, totalPrice, eligibility, AvailabilityStatus.AVAILABLE );
         }
     }
 
@@ -132,7 +147,8 @@ public record QuotationSearchResponse(
             int remainingRoomsAfterAllocation,
             BigDecimal totalPrice,
             List<NightlyPrice> nightlyPrices
-    ) {
+    )
+    {
     }
 
     public record NightlyPrice(
@@ -140,7 +156,8 @@ public record QuotationSearchResponse(
             String source,
             Integer seasonalRateId,
             BigDecimal sellingPrice
-    ) {
+    )
+    {
     }
 
     public record Limits(
@@ -150,6 +167,7 @@ public record QuotationSearchResponse(
             int maxAdvanceDays,
             int maxResults,
             String allocationPolicy
-    ) {
+    )
+    {
     }
 }

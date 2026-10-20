@@ -3,8 +3,8 @@ import {
   Component,
   DestroyRef,
   ElementRef,
-  OnInit,
   inject,
+  OnInit,
   signal,
   viewChild,
 } from '@angular/core';
@@ -36,9 +36,6 @@ const contactRequired = (group: AbstractControl): ValidationErrors | null =>
   styleUrl: './customer-list.scss',
 })
 export class CustomerList implements OnInit {
-  private readonly service = inject(CustomerService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly pendingPage = signal<number | null>(null);
   readonly customers = signal<Customer[]>([]);
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -73,6 +70,10 @@ export class CustomerList implements OnInit {
     },
     { validators: contactRequired },
   );
+  private readonly service = inject(CustomerService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly pendingPage = signal<number | null>(null);
+
   // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.searchControl.valueChanges
@@ -111,15 +112,7 @@ export class CustomerList implements OnInit {
         },
       });
   }
-  // Updates customer results and paging state after a successful response.
-  private finishLoad() {
-    this.loading.set(false);
-    const pending = this.pendingPage();
-    if (pending !== null) {
-      this.pendingPage.set(null);
-      this.load(pending);
-    }
-  }
+
   // Applies customer search text and resets pagination.
   search() {
     const value = this.searchControl.value.trim();
@@ -129,6 +122,7 @@ export class CustomerList implements OnInit {
     this.page.set(0);
     this.load(0);
   }
+
   // Clears the customer search and reloads the first page.
   clearSearch() {
     this.searchControl.setValue('', { emitEvent: false });
@@ -137,6 +131,7 @@ export class CustomerList implements OnInit {
     this.page.set(0);
     this.load(0);
   }
+
   // Opens the customer form for creation or editing.
   openEditor(customer: Customer | null = null) {
     this.selected.set(customer);
@@ -149,10 +144,12 @@ export class CustomerList implements OnInit {
     });
     this.editor().nativeElement.showModal();
   }
+
   // Closes the editor and clears its selection when no save is pending.
   closeEditor() {
     if (!this.saving()) this.editor().nativeElement.close();
   }
+
   // Returns a readable validation message for the selected form control.
   validationMessage(field: 'name' | 'phone' | 'email') {
     const c = this.form.controls[field];
@@ -166,6 +163,7 @@ export class CustomerList implements OnInit {
       ? 'Use 5 to 20 international phone characters and include a digit.'
       : 'Provide a valid email address.';
   }
+
   // Explains the customer contact details required by the form.
   contactMessage() {
     return this.form.hasError('contactRequired') &&
@@ -173,6 +171,7 @@ export class CustomerList implements OnInit {
       ? 'Provide at least a phone number or email address.'
       : '';
   }
+
   // Validates and saves customer details, then refreshes the directory.
   save() {
     this.form.markAllAsTouched();
@@ -205,5 +204,15 @@ export class CustomerList implements OnInit {
         this.submissionError.set(apiError(e));
       },
     });
+  }
+
+  // Updates customer results and paging state after a successful response.
+  private finishLoad() {
+    this.loading.set(false);
+    const pending = this.pendingPage();
+    if (pending !== null) {
+      this.pendingPage.set(null);
+      this.load(pending);
+    }
   }
 }

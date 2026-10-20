@@ -5,17 +5,17 @@ import {
   DestroyRef,
   ElementRef,
   inject,
+  OnInit,
   signal,
   viewChild,
-  OnInit,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   FormControl,
   FormGroup,
   ReactiveFormsModule,
-  Validators,
   ValidatorFn,
+  Validators,
 } from '@angular/forms';
 import { RoomType } from '../../models/room-type.model';
 import { RoomTypeService } from '../../services/room-type.service';
@@ -29,13 +29,6 @@ const notBlank: ValidatorFn = (control) => (!control.value?.trim() ? { required:
   styleUrl: './room-type-list.scss',
 })
 export class RoomTypeList implements OnInit {
-  private readonly service = inject(RoomTypeService);
-  private readonly destroyRef = inject(DestroyRef);
-  readonly directory = new DirectoryState<RoomType>(
-    (page) => this.service.page(this.query(), page),
-    this.destroyRef,
-    () => this.query(),
-  );
   readonly roomTypes = this.directory.items;
   readonly loading = this.directory.loading;
   readonly saving = signal(false);
@@ -46,7 +39,6 @@ export class RoomTypeList implements OnInit {
   readonly selected = signal<RoomType | null>(null);
   readonly editor = viewChild.required<ElementRef<HTMLDialogElement>>('editor');
   readonly filtered = this.roomTypes;
-
   readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
@@ -57,6 +49,14 @@ export class RoomTypeList implements OnInit {
       validators: [Validators.maxLength(255)],
     }),
   });
+  private readonly service = inject(RoomTypeService);
+  private readonly destroyRef = inject(DestroyRef);
+  readonly directory = new DirectoryState<RoomType>(
+    (page) => this.service.page(this.query(), page),
+    this.destroyRef,
+    () => this.query(),
+  );
+
   // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.loadRoomTypes();

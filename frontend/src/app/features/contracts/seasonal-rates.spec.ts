@@ -3,6 +3,8 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Contract } from '../../models/contract.model';
 import { Offering } from '../../models/offering.model';
+import { SeasonalRates } from './seasonal-rates';
+
 const api = '/api';
 const contract: Contract = {
   contractId: 7,
@@ -26,7 +28,6 @@ const offering: Offering = {
   status: 'ENABLED',
   currencyCode: 'USD',
 };
-import { SeasonalRates } from './seasonal-rates';
 const seasonal = {
   seasonalRateId: 12,
   offeringId: 8,
@@ -66,7 +67,9 @@ describe('Seasonal rate management', () => {
     expect(c.editing()).toBe(false);
     c.editing.set(true);
     c.form.setValue({
-      validFrom: seasonal.validFrom, validTo: seasonal.validTo, ratePerPersonPerNight: 165,
+      validFrom: seasonal.validFrom,
+      validTo: seasonal.validTo,
+      ratePerPersonPerNight: 165,
     });
     c.save();
     fixture.detectChanges();

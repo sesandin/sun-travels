@@ -8,5 +8,6 @@ public record CustomerPageResponse(
         int size,
         long totalElements,
         int totalPages
-) {
+)
+{
 }

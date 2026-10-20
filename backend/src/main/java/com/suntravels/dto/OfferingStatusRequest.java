@@ -1,7 +1,8 @@
 package com.suntravels.dto;
 
-import jakarta.validation.constraints.*;
 import com.suntravels.entity.OfferingStatus;
+import jakarta.validation.constraints.NotNull;
 
-public record OfferingStatusRequest(@NotNull OfferingStatus status) {
+public record OfferingStatusRequest(@NotNull OfferingStatus status)
+{
 }
