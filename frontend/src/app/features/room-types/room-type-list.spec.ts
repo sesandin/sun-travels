@@ -29,7 +29,7 @@ describe('Room Type Management', () => {
     fixture.detectChanges();
   }
   it('shows loading, real API data, search and no matches', () => {
-    expect(fixture.nativeElement.textContent).toContain('Loading room types');
+    expect(fixture.nativeElement.textContent).toContain('Loading Room Types');
     load();
     expect(fixture.nativeElement.textContent).toContain('Deluxe');
     component.query.set('sea');

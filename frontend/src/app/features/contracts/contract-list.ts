@@ -46,12 +46,9 @@ const dateRange: ValidatorFn = (group) => {
 export class ContractList implements OnInit {
   readonly linkedOffering = signal<number | null>(null);
   readonly linkError = signal('');
-  readonly contracts = this.directory.items;
   readonly hotels = signal<Hotel[]>([]);
-  readonly loading = this.directory.loading;
   readonly hotelsLoading = signal(false);
   readonly saving = signal(false);
-  readonly error = this.directory.error;
   readonly hotelError = signal('');
   readonly submissionError = signal('');
   readonly notice = signal('');
@@ -71,7 +68,6 @@ export class ContractList implements OnInit {
     | null
   >(null);
   readonly detailsLoading = signal(false);
-  readonly filtered = this.contracts;
   readonly form = new FormGroup(
     {
       hotelId: new FormControl<number | null>(null, [Validators.required, Validators.min(1)]),
@@ -98,6 +94,10 @@ export class ContractList implements OnInit {
     this.destroyRef,
     () => [this.query(), this.statusFilter()],
   );
+  readonly contracts = this.directory.items;
+  readonly loading = this.directory.loading;
+  readonly error = this.directory.error;
+  readonly filtered = this.contracts;
   private readonly injector = inject(Injector);
   private readonly editor = viewChild<ElementRef<HTMLElement>>('editor');
 

@@ -25,9 +25,6 @@ import { HotelForm } from '../hotel-form/hotel-form';
   styleUrl: './hotel-list.scss',
 })
 export class HotelList implements OnInit {
-  readonly hotels = this.directory.items;
-  readonly loading = this.directory.loading;
-  readonly error = this.directory.error;
   readonly notice = signal('');
   readonly query = signal('');
   readonly filter = signal('');
@@ -41,7 +38,6 @@ export class HotelList implements OnInit {
   readonly confirmation = viewChild.required<ElementRef<HTMLDialogElement>>('confirmation');
   readonly form = viewChild.required(HotelForm);
   readonly activeCount = computed(() => Number(this.directory.summary()['activeRecords'] ?? 0));
-  readonly filtered = this.hotels;
   private readonly service = inject(HotelService);
   private readonly destroyRef = inject(DestroyRef);
   readonly directory = new DirectoryState<Hotel>(
@@ -49,6 +45,10 @@ export class HotelList implements OnInit {
     this.destroyRef,
     () => [this.query(), this.filter()],
   );
+  readonly hotels = this.directory.items;
+  readonly loading = this.directory.loading;
+  readonly error = this.directory.error;
+  readonly filtered = this.hotels;
 
   // Loads the initial data and subscriptions needed by this component.
   ngOnInit(): void {

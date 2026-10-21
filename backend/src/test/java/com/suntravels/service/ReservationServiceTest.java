@@ -68,7 +68,6 @@ class ReservationServiceTest
     OfferingRepository offerings;
     ValidatorFactory factory;
     ReservationService service;
-    final LocalDate today = LocalDate.of( 2026, 10, 15 ), in = today.plusDays( 10 ), out = in.plusDays( 3 );
 
     // Configures the component and its test dependencies.
     @BeforeEach
@@ -90,6 +89,8 @@ class ReservationServiceTest
         lenient().when( data.candidates( any() ) ).thenReturn( List.of( candidate( 2, 3 ) ) );
         lenient().when( reservations.insert( anyString(), any( Object[].class ) ) ).thenReturn( 101, 201, 202 );
     }
+
+    final LocalDate today = LocalDate.of( 2026, 10, 15 ), in = today.plusDays( 10 ), out = in.plusDays( 3 );
 
     // Releases resources created for the test.
     @AfterEach

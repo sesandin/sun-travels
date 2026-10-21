@@ -29,16 +29,12 @@ const notBlank: ValidatorFn = (control) => (!control.value?.trim() ? { required:
   styleUrl: './room-type-list.scss',
 })
 export class RoomTypeList implements OnInit {
-  readonly roomTypes = this.directory.items;
-  readonly loading = this.directory.loading;
   readonly saving = signal(false);
-  readonly error = this.directory.error;
   readonly submissionError = signal('');
   readonly notice = signal('');
   readonly query = signal('');
   readonly selected = signal<RoomType | null>(null);
   readonly editor = viewChild.required<ElementRef<HTMLDialogElement>>('editor');
-  readonly filtered = this.roomTypes;
   readonly form = new FormGroup({
     name: new FormControl('', {
       nonNullable: true,
@@ -56,6 +52,10 @@ export class RoomTypeList implements OnInit {
     this.destroyRef,
     () => this.query(),
   );
+  readonly roomTypes = this.directory.items;
+  readonly loading = this.directory.loading;
+  readonly error = this.directory.error;
+  readonly filtered = this.roomTypes;
 
   // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {

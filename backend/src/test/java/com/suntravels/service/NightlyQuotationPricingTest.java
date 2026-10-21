@@ -23,8 +23,6 @@ class NightlyQuotationPricingTest
                 from.plusDays( 29 ), 2, "Double", new BigDecimal( rate ), 10, 2 );
     }
 
-    final LocalDate from = LocalDate.of( 2026, 11, 1 ), in = from.plusDays( 7 ), out = in.plusDays( 3 );
-
     // Verifies base fallback and markup use exact decimals.
     @Test
     void baseFallbackAndMarkupUseExactDecimals()
@@ -35,6 +33,8 @@ class NightlyQuotationPricingTest
         assertEquals( "BASE", nights.get( 0 ).source() );
         assertEquals( new BigDecimal( "690.00" ), pricing.total( tariffs, 2, new BigDecimal( "15" ) ) );
     }
+
+    final LocalDate from = LocalDate.of( 2026, 11, 1 ), in = from.plusDays( 7 ), out = in.plusDays( 3 );
 
     // Verifies seasonal end is inclusive and stay can span base and multiple periods.
     @Test

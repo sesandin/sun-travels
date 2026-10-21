@@ -25,8 +25,6 @@ class StayAvailabilityTest
         return new BookedRoom( id, 7, date.plusDays( start ), date.plusDays( end ), 2 );
     }
 
-    final LocalDate in = LocalDate.of( 2026, 11, 1 ), out = in.plusDays( 3 );
-
     // Supplies boundary cases for the parameterized availability test.
     static Stream<Arguments> cases()
     {
@@ -36,6 +34,8 @@ class StayAvailabilityTest
                 Arguments.of( List.of( b( 1, 3, 4 ) ), 3 ), Arguments.of( List.of( b( 1, -2, 5 ) ), 2 ),
                 Arguments.of( List.of( b( 1, 0, 3 ), b( 2, 0, 3 ), b( 3, 1, 2 ) ), 0 ) );
     }
+
+    final LocalDate in = LocalDate.of( 2026, 11, 1 ), out = in.plusDays( 3 );
 
     // Verifies computes peak not distinct stay intersections.
     @ParameterizedTest

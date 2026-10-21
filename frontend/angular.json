@@ -72,6 +72,7 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "isolate": true,
+            "runnerConfig": "vitest-base.config.mts",
             "setupFiles": ["src/test-setup.ts"]
           }
         }

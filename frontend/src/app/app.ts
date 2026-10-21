@@ -4,6 +4,7 @@ import {
   DestroyRef,
   ElementRef,
   inject,
+  Injector,
   signal,
   viewChild,
 } from '@angular/core';
@@ -24,6 +25,7 @@ export class App {
   readonly mobileNavigation = signal(false);
   private readonly authService = inject(AuthService);
   readonly auth = this.authService.state;
+  private readonly injector = inject(Injector);
   private readonly destroyRef = inject(DestroyRef);
   private readonly navigation = viewChild<ElementRef<HTMLElement>>('navigation');
   private readonly navigationToggle = viewChild<ElementRef<HTMLButtonElement>>('navigationToggle');
@@ -67,8 +69,12 @@ export class App {
       return;
     }
     this.menuOpen.set(true);
-    queueMicrotask(() =>
-      this.navigation()?.nativeElement.querySelector<HTMLElement>('nav a')?.focus(),
+    afterNextRender(
+      () => {
+        if (this.menuOpen())
+          this.navigation()?.nativeElement.querySelector<HTMLElement>('nav a')?.focus();
+      },
+      { injector: this.injector },
     );
   }
 
@@ -76,7 +82,10 @@ export class App {
   closeNavigation(restoreFocus = false) {
     if (!this.menuOpen()) return;
     this.menuOpen.set(false);
-    if (restoreFocus) queueMicrotask(() => this.navigationToggle()?.nativeElement.focus());
+    if (restoreFocus)
+      afterNextRender(() => this.navigationToggle()?.nativeElement.focus(), {
+        injector: this.injector,
+      });
     else if (this.mobileNavigation())
       queueMicrotask(() => document.getElementById('main-content')?.focus());
   }

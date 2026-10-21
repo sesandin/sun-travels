@@ -392,9 +392,9 @@ describe('Reservation directory and details', () => {
     for (const warning of warnings) expect(f.nativeElement.textContent).toContain(warning.message);
     expect(
       f.nativeElement
-        .querySelector('.reservation-identity .status-badge')
-        ?.getAttribute('data-status'),
-    ).toBe('CONFIRMED');
+        .querySelector('.reservation-identity .reservation-status')
+        ?.textContent.trim(),
+    ).toBe('Confirmed');
     const cancelDialog: HTMLDialogElement = f.nativeElement.querySelector('dialog');
     expect(cancelDialog.getAttribute('aria-labelledby')).toBe('cancel-reservation-title');
     expect(f.componentInstance.reservation()?.status).toBe('CONFIRMED');
@@ -415,7 +415,9 @@ describe('Reservation directory and details', () => {
     });
     f.detectChanges();
     expect(f.nativeElement.querySelector('.reservation-warning')).toBeNull();
-    expect(f.nativeElement.textContent).toContain('CANCELLED');
+    expect(f.nativeElement.querySelector('.reservation-status').textContent.trim()).toBe(
+      'Cancelled',
+    );
   });
   it('refreshes independent warnings and removes them only after explicit cancellation', () => {
     const f = TestBed.createComponent(ReservationDetail);
@@ -608,7 +610,7 @@ describe('Reservation directory and details', () => {
       'Room offering suspended',
       'Standard',
       'Sea View',
-      'CONFIRMED',
+      'Confirmed',
     ])
       expect(f.nativeElement.textContent).toContain(text);
     f.componentInstance.load();

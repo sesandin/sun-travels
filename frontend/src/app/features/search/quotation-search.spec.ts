@@ -238,7 +238,9 @@ describe('Search and nightly quotations', () => {
     c.search();
     http.expectOne(api + '/search/quotations').flush(response);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('does not book or hold rooms');
+    expect(fixture.nativeElement.textContent).toContain(
+      'Prices and availability may change until you confirm your booking.',
+    );
     const buttons = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
     );
@@ -447,7 +449,7 @@ describe('Search and nightly quotations', () => {
     fixture.detectChanges();
     expect(c.groupedQuotations()).toEqual([]);
     expect(fixture.nativeElement.querySelector('.quotation')).toBeNull();
-    expect(fixture.nativeElement.textContent).toContain('0 available room-type options');
+    expect(fixture.nativeElement.textContent).toContain('0 Available Room-type Options');
     c.showUnavailable.setValue(true);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.unavailable-option button').disabled).toBe(true);

@@ -13,6 +13,7 @@ import {
 import { DecimalPipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
+  AbstractControl,
   FormArray,
   FormControl,
   FormGroup,
@@ -137,6 +138,14 @@ export class QuotationSearch implements OnInit {
       .toISOString()
       .slice(0, 10);
   });
+  // Checks requested adults against the selected offering’s known capacity.
+  private occupancyValidator(control: AbstractControl) {
+    const max = this.occupancyMax();
+    return !this.showUnavailable.value && max !== null && control.value > max
+      ? { occupancyMax: { max } }
+      : null;
+  }
+
   readonly form = new FormGroup(
     {
       checkIn: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
@@ -382,7 +391,7 @@ export class QuotationSearch implements OnInit {
               Validators.required,
               Validators.min(1),
               adultInteger,
-              this.occupancyValidator,
+              (control) => this.occupancyValidator(control),
             ]),
           );
           this.form.updateValueAndValidity();
@@ -404,7 +413,7 @@ export class QuotationSearch implements OnInit {
       Validators.required,
       Validators.min(1),
       adultInteger,
-      this.occupancyValidator,
+      (control) => this.occupancyValidator(control),
     ]);
     this.rooms.push(r);
   }
@@ -461,14 +470,6 @@ export class QuotationSearch implements OnInit {
       });
   }
 
-  // Checks requested adults against the selected offering’s known capacity.
-  private readonly occupancyValidator: ValidatorFn = (control) => {
-    const max = this.occupancyMax();
-    return !this.showUnavailable.value && max !== null && control.value > max
-      ? { occupancyMax: { max } }
-      : null;
-  };
-
   // Requests an exact quotation for the current custom room choices.
   private requote() {
     const version = ++this.selectionVersion;
@@ -514,7 +515,7 @@ export class QuotationSearch implements OnInit {
         Validators.required,
         Validators.min(1),
         adultInteger,
-        this.occupancyValidator,
+        (control) => this.occupancyValidator(control),
       ]),
     });
   }

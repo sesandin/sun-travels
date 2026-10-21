@@ -145,6 +145,8 @@ describe('App', () => {
     const sidebar: HTMLElement = fixture.nativeElement.querySelector('.sidebar');
     const workspace: HTMLElement = fixture.nativeElement.querySelector('.workspace');
     const toggle: HTMLButtonElement = fixture.nativeElement.querySelector('.menu-button');
+    // jsdom does not apply mobile media queries; simulate the visible mobile toggle.
+    toggle.style.display = 'inline-flex';
     expect(sidebar.inert).toBe(true);
     toggle.click();
     fixture.detectChanges();
@@ -153,7 +155,7 @@ describe('App', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
     sidebar.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     fixture.detectChanges();
-    await Promise.resolve();
+    await fixture.whenStable();
     expect(sidebar.inert).toBe(true);
     expect(workspace.inert).toBe(false);
     expect(document.activeElement).toBe(toggle);

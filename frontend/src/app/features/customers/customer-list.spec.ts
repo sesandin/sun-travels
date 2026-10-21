@@ -136,7 +136,7 @@ describe('CustomerList', () => {
     create.flush(page.customers[0]);
     http.expectOne((r) => r.url === '/api/customers' && r.method === 'GET').flush(page);
     fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('registered successfully');
+    expect(fixture.nativeElement.textContent).toContain('Alice Perera has been added to your customers.');
     http.verify();
   });
 

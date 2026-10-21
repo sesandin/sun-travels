@@ -43,7 +43,7 @@ describe('Hotel management API workflows', () => {
   }
   it('shows loading, renders API hotels and filters by location and status', () => {
     expect(component.loading()).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('Loading hotel partners');
+    expect(fixture.nativeElement.textContent).toContain('Loading Hotel Partners');
     load();
     expect(fixture.nativeElement.textContent).toContain(hotel.name);
     component.query.set('galle');

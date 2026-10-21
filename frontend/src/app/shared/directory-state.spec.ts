@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { DestroyRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
@@ -43,9 +44,16 @@ describe('Server directory state', () => {
     state.load();
     state.load();
     expect(fetch).toHaveBeenCalledTimes(1);
-    failed.error({ status: 500, error: { message: 'Unable to load directory' } });
+    failed.error(
+      new HttpErrorResponse({
+        status: 500,
+        error: { message: 'Database details must stay private' },
+      }),
+    );
     expect(state.loading()).toBe(false);
-    expect(state.error()).toContain('Unable to load directory');
+    expect(state.error()).toBe(
+      'The server could not complete this request. Please try again shortly.',
+    );
     state.load();
     retry.next(directoryPage([]));
     expect(state.error()).toBe('');
