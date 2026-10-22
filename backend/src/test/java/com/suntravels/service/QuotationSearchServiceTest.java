@@ -71,6 +71,130 @@ class QuotationSearchServiceTest
     ValidatorFactory factory;
     QuotationSearchService service;
 
+    @Test
+    void locationLookupsRequireTwoCharactersAndMapCountryCodes()
+    {
+        assertTrue( service.citySuggestions( " c ", null ).isEmpty() );
+        assertTrue( service.hotelSuggestions( " h ", null, null ).isEmpty() );
+        assertTrue( service.citySuggestions( "   ", null ).isEmpty() );
+        verifyNoInteractions( data );
+        when( data.citySuggestions( "Co", "Sri Lanka" ) ).thenReturn( List.of() );
+        when( data.hotelSuggestions( "Oc", " Colombo ", "Sri Lanka" ) ).thenReturn( List.of() );
+        service.citySuggestions( " Co ", "lk" );
+        service.hotelSuggestions( " Oc ", " Colombo ", "LK" );
+        verify( data ).citySuggestions( "Co", "Sri Lanka" );
+        verify( data ).hotelSuggestions( "Oc", " Colombo ", "Sri Lanka" );
+        assertThrows( QuotationSearchException.class, () -> service.citySuggestions( "Co", "x".repeat(101) ) );
+    }
+
+    @Test
+    void autocompleteRejectsLongTermsAndDoesNotQueryForBlankText()
+    {
+        assertTrue( service.hotelSuggestions( "   " ).isEmpty() );
+        assertTrue( service.hotelSuggestions( "" ).isEmpty() );
+        assertThrows( QuotationSearchException.class, () -> service.hotelSuggestions( "x".repeat( 101 ) ) );
+        verifyNoInteractions( data, hotels );
+        when( data.hotelSuggestions( "Ocean", null, null ) ).thenReturn( List.of() );
+        assertTrue( service.hotelSuggestions( " Ocean " ).isEmpty() );
+        verify( data ).hotelSuggestions( "Ocean", null, null );
+    }
+
+    @Test
+    void selectedHotelResolvesWithoutSearchingTheSuggestionPage()
+    {
+        var option = new com.suntravels.dto.HotelSuggestion( 42, "Ocean", "Colombo", "Sri Lanka" );
+        when( data.activeHotelOption( 42 ) ).thenReturn( java.util.Optional.of( option ) );
+        assertEquals( option, service.hotelOption( 42 ) );
+        when( data.activeHotelOption( 43 ) ).thenReturn( java.util.Optional.empty() );
+        assertEquals( 404, assertThrows( QuotationSearchException.class, () -> service.hotelOption( 43 ) ).getStatus() );
+        assertThrows( QuotationSearchException.class, () -> service.hotelOption( 0 ) );
+        verifyNoInteractions( hotels );
+    }
+
+    @Test
+    void evaluatedEmptyPageSkipsInventoryAndPrices()
+    {
+        var request = request( 2 );
+        when( data.candidatePage( request, null ) ).thenReturn(
+                new QuotationSearchRepository.CandidatePage( List.of(), List.of(), null ) );
+        var result = service.evaluatedPage( request, null );
+        assertTrue( result.hotels().isEmpty() );
+        assertNull( result.nextAfterHotelId() );
+        verify( data ).candidatePage( request, null );
+        org.mockito.Mockito.verifyNoMoreInteractions( data );
+    }
+
+    @Test
+    void evaluatedPagePreservesUnavailableOfferingsAndSharedRoomDemand()
+    {
+        var request = request( 2, 1 );
+        var doubleRoom = candidate();
+        var singleRoom = candidate( 8, 4, 1, 1, 3, "50", "USD" );
+        when( data.candidatePage( request, 10 ) ).thenReturn(
+                new QuotationSearchRepository.CandidatePage( List.of( 1 ), List.of( doubleRoom, singleRoom ), 20 ) );
+        when( data.bookedRooms( Set.of( 7, 8 ), in, out ) ).thenReturn(
+                List.of( new BookedRoom( 1, 7, in, out, 2 ),
+                        new BookedRoom( 2, 7, in.plusDays( 1 ), out, 1 ) ) );
+        var result = service.evaluatedPage( request, 10 );
+        assertEquals( 20, result.nextAfterHotelId() );
+        var offerings = result.hotels().get( 0 ).offerings();
+        assertEquals( 2, offerings.size() );
+        assertEquals( AvailabilityStatus.NOT_AVAILABLE, offerings.get( 0 ).availabilityStatus() );
+        assertEquals( 1, offerings.get( 0 ).roomChoices().availableRoomsForStay() );
+        assertEquals( ReasonCode.INSUFFICIENT_INVENTORY,
+                offerings.get( 0 ).unavailableOption().reasons().get( 0 ).code() );
+        assertEquals( new BigDecimal( "1035.00" ), offerings.get( 0 ).unavailableOption().indicativeTotalPrice() );
+        assertEquals( ReasonCode.MAX_ADULT_OCCUPANCY,
+                offerings.get( 1 ).unavailableOption().reasons().get( 0 ).code() );
+        assertNull( offerings.get( 1 ).roomChoices().rooms().get( 0 ).totalPrice() );
+        assertNull( offerings.get( 1 ).quotation() );
+        verify( data ).seasons( Set.of( 7, 8 ) );
+        verify( data ).bookedRooms( Set.of( 7, 8 ), in, out );
+        verify( data, never() ).candidates( any() );
+    }
+
+    @Test
+    void evaluatedPageBatchesMoreThanTwoHundredOfferingsWithoutTruncatingHotel()
+    {
+        var request = request( 2, 1 );
+        var offerings = java.util.stream.IntStream.rangeClosed( 1, 201 )
+                                                  .mapToObj( id -> candidate( id, 4, 1, 2, 3, "100", "USD" ) ).toList();
+        when( data.candidatePage( request, null ) ).thenReturn(
+                new QuotationSearchRepository.CandidatePage( List.of( 1 ), offerings, null ) );
+        var result = service.evaluatedPage( request, null );
+        assertEquals( 201, result.hotels().get( 0 ).offerings().size() );
+        assertTrue( result.hotels().get( 0 ).offerings().stream().allMatch(
+                o -> o.availabilityStatus() == AvailabilityStatus.AVAILABLE &&
+                             o.quotation().totalPrice().equals( new BigDecimal( "1035.00" ) ) &&
+                             o.quotation().rooms().get( 0 ).allocatedRoomsForOffering() == 2 ) );
+        var batches = ArgumentCaptor.forClass( Set.class );
+        verify( data, times( 2 ) ).bookedRooms( batches.capture(), org.mockito.ArgumentMatchers.eq( in ),
+                org.mockito.ArgumentMatchers.eq( out ) );
+        assertEquals( 200, batches.getAllValues().get( 0 ).size() );
+        assertEquals( 1, batches.getAllValues().get( 1 ).size() );
+        verify( data, times( 2 ) ).seasons( any() );
+    }
+
+    @Test
+    void candidateDiscoveryValidatesBeforeQuerying()
+    {
+        assertThrows( QuotationSearchException.class, () -> service.candidatePage( request( 0 ), null ) );
+        assertThrows( QuotationSearchException.class, () -> service.candidatePage( request( 2 ), 0 ) );
+        assertThrows( QuotationSearchException.class, () -> service.candidatePage( request( 2 ), -1 ) );
+        verifyNoInteractions( data );
+    }
+
+    @Test
+    void candidateDiscoveryPassesContinuationWithoutPricing()
+    {
+        var request = request( 2 );
+        var page = new QuotationSearchRepository.CandidatePage( List.of(), List.of(), null );
+        when( data.candidatePage( request, 42 ) ).thenReturn( page );
+        assertEquals( page, service.candidatePage( request, 42 ) );
+        verify( data ).candidatePage( request, 42 );
+        org.mockito.Mockito.verifyNoMoreInteractions( data );
+    }
+
     // Configures the component and its test dependencies.
     @BeforeEach
     void setup()

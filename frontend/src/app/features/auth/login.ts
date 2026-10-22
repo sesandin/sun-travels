@@ -18,11 +18,11 @@ export class Login {
   readonly form = new FormGroup({
     username: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(100)],
+      validators: [Validators.required, Validators.pattern(/\S/), Validators.maxLength(100)],
     }),
     password: new FormControl('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.maxLength(200)],
+      validators: [Validators.required, Validators.pattern(/\S/), Validators.maxLength(200)],
     }),
   });
   private readonly auth = inject(AuthService);

@@ -167,6 +167,17 @@ pnpm-debug.log*
 # Test reports
 test-results/
 playwright-report/
+surefire-reports/
+failsafe-reports/
+.vitest/
+blob-report/
+
+# Generated benchmark results and local database diagnostic captures
+/database/benchmarks/results/
+/database/benchmarks/REPORT.md
+/docs/contract-hotel-lookup-plans.txt
+/docs/reservation-summary-evidence.txt
+/docs/validation/mysql-columns.tsv
 
 # Local SunTravels test automation files and execution workbooks
 /execution-evidence/

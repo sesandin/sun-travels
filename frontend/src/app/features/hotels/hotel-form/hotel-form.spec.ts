@@ -32,6 +32,37 @@ describe('HotelForm', () => {
     component.form.controls.starRating.setValue(6);
     expect(component.form.invalid).toBe(true);
   });
+  it('maps existing country names and codes to the same selected ISO country', () => {
+    component.reset(hotel);
+    expect(component.form.controls.country.value).toBe('LK');
+    component.reset({ ...hotel, country: 'lk' });
+    expect(component.form.controls.country.value).toBe('LK');
+    component.countryQuery.setValue('Sri');
+    expect(component.countryOptions.some((c) => c.code === 'LK')).toBe(true);
+    const emit = vi.spyOn(component.submitted, 'emit');
+    component.submit();
+    expect(emit).toHaveBeenCalledWith(expect.objectContaining({ country: 'Sri Lanka' }));
+  });
+  it('requires a recognized country and never silently replaces unknown legacy values', () => {
+    component.reset({ ...hotel, country: 'Legacy country' });
+    expect(component.legacyCountry).toBe('Legacy country');
+    expect(component.form.invalid).toBe(true);
+    component.form.controls.country.setValue('ZZ');
+    expect(component.form.invalid).toBe(true);
+    component.form.controls.country.setValue('');
+    expect(component.form.invalid).toBe(true);
+    component.form.controls.country.setValue('US');
+    expect(component.form.valid).toBe(true);
+    expect(component.form.controls.city.value).toBe('Galle');
+  });
+  it('contains the full 249-entry catalogue and filters the dropdown locally', () => {
+    component.reset(null);
+    expect(component.countryOptions).toHaveLength(249);
+    component.countryQuery.setValue('Sri Lanka');
+    expect(component.countryOptions.map((c) => c.code)).toEqual(['LK']);
+    component.countryQuery.setValue('no such country');
+    expect(component.countryOptions).toEqual([]);
+  });
   it('applies limits to both registration and editing and allows optional contact fields', () => {
     component.reset(hotel);
     expect(component.form.valid).toBe(true);
@@ -47,7 +78,6 @@ describe('HotelForm', () => {
     ['name', 150],
     ['address', 255],
     ['city', 100],
-    ['country', 100],
     ['phone', 20],
     ['email', 100],
   ] as const;

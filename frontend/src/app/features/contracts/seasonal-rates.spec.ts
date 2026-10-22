@@ -50,6 +50,9 @@ describe('Seasonal rate management', () => {
     fixture.componentRef.setInput('contract', contract);
     fixture.componentRef.setInput('offering', offering);
     fixture.detectChanges();
+    http.expectNone(api + '/offerings/8/seasonal-rates');
+    c.toggle();
+    fixture.detectChanges();
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -77,6 +80,19 @@ describe('Seasonal rate management', () => {
     http.expectNone((r) => r.method !== 'GET');
   });
   const url = api + '/offerings/8/seasonal-rates';
+  it('loads only on expansion and reuses successful results across repeated toggles', () => {
+    c.toggle();
+    c.toggle();
+    const request = http.expectOne(url);
+    request.flush([seasonal]);
+    c.toggle();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.season')).toBeNull();
+    c.toggle();
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('150 USD');
+    http.expectNone(url);
+  });
   // Completes the pending API request with test fixture data.
   function load(rows = [seasonal]) {
     http.expectOne(url).flush(rows);

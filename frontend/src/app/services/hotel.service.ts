@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { Hotel, HotelCreateRequest, HotelStatus, HotelUpdateRequest } from '../models/hotel.model';
+export type ManagementHotelOption = Pick<Hotel, 'hotelId' | 'name' | 'city' | 'country' | 'status'>;
 
 @Injectable({
   providedIn: 'root',
@@ -17,6 +18,16 @@ export class HotelService {
     return this.http.get<DirectoryPage<Hotel>>(this.apiUrl + '/page', {
       params: { query, status, page },
     });
+  }
+
+  // Retrieves a bounded management selector result, including inactive hotels.
+  options(term: string, status = '') {
+    return this.http.get<ManagementHotelOption[]>(this.apiUrl + '/options', {
+      params: status ? { term, status } : { term },
+    });
+  }
+  option(id: number) {
+    return this.http.get<ManagementHotelOption>(this.apiUrl + '/options/' + id);
   }
 
   // Returns the all hotels.

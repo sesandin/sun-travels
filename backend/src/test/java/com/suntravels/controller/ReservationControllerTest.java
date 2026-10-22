@@ -81,6 +81,25 @@ class ReservationControllerTest
         }
     }
 
+    @Test
+    void directoryReturnsOnlySummaryFieldsWithoutNightlySnapshots() throws Exception
+    {
+        var date = java.time.LocalDate.of(2026,10,25);
+        var summary = new ReservationResponse.Summary(5,6,"Customer",date,date.plusDays(1),
+                "CONFIRMED","USD",new java.math.BigDecimal("123.20"),
+                List.of(new ReservationResponse.RoomSummary(1,"Hotel","Double",2)),true);
+        when(reservations.list("","",0,10,null,null,"")).thenReturn(
+                new ReservationResponse.Page(List.of(summary),0,10,1));
+        mvc.perform(get("/api/reservations").with(user("staff").roles("AGENT")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reservations[0].totalPrice").value(123.20))
+                .andExpect(jsonPath("$.reservations[0].hasOperationalWarnings").value(true))
+                .andExpect(jsonPath("$.reservations[0].rooms[0].hotelName").value("Hotel"))
+                .andExpect(jsonPath("$.reservations[0].rooms[0].nightlyPrices").doesNotExist())
+                .andExpect(jsonPath("$.reservations[0].phone").doesNotExist());
+        org.mockito.Mockito.verify(reservations,org.mockito.Mockito.never()).detail(org.mockito.ArgumentMatchers.anyInt());
+    }
+
     // Verifies anonymous requests return401 and authenticated mutations require csrf.
     @Test
     void anonymousRequestsReturn401AndAuthenticatedMutationsRequireCsrf() throws Exception

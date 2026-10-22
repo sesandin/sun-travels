@@ -34,6 +34,9 @@
     <label>Stay to<input [formControl]="stayTo" [min]="stayFrom.value" type="date"/> </label>
     <button [disabled]="loading() || filters.invalid" class="primary">Search</button>
   </form>
+  @if (query.touched && query.hasError('maxlength')) {
+  <p class="field-error" role="alert">Use at most 150 characters.</p>
+  }
   <small
   >Find stays overlapping these dates, including the To date. Checkout day is excluded.</small
   >
@@ -78,12 +81,17 @@
         </td>
         <td>{{ booking.customerName }}</td>
         <td>{{ booking.rooms[0]?.hotelName }}</td>
-        <td>{{ booking.checkIn }} → {{ booking.checkOut }}</td>
+        <td>{{ booking.checkIn }} → {{ booking.checkOut }}
+          <small>{{ booking.rooms.length }} rooms</small>
+          @for (room of booking.rooms; track $index) {
+            <small>{{ room.roomTypeName }} · {{ room.adults }} adults</small>
+          }
+        </td>
         <td>
                 <span [attr.data-status]="booking.status" class="status-badge">{{
                   booking.status
                 }}</span>
-          @if (booking.status === 'CONFIRMED' && booking.warnings?.length) {
+          @if (booking.status === 'CONFIRMED' && booking.hasOperationalWarnings) {
           <span class="reservation-warning-indicator">Verify hotel arrangements</span>
           }
         </td>
@@ -126,7 +134,16 @@
   />
   }
 </section>
-<dialog #detailsDialog aria-labelledby="reservation-modal-title" class="reservation-modal">
+<dialog #detailsDialog (cancel)="closeDetails()" aria-labelledby="reservation-modal-title" class="reservation-modal">
+  @if (detailsLoading() || detailsError()) {
+    <h2 id="reservation-modal-title">Reservation details</h2>
+    <button type="button" (click)="closeDetails()">Close</button>
+    @if (detailsLoading()) { <p role="status">Loading reservation...</p> }
+    @if (detailsError()) {
+      <p role="alert">{{ detailsError() }}</p>
+      <button type="button" (click)="retryDetails()">Retry details</button>
+    }
+  }
   @if (selected(); as booking) {
   <header class="modal-heading">
     <div>

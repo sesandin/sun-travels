@@ -30,7 +30,7 @@
         maxlength="100"
       />
       @if (form.controls.username.touched && form.controls.username.invalid) {
-      <small class="field-error" id="username-error">Enter your username.</small>
+      <small class="field-error" id="username-error">{{ form.controls.username.hasError('maxlength') ? 'Use at most 100 characters.' : 'Enter your username.' }}</small>
       }
       <label for="password">Password</label>
       <input
@@ -46,7 +46,7 @@
         type="password"
       />
       @if (form.controls.password.touched && form.controls.password.invalid) {
-      <small class="field-error" id="password-error">Enter your password.</small>
+      <small class="field-error" id="password-error">{{ form.controls.password.hasError('maxlength') ? 'Use at most 200 characters.' : 'Enter your password.' }}</small>
       }
       <button [disabled]="submitting()" class="primary" type="submit">
         {{ submitting() ? 'Signing in...' : 'Sign in' }}

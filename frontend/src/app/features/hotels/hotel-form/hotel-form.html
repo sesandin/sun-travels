@@ -4,53 +4,84 @@
     <h2 id="editor-title">{{ editing ? 'Edit Hotel' : 'Register a Hotel' }}</h2>
     <p>
       {{
-      editing
-      ? 'Update partner details. ID and status are preserved.'
-      : 'Add a hotel partner to your accommodation network.'
+        editing
+          ? 'Update partner details. ID and status are preserved.'
+          : 'Add a hotel partner to your accommodation network.'
       }}
     </p>
   </div>
   @if (error()) {
-  <p class="error-message" role="alert">{{ error() }}</p>
+    <p class="error-message" role="alert">{{ error() }}</p>
   }
   <fieldset [disabled]="busy()">
     <div class="fields">
       @for (field of fields; track field.key) {
-      <div [class.wide]="field.key === 'address' || field.key === 'name'">
-        <label [for]="field.key"
-        >{{ field.label }} <span>{{ field.required ? '*' : '(optional)' }}</span>
-        </label>
-        <input
-          [attr.aria-describedby]="field.key + '-error'"
-          [attr.aria-invalid]="!!validationMessage(field.key)"
-          [attr.aria-required]="field.required"
-          [formControlName]="field.key"
-          [id]="field.key"
-          [type]="field.type"
-        />
-        <small [id]="field.key + '-error'" class="field-error">{{
-          validationMessage(field.key)
+        <div [class.wide]="field.key === 'address' || field.key === 'name'">
+          <label [for]="field.key"
+            >{{ field.label }} <span>{{ field.required ? '*' : '(optional)' }}</span>
+          </label>
+          @if (field.key === 'country') {
+            <label for="country-search">Find a country</label>
+            <input
+              id="country-search"
+              type="search"
+              [formControl]="countryQuery"
+              placeholder="Search country name or code"
+            />
+            <select
+              id="country"
+              formControlName="country"
+              required
+              aria-describedby="country-error"
+              [attr.aria-invalid]="!!validationMessage('country')"
+            >
+              <option value="">Choose a country</option>
+              @if (legacyCountry) {
+                <option [value]="legacyCountry" disabled>
+                  {{ legacyCountry }} (select an ISO country)
+                </option>
+              }
+              @for (country of countryOptions; track country.code) {
+                <option [value]="country.code">{{ country.name }}</option>
+              }
+            </select>
+            @if (!countryOptions.length) {
+              <small>No matching countries.</small>
+            }
+          } @else {
+            <input
+              [attr.aria-describedby]="field.key + '-error'"
+              [attr.aria-invalid]="!!validationMessage(field.key)"
+              [attr.aria-required]="field.required"
+              [formControlName]="field.key"
+              [maxlength]="maximumLength(field.key)"
+              [id]="field.key"
+              [type]="field.type"
+            />
+          }
+          <small [id]="field.key + '-error'" class="field-error">{{
+            validationMessage(field.key)
           }}</small>
-      </div>
+        </div>
       }
       <div>
         <label for="starRating">Star rating *</label>
         <select formControlName="starRating" id="starRating">
           @for (rating of [1, 2, 3, 4, 5]; track rating) {
-          <option [ngValue]="rating">{{ rating }} {{ rating === 1 ? 'star' : 'stars' }}</option>
+            <option [ngValue]="rating">{{ rating }} {{ rating === 1 ? 'star' : 'stars' }}</option>
           }
         </select>
         <small class="field-error">{{ validationMessage('starRating') }}</small>
       </div>
       @if (!editing) {
-      <div>
-        <label for="status">Status *</label>
-        <select formControlName="status" id="status">
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-        </select>
-        <small class="field-error">{{ validationMessage('status') }}</small>
-      </div>
+        <div>
+          <label for="status">Status *</label>
+          <select formControlName="status" id="status">
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+          <small class="field-error">{{ validationMessage('status') }}</small>
+        </div>
       }
     </div>
   </fieldset>

@@ -1,6 +1,10 @@
 package com.suntravels.repository;
 
 import com.suntravels.dto.QuotationSearchRequest;
+import com.suntravels.dto.HotelSuggestion;
+import com.suntravels.dto.CitySuggestion;
+import com.suntravels.validation.CountryCatalog;
+import java.util.Optional;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -17,6 +21,7 @@ import java.util.Set;
 @Repository
 public class QuotationSearchRepository
 {
+    public static final int HOTEL_PAGE_SIZE = 20;
     public static final int MAX_OFFERINGS = 500;
     public static final int MAX_SEASONS = 10000;
     public static final int MAX_BOOKED_ITEMS = 20000;
@@ -28,8 +33,125 @@ public class QuotationSearchRepository
         this.jdbc = jdbc;
     }
 
+    // Escape LIKE metacharacters so the supplied text is a literal name prefix.
+    public List<HotelSuggestion> hotelSuggestions( String term )
+    {
+        return hotelSuggestions( term, null, null );
+    }
+
+    private String prefix( String term )
+    {
+        return term.replace( "!", "!!" ).replace( "%", "!%" ).replace( "_", "!_" ) + "%";
+    }
+
+    public List<HotelSuggestion> hotelSuggestions( String term, String city, String country )
+    {
+        Map<String,Object> p = new HashMap<>();
+        p.put( "prefix", prefix( term ) );
+        String sql = """
+                select hotel_id,name,search_city as city,search_country as country from hotel
+                where status='ACTIVE' and name like :prefix escape '!'
+                """;
+        if( city != null && !city.isBlank() )
+        {
+            sql += " and search_city=:city";
+            p.put( "city", city.trim() );
+        }
+        if( country != null )
+        {
+            sql += " and search_country=:country";
+            p.put( "country", country );
+        }
+        return jdbc.query( sql + " order by name,hotel_id limit 20", p,
+                ( r, n ) -> new HotelSuggestion( r.getInt( 1 ), r.getString( 2 ), r.getString( 3 ), r.getString( 4 ) ) );
+    }
+
+    public List<CitySuggestion> citySuggestions( String term, String country )
+    {
+        Map<String,Object> p = new HashMap<>();
+        p.put( "prefix", prefix( term.toLowerCase( java.util.Locale.ROOT ) ) );
+        String sql = """
+                select distinct search_city as city,search_country as country from hotel
+                where status='ACTIVE' and search_city like :prefix escape '!'
+                """;
+        if( country != null )
+        {
+            sql += " and search_country=:country";
+            p.put( "country", country );
+        }
+        return jdbc.query( sql + " order by city,country limit 15", p,
+                ( r, n ) -> new CitySuggestion( r.getString( 1 ), r.getString( 2 ) ) );
+    }
+
+    public Optional<HotelSuggestion> activeHotelOption( int id )
+    {
+        return jdbc.query( "select hotel_id,name,search_city,search_country from hotel where hotel_id=:id and status='ACTIVE'",
+                Map.of( "id", id ),
+                ( r, n ) -> new HotelSuggestion( r.getInt( 1 ), r.getString( 2 ), r.getString( 3 ), r.getString( 4 ) ) ).stream().findFirst();
+    }
+
     // Loads active-hotel offerings with approved contracts covering the requested stay.
     public List<Candidate> candidates( QuotationSearchRequest request )
+    {
+        return candidates( request, null );
+    }
+
+    /** Select hotel IDs first, then load complete eligible offering groups. */
+    public CandidatePage candidatePage( QuotationSearchRequest request, Integer afterHotelId )
+    {
+        Map<String,Object> p = new HashMap<>();
+        p.put( "in", request.checkIn() );
+        p.put( "last", request.checkOut().minusDays( 1 ) );
+        p.put( "after", afterHotelId == null ? 0 : afterHotelId );
+        String sql = """
+                select h.hotel_id from hotel h
+                where h.status='ACTIVE' and h.hotel_id>:after
+                and (
+                    select 1 from contract c join contract_room_offering o on o.contract_id=c.contract_id
+                    where c.hotel_id=h.hotel_id and c.status='APPROVED' and o.status='ENABLED'
+                     and c.valid_from<=:in and c.valid_to>=:last and o.contracted_room_count>0
+                """;
+        if( request.roomTypeId() != null )
+        {
+            sql += " and o.room_type_id=:room";
+            p.put( "room", request.roomTypeId() );
+        }
+        // A scalar LIMIT 1 preserves the hotel-ID scan. EXISTS was transformed into
+        // a semijoin that sorted/materialized broad destinations in measured plans.
+        sql += " limit 1) is not null";
+        if( request.hotelId() != null )
+        {
+            sql += " and h.hotel_id=:hotel";
+            p.put( "hotel", request.hotelId() );
+        }
+        if( request.city() != null && !request.city().isBlank() )
+        {
+            sql += " and h.search_city=:city";
+            p.put( "city", request.city().trim() );
+        }
+        // One extra ID detects continuation without counting every eligible hotel.
+        if( request.country() != null && !request.country().isBlank() )
+        {
+            sql += " and h.search_country=:country";
+            p.put( "country", CountryCatalog.filterName( request.country() ) );
+        }
+        List<Integer> found = jdbc.queryForList(
+                sql + " order by h.hotel_id limit " + ( HOTEL_PAGE_SIZE + 1 ), p, Integer.class );
+        List<Integer> ids = List.copyOf( found.subList( 0, Math.min( HOTEL_PAGE_SIZE, found.size() ) ) );
+        Integer next = found.size() > HOTEL_PAGE_SIZE ? ids.get( ids.size() - 1 ) : null;
+        return new CandidatePage( ids, ids.isEmpty() ? List.of() : candidates( request, ids ), next );
+    }
+
+    public record CandidatePage(List<Integer> hotelIds, List<Candidate> offerings, Integer nextAfterHotelId)
+    {
+        public CandidatePage
+        {
+            hotelIds = List.copyOf( hotelIds );
+            offerings = List.copyOf( offerings );
+        }
+    }
+
+    private List<Candidate> candidates( QuotationSearchRequest request, List<Integer> hotelIds )
     {
         // Only fixed SQL fragments and internal numeric bounds are concatenated below.
         // Request dates, IDs and city remain named parameters, never executable SQL text.
@@ -57,10 +179,22 @@ public class QuotationSearchRepository
         }
         if( request.city() != null && !request.city().isBlank() )
         {
-            sql += " and lower(trim(h.city))=lower(:city)";
+            sql += " and h.search_city=:city";
             p.put( "city", request.city().trim() );
         }
-        sql += " order by h.hotel_id,c.contract_id,o.offering_id limit " + ( MAX_OFFERINGS + 1 );
+        if( hotelIds != null )
+        {
+            sql += " and h.hotel_id in (:hotels)";
+            p.put( "hotels", hotelIds );
+        }
+        if( request.country() != null && !request.country().isBlank() )
+        {
+            sql += " and h.search_country=:country";
+            p.put( "country", CountryCatalog.filterName( request.country() ) );
+        }
+        sql += " order by h.hotel_id,c.contract_id,o.offering_id";
+        // Preserve the legacy guard, but never truncate a candidate hotel's offerings.
+        if( hotelIds == null ) sql += " limit " + ( MAX_OFFERINGS + 1 );
         return jdbc.query( sql, p, ( r, n ) -> new Candidate( r.getInt( "offering_id" ), r.getInt( "contract_id" ),
                 r.getInt( "hotel_id" ), r.getString( "hotel_name" ), r.getString( "city" ),
                 r.getString( "contract_code" ), r.getString( "currency_code" ),

@@ -32,6 +32,7 @@ public interface OfferingRepository extends JpaRepository<ContractRoomOffering,I
     List<ContractRoomOffering> findAllForUpdate( @Param( "id" ) Integer id );
 
     // Lists a contract’s offerings in offering-ID order.
+    @EntityGraph(attributePaths = { "roomType" })
     List<ContractRoomOffering> findByContractContractIdOrderByOfferingId( Integer id );
 
     // Checks whether another offering already uses this room type in the contract.

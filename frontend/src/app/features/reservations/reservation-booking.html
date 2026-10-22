@@ -154,7 +154,9 @@
     <fieldset [disabled]="customerBusy() || busy()">
       <legend>New customer</legend>
       <label>Name<input autocomplete="name" formControlName="name" maxlength="150"/> </label>
+      <p class="field-error" role="alert">{{ registrationMessage('name') }}</p>
       <label>Phone<input autocomplete="tel" formControlName="phone" maxlength="20"/> </label>
+      <p class="field-error" role="alert">{{ registrationMessage('phone') }}</p>
       <label
       >Email<input
         autocomplete="email"
@@ -164,6 +166,7 @@
       />
       </label>
       <p>Provide a name and at least a valid phone number or email address.</p>
+      <p class="field-error" role="alert">{{ registrationMessage('email') }}</p>
       @if (registration.touched && registration.invalid) {
       <p class="error-message" role="alert">
         Check the name (up to 150 characters), phone (5–20 international phone characters),

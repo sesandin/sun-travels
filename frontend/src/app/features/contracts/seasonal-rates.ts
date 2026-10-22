@@ -7,7 +7,6 @@ import {
   inject,
   Injector,
   input,
-  OnInit,
   signal,
   viewChild,
 } from '@angular/core';
@@ -26,7 +25,9 @@ import { isContractExpired } from './contract-expiration';
   templateUrl: './seasonal-rates.html',
   styleUrl: './offering-panel.scss',
 })
-export class SeasonalRates implements OnInit {
+export class SeasonalRates {
+  readonly expanded = signal(false);
+  private loaded = false;
   readonly contract = input.required<Contract>();
   readonly offering = input.required<Offering>();
   readonly rows = signal<SeasonalRate[]>([]);
@@ -50,9 +51,11 @@ export class SeasonalRates implements OnInit {
   private readonly service = inject(OfferingService);
   private readonly destroyRef = inject(DestroyRef);
 
-  // Loads the initial data and subscriptions needed by this component.
-  ngOnInit() {
-    this.load();
+  // Keep successful results when collapsed; only first expansion or retry fetches.
+  toggle() {
+    if (this.saving()) return;
+    this.expanded.update(value => !value);
+    if (this.expanded()) this.load();
   }
   // Checks whether the contract permits rate and seasonal maintenance.
   canMaintain() {
@@ -63,7 +66,7 @@ export class SeasonalRates implements OnInit {
   }
   // Loads the offering’s seasonal rate periods.
   load() {
-    if (this.loading()) return;
+    if (this.loading() || this.loaded) return;
     this.loading.set(true);
     this.error.set('');
     this.service
@@ -72,6 +75,7 @@ export class SeasonalRates implements OnInit {
       .subscribe({
         next: (rows) => {
           this.rows.set(rows);
+          this.loaded = true;
           this.loading.set(false);
         },
         error: (e) => {
@@ -83,6 +87,8 @@ export class SeasonalRates implements OnInit {
   // Opens the seasonal period form with new or existing values.
   open(row: SeasonalRate | null = null) {
     if (!this.canMaintain() || this.saving()) return;
+    this.expanded.set(true);
+    this.load();
     this.selected.set(row);
     this.editing.set(true);
     this.failure.set('');
@@ -100,7 +106,7 @@ export class SeasonalRates implements OnInit {
   }
   // Validates and saves the seasonal period and rate.
   save() {
-    if (!this.canMaintain() || this.saving() || !this.editing()) return;
+    if (!this.canMaintain() || this.saving() || this.loading() || this.error() || !this.editing()) return;
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
     const raw = this.form.getRawValue(),

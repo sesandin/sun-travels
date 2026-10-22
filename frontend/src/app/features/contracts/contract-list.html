@@ -210,10 +210,10 @@
   }
   @if (hotelError()) {
   <p class="error-message" role="alert">{{ hotelError() }}</p>
-  <button (click)="loadHotels()" type="button">Retry hotels</button>
+  <button (click)="retryHotels()" type="button">Retry hotels</button>
   }
-  @if (!hotelsLoading() && !hotelError() && !hotels().length) {
-  <p>No hotels available. Register a hotel first.</p>
+  @if (hotelLookupDone() && !hotelsLoading() && !hotelError() && !hotels().length && !selectedHotel()) {
+  <p>No matching hotels.</p>
   }
   <form (ngSubmit)="save()" [formGroup]="form">
     <fieldset [disabled]="saving()">
@@ -226,12 +226,22 @@
         }
         <div>
           <label for="hotel">Hotel</label>
-          <select formControlName="hotelId" id="hotel">
-            <option [ngValue]="null">Select a hotel</option>
-            @for (hotel of hotels(); track hotel.hotelId) {
-            <option [ngValue]="hotel.hotelId">{{ hotel.name }}</option>
-            }
+          <input [formControl]="hotelQuery" id="hotel" maxlength="150" autocomplete="off"
+            placeholder="Type at least two characters of a hotel name" aria-controls="management-hotels"/>
+          <label for="hotel-status">Hotel status</label>
+          <select [formControl]="hotelStatus" id="hotel-status">
+            <option value="">All statuses</option><option>ACTIVE</option><option>INACTIVE</option>
           </select>
+          @if (hotelQuery.hasError('maxlength')) { <p class="field-error">Use at most 150 characters.</p> }
+          <ul id="management-hotels">
+            @for (hotel of hotels(); track hotel.hotelId) {
+            <li><button type="button" (click)="selectHotel(hotel)">{{ hotel.name }} - {{ hotel.city }} - {{ hotel.country }} ({{ hotel.status }})</button></li>
+            }
+          </ul>
+          @if (selectedHotel(); as hotel) {
+            <p>Selected: {{ hotel.name }} ({{ hotel.status }})</p>
+          }
+          <button type="button" (click)="clearHotel()">Clear hotel</button>
           @if (form.controls.hotelId.touched && form.controls.hotelId.invalid) {
           <p class="field-error">Select a hotel.</p>
           }
@@ -281,7 +291,7 @@
       <div class="actions">
         <button (click)="closeEditor()" type="button">Cancel</button>
         <button
-          [disabled]="saving() || hotelsLoading() || !!hotelError() || !hotels().length"
+          [disabled]="saving() || hotelsLoading() || !!hotelError() || form.invalid"
           class="primary"
           type="submit"
         >

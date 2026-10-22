@@ -12,7 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute, ParamMap } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, Subject, switchMap, timer, of, catchError } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   FormControl,
@@ -22,11 +22,11 @@ import {
   Validators,
 } from '@angular/forms';
 import { Contract, ContractStatus } from '../../models/contract.model';
-import { Hotel } from '../../models/hotel.model';
 import { ContractService } from '../../services/contract.service';
-import { HotelService } from '../../services/hotel.service';
+import { HotelService, ManagementHotelOption } from '../../services/hotel.service';
 import { OfferingPanel } from './offering-panel';
 import { isContractExpired } from './contract-expiration';
+import { positiveInteger } from './offering-validators';
 import { apiError } from '../../services/api-error';
 // Validates the allowed decimal precision for contract markup.
 const decimal: ValidatorFn = (c) =>
@@ -46,7 +46,13 @@ const dateRange: ValidatorFn = (group) => {
 export class ContractList implements OnInit {
   readonly linkedOffering = signal<number | null>(null);
   readonly linkError = signal('');
-  readonly hotels = signal<Hotel[]>([]);
+  readonly hotels = signal<ManagementHotelOption[]>([]);
+  readonly hotelQuery = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(150)] });
+  readonly hotelStatus = new FormControl('', { nonNullable: true });
+  readonly selectedHotel = signal<ManagementHotelOption | null>(null);
+  readonly hotelLookupDone = signal(false);
+  private readonly hotelLookup = new Subject<void>();
+  private hotelResolution?: Subscription;
   readonly hotelsLoading = signal(false);
   readonly saving = signal(false);
   readonly hotelError = signal('');
@@ -70,13 +76,13 @@ export class ContractList implements OnInit {
   readonly detailsLoading = signal(false);
   readonly form = new FormGroup(
     {
-      hotelId: new FormControl<number | null>(null, [Validators.required, Validators.min(1)]),
+      hotelId: new FormControl<number | null>(null, [Validators.required, positiveInteger]),
       validFrom: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
       validTo: new FormControl('', { nonNullable: true, validators: [Validators.required] }),
       markupPercentage: new FormControl<number | null>(0, [Validators.required, decimal]),
       currencyCode: new FormControl('', {
         nonNullable: true,
-        validators: [Validators.required, Validators.pattern(/^[A-Z]{3}$/)],
+        validators: [Validators.required, Validators.maxLength(3), Validators.pattern(/^[A-Z]{3}$/)],
       }),
     },
     { validators: dateRange },
@@ -108,7 +114,34 @@ export class ContractList implements OnInit {
   // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.loadContracts();
-    this.loadHotels();
+    this.hotelLookup.pipe(
+      switchMap(() => {
+        this.hotels.set([]);
+        this.hotelError.set('');
+        this.hotelLookupDone.set(false);
+        this.hotelsLoading.set(false);
+        const term = this.hotelQuery.value.trim();
+        if (this.hotelQuery.invalid || term.length < 2) return of([]);
+        return timer(300).pipe(switchMap(() => {
+          this.hotelsLoading.set(true);
+          return this.hotelService.options(term, this.hotelStatus.value).pipe(catchError((e) => {
+            this.hotelError.set(apiError(e));
+            return of([]);
+          }));
+        }));
+      }), takeUntilDestroyed(this.destroyRef),
+    ).subscribe((rows) => {
+      this.hotels.set(rows);
+      this.hotelsLoading.set(false);
+      this.hotelLookupDone.set(this.hotelQuery.value.trim().length >= 2 && this.hotelQuery.valid);
+    });
+    this.hotelQuery.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.hotelResolution?.unsubscribe();
+      this.selectedHotel.set(null);
+      this.form.controls.hotelId.setValue(null);
+      this.loadHotels();
+    });
+    this.hotelStatus.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.loadHotels());
     this.route?.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => this.openLink(params));
@@ -119,22 +152,32 @@ export class ContractList implements OnInit {
   }
   // Loads the hotels.
   loadHotels() {
-    if (this.hotelsLoading()) return;
-    this.hotelsLoading.set(true);
+    this.hotelLookup.next();
+  }
+  retryHotels() {
+    const row = this.selected();
+    if (row?.status === 'DRAFT' && !this.hotelQuery.value.trim() && !this.selectedHotel())
+      this.resolveHotel(row.hotelId);
+    else this.loadHotels();
+  }
+  selectHotel(hotel: ManagementHotelOption) {
+    this.hotelResolution?.unsubscribe();
+    this.hotelQuery.setValue('', { emitEvent: false });
+    this.loadHotels();
+    this.hotelQuery.setValue(hotel.name, { emitEvent: false });
+    this.selectedHotel.set(hotel);
+    this.form.controls.hotelId.setValue(hotel.hotelId);
+  }
+  clearHotel() {
+    this.hotelQuery.setValue('');
+  }
+  private resolveHotel(id: number) {
     this.hotelError.set('');
-    this.hotelService
-      .getAllHotels()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (rows) => {
-          this.hotels.set(rows);
-          this.hotelsLoading.set(false);
-        },
-        error: (e) => {
-          this.hotelError.set(apiError(e));
-          this.hotelsLoading.set(false);
-        },
-      });
+    this.hotelsLoading.set(true);
+    this.hotelResolution = this.hotelService.option(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (hotel) => { this.selectHotel(hotel); this.hotelsLoading.set(false); },
+      error: (e) => { this.hotelsLoading.set(false); this.hotelError.set(apiError(e)); },
+    });
   }
   // Opens contract creation, draft editing, or approved markup maintenance.
   openEditor(row: Contract | null = null) {
@@ -152,6 +195,8 @@ export class ContractList implements OnInit {
       markupPercentage: row?.markupPercentage ?? 0,
       currencyCode: row?.currencyCode ?? '',
     });
+    this.clearHotel();
+    if (row && row.status === 'DRAFT') this.resolveHotel(row.hotelId);
     this.markupForm.reset({ markupPercentage: row?.markupPercentage ?? 0 });
     this.focusEditor();
   }
@@ -165,7 +210,10 @@ export class ContractList implements OnInit {
 
   // Closes the editor and clears its selection when no save is pending.
   closeEditor() {
-    if (!this.saving() && !this.detailsLoading()) this.mode.set(null);
+    if (!this.saving() && !this.detailsLoading()) {
+      this.clearHotel();
+      this.mode.set(null);
+    }
   }
 
   // Opens confirmation for the selected contract lifecycle action.

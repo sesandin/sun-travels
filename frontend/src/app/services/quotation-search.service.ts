@@ -3,6 +3,9 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { map } from 'rxjs';
 import {
   AccommodationQuotation,
+  HotelPage,
+  HotelSuggestion,
+  CitySuggestion,
   OfferingOccupancy,
   QuotationRequest,
   QuotationResponse,
@@ -14,6 +17,11 @@ import {
 export class QuotationSearchService {
   private readonly http = inject(HttpClient);
   private readonly url = '/api/search';
+  page(request: QuotationRequest, afterHotelId: number | null = null) {
+    const params =
+      afterHotelId === null ? new HttpParams() : new HttpParams().set('afterHotelId', afterHotelId);
+    return this.http.post<HotelPage>(this.url + '/hotel-pages', request, { params });
+  }
   // Retrieves business dates and supported quotation-search limits.
   limits() {
     return this.http.get<SearchLimits>(this.url + '/limits');
@@ -21,6 +29,22 @@ export class QuotationSearchService {
   // Retrieves the available hotel and room-type search filters.
   filters() {
     return this.http.get<QuotationSearchFilters>(this.url + '/filters');
+  }
+  roomTypes() {
+    return this.http.get<QuotationSearchFilters['roomTypes']>(this.url + '/room-types');
+  }
+  cities(term: string, country?: string | null) {
+    return this.http.get<CitySuggestion[]>(this.url + '/cities', {
+      params: { term, ...(country ? { country } : {}) },
+    });
+  }
+  hotels(term: string, city?: string | null, country?: string | null) {
+    return this.http.get<HotelSuggestion[]>(this.url + '/hotels', {
+      params: { term, ...(city ? { city } : {}), ...(country ? { country } : {}) },
+    });
+  }
+  hotel(id: number) {
+    return this.http.get<HotelSuggestion>(this.url + '/hotels/' + id);
   }
   // Retrieves adult-capacity guidance for eligible room offerings.
   occupancy(request: {

@@ -81,6 +81,18 @@ export class ReservationBooking {
       });
   }
   // Selects an existing customer for the reservation.
+  registrationMessage(field: 'name' | 'phone' | 'email'): string {
+    const control = this.registration.controls[field];
+    if (!control.touched || !control.errors) return '';
+    if (control.hasError('required')) return 'Customer name is required.';
+    if (control.hasError('maxlength'))
+      return `Use at most ${control.errors['maxlength'].requiredLength} characters.`;
+    return field === 'phone'
+      ? 'Use 5 to 20 international phone characters, including a digit.'
+      : 'Enter a valid email address.';
+  }
+
+  // Selects an existing customer for the reservation.
   select(customer: Customer) {
     if (this.busy()) return;
     this.selected.set(customer);

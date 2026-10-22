@@ -41,7 +41,7 @@ describe('App', () => {
       maxResults: 20,
       allocationPolicy: 'INDIVIDUAL_ROOM_TYPES',
     });
-    http.expectOne('/api/search/filters').flush({ hotels: [], roomTypes: [] });
+    http.expectOne('/api/search/room-types').flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
     const link: HTMLAnchorElement = fixture.nativeElement.querySelector('a[href="/search"]');
@@ -65,7 +65,7 @@ describe('App', () => {
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
     http.expectOne((r) => r.url === '/api/contracts/page').flush(directoryPage([]));
-    http.expectOne('/api/hotels').flush([]);
+    http.expectNone('/api/hotels');
     await fixture.whenStable();
     fixture.detectChanges();
     const link: HTMLAnchorElement = fixture.nativeElement.querySelector('nav a[href="/contracts"]');

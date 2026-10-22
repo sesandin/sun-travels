@@ -82,6 +82,23 @@ describe('Hotel management API workflows', () => {
     http.expectOne((r) => r.url === url + '/page').flush(directoryPage([hotel]));
     expect(component.notice()).toContain('registered successfully');
   });
+  it.each([false, true])('shows duplicate identity conflicts and keeps the editor values (editing=%s)', (editing) => {
+    load();
+    component.openEditor(editing ? hotel : null);
+    fixture.detectChanges();
+    component.form().form.controls.name.setValue(hotel.name);
+    const { hotelId, ...details } = hotel;
+    component.save(details);
+    const message = 'A hotel with this name, country, city and street address already exists, including inactive hotels.';
+    http.expectOne(editing ? url + '/7' : url).flush({message}, {status: 409, statusText: 'Conflict'});
+    fixture.detectChanges();
+    expect(component.submissionError()).toBe(message);
+    expect(component.saving()).toBe(false);
+    expect(component.form().form.controls.name.value).toBe(hotel.name);
+    expect(component.editor().nativeElement.close).not.toHaveBeenCalled();
+    expect(fixture.nativeElement.textContent).toContain(message);
+    http.expectNone(r => r.url === url + '/page');
+  });
   it('updates only editable fields and keeps failed submissions visible', () => {
     load();
     component.openEditor(hotel);

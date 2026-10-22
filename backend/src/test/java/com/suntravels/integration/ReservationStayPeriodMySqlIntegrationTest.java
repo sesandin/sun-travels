@@ -89,7 +89,7 @@ class ReservationStayPeriodMySqlIntegrationTest
     // Extracts reservation IDs returned by the tested directory query.
     Set<Integer> returned( ReservationResponse.Page page )
     {
-        return new HashSet<>( page.reservations().stream().map( ReservationResponse::reservationId ).toList() );
+        return new HashSet<>( page.reservations().stream().map( ReservationResponse.Summary::reservationId ).toList() );
     }
 
     // Verifies exact october sixteenth boundaries are applied by sql.
@@ -135,7 +135,7 @@ class ReservationStayPeriodMySqlIntegrationTest
             assertEquals( 25, result.totalElements() );
             assertEquals( 10, result.size() );
             assertEquals( page == 2 ? 5 : 10, result.reservations().size() );
-            actual.addAll( result.reservations().stream().map( ReservationResponse::reservationId ).toList() );
+            actual.addAll( result.reservations().stream().map( ReservationResponse.Summary::reservationId ).toList() );
         }
         var expected = new ArrayList<>( ids );
         expected.sort( Comparator.reverseOrder() );

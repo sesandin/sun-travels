@@ -1,5 +1,6 @@
 package com.suntravels.controller;
 
+import com.suntravels.dto.EvaluatedHotelPage;
 import com.suntravels.dto.OfferingOccupancy;
 import com.suntravels.dto.QuotationSearchFilters;
 import com.suntravels.dto.QuotationSearchRequest;
@@ -13,6 +14,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -44,6 +47,111 @@ class QuotationSearchControllerTest
     QuotationSearchService service;
     MockMvc mvc;
     LocalValidatorFactoryBean validator;
+
+    @Test
+    void exposesCountryAwareCityAndHotelSuggestions() throws Exception
+    {
+        when( service.citySuggestions( "Sp", "US" ) ).thenReturn( List.of(
+                new com.suntravels.dto.CitySuggestion( "Springfield", "United States" ) ) );
+        mvc.perform( get( "/api/search/cities" ).param( "term", "Sp" ).param( "country", "US" ) )
+                .andExpect( status().isOk() ).andExpect( jsonPath( "$[0].city" ).value( "Springfield" ) )
+                .andExpect( jsonPath( "$[0].country" ).value( "United States" ) );
+        when( service.hotelSuggestions( "Oc", "Springfield", "US" ) ).thenReturn( List.of(
+                new com.suntravels.dto.HotelSuggestion( 7, "Ocean", "Springfield", "United States" ) ) );
+        mvc.perform( get( "/api/search/hotels" ).param( "term", "Oc" ).param( "city", "Springfield" ).param( "country", "US" ) )
+                .andExpect( status().isOk() ).andExpect( jsonPath( "$[0].country" ).value( "United States" ) );
+    }
+
+    @Test
+    void exposesLightweightHotelLookupAndIndependentRoomTypes() throws Exception
+    {
+        var hotel = new com.suntravels.dto.HotelSuggestion( 7, "Ocean", "Colombo", "Sri Lanka" );
+        when( service.hotelSuggestions( "Oc", null, null ) ).thenReturn( List.of( hotel ) );
+        mvc.perform( get( "/api/search/hotels" ).param( "term", "Oc" ) ).andExpect( status().isOk() )
+                .andExpect( jsonPath( "$[0].hotelId" ).value( 7 ) )
+                .andExpect( jsonPath( "$[0].length()" ).value( 4 ) );
+        when( service.hotelOption( 7 ) ).thenReturn( hotel );
+        mvc.perform( get( "/api/search/hotels/7" ) ).andExpect( status().isOk() )
+                .andExpect( jsonPath( "$.name" ).value( "Ocean" ) );
+        when( service.roomTypeFilters() ).thenReturn( List.of( new QuotationSearchFilters.RoomTypeOption( 3, "Double" ) ) );
+        mvc.perform( get( "/api/search/room-types" ) ).andExpect( status().isOk() )
+                .andExpect( jsonPath( "$[0].name" ).value( "Double" ) );
+        org.mockito.Mockito.verify( service, org.mockito.Mockito.never() ).filters();
+    }
+
+    @ParameterizedTest
+    @CsvSource( value = { "Colombo,NULL", "NULL,7", "Colombo,7", "'   ',7" }, nullValues = "NULL" )
+    void hotelPageAcceptsCityOrHotel( String city, Integer hotelId ) throws Exception
+    {
+        when( service.evaluatedPage( any(), org.mockito.ArgumentMatchers.isNull() ) ).thenReturn(
+                new EvaluatedHotelPage( LocalDate.of( 2026, 10, 15 ), LocalDate.of( 2026, 10, 24 ),
+                        LocalDate.of( 2026, 10, 27 ), 3, List.of(), null ) );
+        String body = json.replace( "\"city\":\"Colombo\"", "\"city\":" + (city == null ? "null" : "\"" + city + "\"") )
+                .replace( "\"hotelId\":null", "\"hotelId\":" + hotelId );
+        mvc.perform( post( "/api/search/hotel-pages" ).contentType( "application/json" ).content( body ) )
+                .andExpect( status().isOk() );
+    }
+
+    @ParameterizedTest
+    @CsvSource( value = { "NULL", "''", "'   '" }, nullValues = "NULL" )
+    void hotelPageRejectsMissingOrBlankDestinationBeforeSearch( String city ) throws Exception
+    {
+        String body = json.replace( "\"city\":\"Colombo\"", "\"city\":" + (city == null ? "null" : "\"" + city + "\"") );
+        mvc.perform( post( "/api/search/hotel-pages" ).contentType( "application/json" ).content( body ) )
+                .andExpect( status().isBadRequest() ).andExpect( jsonPath( "$.message" ).value( "Enter a city or select a hotel" ) );
+        verifyNoInteractions( service );
+    }
+
+    @Test
+    void legacySearchStillAcceptsNoDestination() throws Exception
+    {
+        when( service.search( any() ) ).thenReturn( new QuotationSearchResponse(
+                LocalDate.of( 2026, 10, 15 ), LocalDate.of( 2026, 10, 24 ), LocalDate.of( 2026, 10, 27 ),
+                3, List.of(), 0, false, "INDIVIDUAL_ROOM_TYPES", "Informational" ) );
+        mvc.perform( post( "/api/search/quotations" ).contentType( "application/json" )
+                .content( json.replace( "\"city\":\"Colombo\"", "\"city\":null" ) ) ).andExpect( status().isOk() );
+    }
+
+    @Test
+    void paginatedEndpointFiltersAfterEvaluationAndKeepsCandidateCursor() throws Exception
+    {
+        var available = new EvaluatedHotelPage.Offering( 1, 1, 3, null,
+                QuotationSearchResponse.AvailabilityStatus.AVAILABLE, null, null );
+        var unavailable = new EvaluatedHotelPage.Offering( 2, 2, 3, null,
+                QuotationSearchResponse.AvailabilityStatus.NOT_AVAILABLE, null, null );
+        when( service.evaluatedPage( any(), org.mockito.ArgumentMatchers.eq( 20 ) ) ).thenReturn(
+                new EvaluatedHotelPage( LocalDate.of( 2026, 10, 15 ), LocalDate.of( 2026, 10, 24 ),
+                        LocalDate.of( 2026, 10, 27 ), 3, List.of(
+                        new EvaluatedHotelPage.Hotel( 21, "Available hotel", "Colombo", List.of( available, unavailable ) ),
+                        new EvaluatedHotelPage.Hotel( 22, "Full hotel", "Colombo", List.of( unavailable ) ) ), 40 ) );
+        mvc.perform( post( "/api/search/hotel-pages" ).param( "afterHotelId", "20" )
+                                                      .contentType( "application/json" ).content( json ) ).andExpect( status().isOk() )
+           .andExpect( jsonPath( "$.hotels.length()" ).value( 1 ) )
+           .andExpect( jsonPath( "$.hotels[0].offerings.length()" ).value( 1 ) )
+           .andExpect( jsonPath( "$.hotels[0].offerings[0].availabilityStatus" ).value( "AVAILABLE" ) )
+           .andExpect( jsonPath( "$.nextAfterHotelId" ).value( 40 ) );
+    }
+
+    @Test
+    void paginatedEndpointPreservesEmptyPageWithContinuation() throws Exception
+    {
+        when( service.evaluatedPage( any(), org.mockito.ArgumentMatchers.isNull() ) ).thenReturn(
+                new EvaluatedHotelPage( LocalDate.of( 2026, 10, 15 ), LocalDate.of( 2026, 10, 24 ),
+                        LocalDate.of( 2026, 10, 27 ), 3, List.of(), 20 ) );
+        mvc.perform( post( "/api/search/hotel-pages" ).contentType( "application/json" ).content( json ) )
+           .andExpect( status().isOk() ).andExpect( jsonPath( "$.hotels" ).isEmpty() )
+           .andExpect( jsonPath( "$.nextAfterHotelId" ).value( 20 ) );
+    }
+
+    @Test
+    void paginatedEndpointRejectsMalformedCursorAndInvalidRooms() throws Exception
+    {
+        mvc.perform( post( "/api/search/hotel-pages" ).param( "afterHotelId", "bad" )
+                                                      .contentType( "application/json" ).content( json ) ).andExpect( status().isBadRequest() );
+        mvc.perform( post( "/api/search/hotel-pages" ).contentType( "application/json" )
+                                                      .content( json.replace( "\"adults\":2", "\"adults\":0" ) ) ).andExpect( status().isBadRequest() );
+        verifyNoInteractions( service );
+    }
 
     // Configures the component and its test dependencies.
     @BeforeEach

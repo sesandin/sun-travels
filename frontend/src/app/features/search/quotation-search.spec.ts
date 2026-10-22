@@ -6,6 +6,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { QuotationSearch } from './quotation-search';
 import {
   QuotationResponse,
+  HotelPage,
   SearchLimits,
   UnavailableAccommodation,
 } from '../../models/quotation.model';
@@ -103,7 +104,7 @@ const unavailableOption: UnavailableAccommodation = {
   reasons: [{ code: 'INSUFFICIENT_INVENTORY', message: 'Only 1 room available; 2 requested.' }],
   indicativeTotalPrice: 690,
 };
-describe('Search and nightly quotations', () => {
+describe('Hotel-paginated accommodation search', () => {
   let http: HttpTestingController;
   let fixture: ReturnType<typeof TestBed.createComponent<QuotationSearch>>;
   let c: QuotationSearch;
@@ -116,951 +117,581 @@ describe('Search and nightly quotations', () => {
     fixture = TestBed.createComponent(QuotationSearch);
     c = fixture.componentInstance;
     fixture.detectChanges();
-  });
-  afterEach(() => http.verify());
-  // Configures the component and its test dependencies.
-  function setup() {
     http.expectOne(api + '/search/limits').flush(limits);
-    http.expectOne(api + '/search/filters').flush({
-      hotels: [{ hotelId: 7, name: 'Ocean Hotel', city: 'Colombo' }],
-      roomTypes: [{ roomTypeId: 3, name: 'Double' }],
-    });
+    http.expectOne(api + '/search/room-types').flush([{ roomTypeId: 3, name: 'Double' }]);
+    c.form.patchValue({ checkIn: '2026-10-24', nights: 3, city: 'Colombo' });
+    c.rooms.at(0).controls.adults.setValue(2);
+    fixture.detectChanges();
+  });
+  afterEach(() => {
+    http.verify();
+    vi.useRealTimers();
+  });
+
+  it('debounces city lookup, keeps countries distinct and sends the selected country on every page', async () => {
+    vi.useFakeTimers();
+    c.form.controls.city.setValue('');
+    c.cityQuery.setValue('S');
+    c.hotelQuery.setValue('O');
+    await vi.advanceTimersByTimeAsync(300);
+    http.expectNone((r) => r.url === api + '/search/cities' || r.url === api + '/search/hotels');
+    c.cityQuery.setValue('Sp');
+    await vi.advanceTimersByTimeAsync(299);
+    http.expectNone((r) => r.url === api + '/search/cities');
+    await vi.advanceTimersByTimeAsync(1);
+    const req = http.expectOne((r) => r.url === api + '/search/cities');
+    expect(req.request.params.get('term')).toBe('Sp');
+    req.flush([
+      { city: 'Springfield', country: 'United States' },
+      { city: 'Springfield', country: 'Sri Lanka' },
+    ]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#city-matches').textContent).toContain(
+      'United States',
+    );
+    expect(fixture.nativeElement.querySelector('#city-matches').textContent).toContain('Sri Lanka');
+    expect(c.form.hasError('destination')).toBe(true); // Typed text alone is not a selection.
+    c.selectCity({ city: 'Springfield', country: 'Sri Lanka' });
+    c.search();
+    const first = http.expectOne(api + '/search/hotel-pages');
+    expect(first.request.body.country).toBe('Sri Lanka');
+    first.flush(page(7, 20));
+    c.loadMore();
+    const more = http.expectOne((r) => r.url === api + '/search/hotel-pages');
+    expect(more.request.body.country).toBe('Sri Lanka');
+    more.flush(page(21));
+  });
+
+  it('cancels old city requests and handles empty and error states', async () => {
+    vi.useFakeTimers();
+    c.cityQuery.setValue('Ga');
+    await vi.advanceTimersByTimeAsync(300);
+    const old = http.expectOne((r) => r.url === api + '/search/cities');
+    c.cityQuery.setValue('Co');
+    expect(old.cancelled).toBe(true);
+    await vi.advanceTimersByTimeAsync(300);
+    http.expectOne((r) => r.url === api + '/search/cities').flush([]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No matching destinations.');
+    c.cityQuery.setValue('Ma');
+    await vi.advanceTimersByTimeAsync(300);
+    http
+      .expectOne((r) => r.url === api + '/search/cities')
+      .flush({}, { status: 503, statusText: 'Unavailable' });
+    expect(c.cityLoading()).toBe(false);
+    expect(c.cityError()).toContain('try again');
+  });
+
+  it('filters hotel requests by location and cancels requests when that location changes', async () => {
+    vi.useFakeTimers();
+    c.selectCity({ city: 'Springfield', country: 'Sri Lanka' });
+    c.hotelQuery.setValue('Oc');
+    await vi.advanceTimersByTimeAsync(300);
+    const old = http.expectOne((r) => r.url === api + '/search/hotels');
+    expect(old.request.params.get('city')).toBe('Springfield');
+    expect(old.request.params.get('country')).toBe('Sri Lanka');
+    c.selectCity({ city: 'Springfield', country: 'United States' });
+    expect(old.cancelled).toBe(true);
+    await vi.advanceTimersByTimeAsync(300);
+    const current = http.expectOne((r) => r.url === api + '/search/hotels');
+    expect(current.request.params.get('country')).toBe('United States');
+    current.flush([]);
+  });
+
+  it('clears incompatible hotels and old destination selections without losing hotel-only search', () => {
+    c.selectCity({ city: 'Springfield', country: 'Sri Lanka' });
+    c.selectHotel({ hotelId: 7, name: 'Ocean', city: 'Springfield', country: 'Sri Lanka' });
+    expect(c.form.controls.hotelId.value).toBe(7);
+    search(page(7, 20));
+    c.selectCity({ city: 'Springfield', country: 'United States' });
+    expect(c.form.controls.hotelId.value).toBeNull();
+    expect(c.response()).toBeNull();
+    expect(c.nextAfterHotelId()).toBeNull();
+    c.hotelQuery.setValue('');
+    c.cityQuery.setValue('New text');
+    expect(c.selectedCity()).toBeNull();
+    expect(c.form.controls.city.value).toBe('');
+    expect(c.form.controls.country.value).toBeNull();
+    expect(c.form.hasError('destination')).toBe(true);
+    c.clearCity();
+    c.selectHotel({ hotelId: 9, name: 'Hotel only', city: 'Colombo', country: 'Sri Lanka' });
+    expect(c.form.valid).toBe(true);
+    c.search();
+    const req = http.expectOne(api + '/search/hotel-pages');
+    expect(req.request.body.city).toBeNull();
+    expect(req.request.body.hotelId).toBe(9);
+    req.flush(page(9));
+  });
+
+  it('debounces hotel-name lookup and never loads the hotel catalogue during setup', async () => {
+    vi.useFakeTimers();
+    http.expectNone(api + '/search/filters');
+    c.hotelQuery.setValue('Oc');
+    await vi.advanceTimersByTimeAsync(299);
+    http.expectNone((r) => r.url === api + '/search/hotels');
+    await vi.advanceTimersByTimeAsync(1);
+    const req = http.expectOne((r) => r.url === api + '/search/hotels');
+    expect(req.request.params.get('term')).toBe('Oc');
+    req.flush([{ hotelId: 7, name: 'Ocean Hotel', city: 'Colombo' }]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#hotel-matches').textContent).toContain(
+      'Ocean Hotel - Colombo',
+    );
+    expect(c.form.controls.hotelId.value).toBeNull();
+  });
+
+  it('cancels stale hotel requests immediately when newer text is typed', async () => {
+    vi.useFakeTimers();
+    c.hotelQuery.setValue('Oc');
+    await vi.advanceTimersByTimeAsync(300);
+    const old = http.expectOne((r) => r.url === api + '/search/hotels');
+    c.hotelQuery.setValue('Sea');
+    expect(old.cancelled).toBe(true);
+    await vi.advanceTimersByTimeAsync(300);
+    http
+      .expectOne((r) => r.url === api + '/search/hotels')
+      .flush([{ hotelId: 9, name: 'Sea Hotel', city: 'Colombo' }]);
+    expect(c.hotelMatches().map((h) => h.hotelId)).toEqual([9]);
+  });
+
+  it('selects a real ID and clears it when the name is edited or selection is cleared', () => {
+    c.form.controls.city.setValue('');
+    const hotel = { hotelId: 7, name: 'Ocean Hotel', city: 'Colombo' };
+    c.selectHotel(hotel);
+    expect(c.form.controls.hotelId.value).toBe(7);
+    expect(c.hotelQuery.value).toBe('Ocean Hotel');
+    expect(c.form.valid).toBe(true);
+    http.expectNone(api + '/search/hotels/7');
+    c.hotelQuery.setValue('Different');
+    expect(c.form.controls.hotelId.value).toBeNull();
+    expect(c.form.hasError('destination')).toBe(true);
+    c.selectHotel(hotel);
+    c.clearHotel();
+    expect(c.selectedHotel()).toBeNull();
+    expect(c.hotelQuery.value).toBe('');
+    expect(c.form.controls.hotelId.value).toBeNull();
+  });
+
+  it('resolves selected IDs independently and cancels an obsolete ID lookup', () => {
+    c.form.controls.hotelId.setValue(7);
+    const old = http.expectOne(api + '/search/hotels/7');
+    c.form.controls.hotelId.setValue(9);
+    expect(old.cancelled).toBe(true);
+    http
+      .expectOne(api + '/search/hotels/9')
+      .flush({ hotelId: 9, name: 'Sea Hotel', city: 'Colombo' });
+    expect(c.selectedHotel()?.hotelId).toBe(9);
+    expect(c.hotelQuery.value).toBe('Sea Hotel');
+    expect(c.hotelMatches()).toEqual([]);
+  });
+
+  it('handles blank text, no matches and hotel API errors', async () => {
+    vi.useFakeTimers();
+    c.hotelQuery.setValue('   ');
+    await vi.advanceTimersByTimeAsync(300);
+    http.expectNone((r) => r.url === api + '/search/hotels');
+    c.hotelQuery.setValue('Missing');
+    await vi.advanceTimersByTimeAsync(300);
+    http.expectOne((r) => r.url === api + '/search/hotels').flush([]);
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).toContain('No matching hotels.');
+    c.hotelQuery.setValue('Other');
+    await vi.advanceTimersByTimeAsync(300);
+    expect(c.hotelLoading()).toBe(true);
+    http
+      .expectOne((r) => r.url === api + '/search/hotels')
+      .flush({}, { status: 503, statusText: 'Unavailable' });
+    expect(c.hotelLoading()).toBe(false);
+    expect(c.hotelError()).toContain('try again');
+    expect(c.form.valid).toBe(true); // City-only search remains usable.
+  });
+
+  it.each([
+    ['Colombo', null, true],
+    ['', 7, true],
+    ['Colombo', 7, true],
+    ['   ', 7, true],
+    ['   ', null, false],
+    ['', null, false],
+  ] as const)('validates destination city %s and hotel %s', (city, hotelId, valid) => {
+    c.form.patchValue({ city, hotelId });
+    if (hotelId !== null)
+      http
+        .expectOne(api + '/search/hotels/' + hotelId)
+        .flush({ hotelId, name: 'Ocean Hotel', city: 'Colombo' });
+    fixture.detectChanges();
+    expect(c.form.hasError('destination')).toBe(!valid);
+    expect(c.form.valid).toBe(valid);
+    if (!valid) {
+      c.search();
+      expect(fixture.nativeElement.textContent).toContain('Enter a city or select a hotel.');
+      http.expectNone(api + '/search/hotel-pages');
+    } else {
+      c.search();
+      const req = http.expectOne(api + '/search/hotel-pages');
+      expect(req.request.body.city).toBe(city.trim() || null);
+      expect(req.request.body.hotelId).toBe(hotelId);
+      req.flush({ ...page(), hotels: [] });
+    }
+  });
+
+  function page(hotelId = 7, cursor: number | null = null, count = 1): HotelPage {
+    const quotation = {
+      ...response.quotations[0],
+      hotelId,
+      rooms: Array.from({ length: count }, (_, i) => ({
+        ...response.quotations[0].rooms[0],
+        roomNumber: i + 1,
+        adults: i ? 1 : 2,
+        allocatedRoomsForOffering: count,
+        totalPrice: i ? 402.5 : 805,
+      })),
+      totalPrice: count === 1 ? 805 : 1207.5,
+    };
+    return {
+      businessDate: limits.businessDate,
+      checkIn: quotation.checkIn,
+      checkOut: quotation.checkOut,
+      nights: 3,
+      nextAfterHotelId: cursor,
+      hotels: [
+        {
+          hotelId,
+          hotelName: 'Ocean Hotel',
+          city: 'Colombo',
+          offerings: [
+            {
+              offeringId: 8,
+              roomTypeId: 3,
+              contractedRooms: 3,
+              availabilityStatus: 'AVAILABLE',
+              unavailableOption: null,
+              quotation,
+              roomChoices: {
+                hotelId,
+                hotelName: 'Ocean Hotel',
+                contractId: 4,
+                offeringId: 8,
+                roomTypeName: 'Double',
+                maxAdults: 2,
+                availableRoomsForStay: 2,
+                currencyCode: 'USD',
+                rooms: quotation.rooms.map((r) => ({
+                  roomNumber: r.roomNumber,
+                  adults: r.adults,
+                  totalPrice: r.totalPrice,
+                })),
+              },
+            },
+          ],
+        },
+      ],
+    };
+  }
+  function search(data = page()) {
+    c.search();
+    http.expectOne(api + '/search/hotel-pages').flush(data);
     fixture.detectChanges();
   }
-  // Populates the form with valid test input.
-  function fill() {
-    c.form.patchValue({ checkIn: '2026-10-24', nights: 3 });
-    c.rooms.at(0).controls.adults.setValue(2);
+  function mixedChoices() {
+    const data = page(7, null, 2);
+    const first = data.hotels[0].offerings[0].roomChoices;
+    return [
+      first,
+      {
+        ...first,
+        offeringId: 9,
+        roomTypeName: 'Single',
+        maxAdults: 1,
+        rooms: [
+          { roomNumber: 1, adults: 2, totalPrice: null },
+          { roomNumber: 2, adults: 1, totalPrice: 172.5 },
+        ],
+      },
+    ];
   }
-  it('loads business date and real reference selections without browser-local today assumptions', () => {
-    expect(fixture.nativeElement.textContent).toContain('Loading search dates');
-    setup();
-    expect(fixture.nativeElement.textContent).toContain('2026-10-15 (Asia/Colombo)');
-    expect(fixture.nativeElement.textContent).toContain('Ocean Hotel');
-    expect(c.limits()?.maxRooms).toBe(8);
-  });
-  it('validates missing, past, reversed and too-long stay dates', () => {
-    setup();
-    c.search();
-    expect(c.form.invalid).toBe(true);
-    fill();
-    c.form.controls.checkIn.setValue('2026-10-14');
-    c.search();
-    expect(c.form.invalid).toBe(true);
-    fill();
-    c.form.controls.nights.setValue(0);
-    expect(c.form.invalid).toBe(true);
-    c.form.controls.nights.setValue(-1);
-    expect(c.form.invalid).toBe(true);
-    fill();
-    c.form.controls.nights.setValue(38);
-    expect(c.form.invalid).toBe(true);
-    http.expectNone(api + '/search/quotations');
-  });
-  it('rejects fractional, null and out-of-range adults', () => {
-    setup();
-    fill();
-    for (const adults of [null, 0, -1, 1.5, 2147483648, Number.MAX_SAFE_INTEGER]) {
-      c.rooms.at(0).controls.adults.setValue(adults);
-      c.search();
-      expect(c.form.invalid).toBe(true);
-    }
-    http.expectNone(api + '/search/quotations');
-  });
-  it('adds individual rooms, preserves adult counts, caps rooms and keeps at least one', () => {
-    setup();
-    fill();
+  function openCustom() {
     c.addRoom();
-    c.rooms.at(1).controls.adults.setValue(1);
-    expect(c.rooms.getRawValue()).toEqual([{ adults: 2 }, { adults: 1 }]);
-    for (let i = 0; i < 10; i++) c.addRoom();
-    expect(c.rooms.length).toBe(8);
-    while (c.rooms.length > 1) c.removeRoom(1);
-    c.removeRoom(0);
-    expect(c.rooms.length).toBe(1);
-  });
-  it('submits structured multi-room payload and selected filters only to the read-only API', () => {
-    setup();
-    fill();
-    c.addRoom();
-    c.form.patchValue({ hotelId: 7, roomTypeId: 3, city: ' Colombo ' });
+    search(page(7, null, 2));
+    c.openCustomization();
     http
-      .expectOne((r) => r.url === api + '/search/occupancy')
-      .flush([{ offeringId: 8, roomTypeId: 3, roomTypeName: 'Double', maxAdults: 2 }]);
+      .expectOne(api + '/search/quotations')
+      .flush({ ...response, selectionOfferings: mixedChoices() });
+    c.customize(mixedChoices()[0]);
+    fixture.detectChanges();
+  }
+  it('loads real reference data and derives exclusive checkout without changing adults', () => {
+    expect(c.limits()?.businessDate).toBe('2026-10-15');
+    expect(c.form.controls.checkOut.value).toBe('2026-10-27');
+    c.form.controls.nights.setValue(1);
+    expect(c.form.controls.checkOut.value).toBe('2026-10-25');
+    expect(c.rooms.at(0).controls.adults.value).toBe(2);
+  });
+  it.each([0, -1, 1.5, 2147483648, null])('rejects invalid adults %s', (adults) => {
+    c.rooms.at(0).controls.adults.setValue(adults);
+    c.search();
+    expect(c.form.invalid).toBe(true);
+    http.expectNone(api + '/search/hotel-pages');
+  });
+  it.each(['2026-10-14', 'bad-date'])('rejects invalid check-in %s', (checkIn) => {
+    c.form.controls.checkIn.setValue(checkIn);
+    c.search();
+    expect(c.form.invalid).toBe(true);
+    http.expectNone(api + '/search/hotel-pages');
+  });
+  it('preserves optional filters and blocks duplicate initial searches', () => {
+    c.form.controls.city.setValue(' Colombo ');
+    c.addRoom();
     c.search();
     c.search();
-    const req = http.expectOne(api + '/search/quotations');
+    const req = http.expectOne(api + '/search/hotel-pages');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({
       checkIn: '2026-10-24',
       checkOut: '2026-10-27',
-      rooms: [{ adults: 2 }, { adults: 1 }],
       city: 'Colombo',
-      hotelId: 7,
-      roomTypeId: 3,
+      hotelId: null,
+      roomTypeId: null,
+      rooms: [{ adults: 2 }, { adults: 1 }],
     });
-    expect(c.searching()).toBe(true);
-    req.flush({ ...response, quotations: [] });
+    expect(req.request.params.has('afterHotelId')).toBe(false);
+    req.flush(page(7, null, 2));
     expect(c.searching()).toBe(false);
   });
-  it('renders allocation, currency, selling totals and expandable nightly price sources', () => {
-    setup();
-    fill();
-    c.search();
-    http.expectOne(api + '/search/quotations').flush(response);
-    fixture.detectChanges();
+  it('renders seasonal selling prices, adult capacity, inventory and original currency', () => {
+    search();
     const text = fixture.nativeElement.textContent;
     for (const value of [
       'Ocean Hotel',
-      '805.00 USD',
+      'Colombo',
       'Double',
-      '2 rooms available',
-      '1 room requested',
-      'BASE',
-      'SEASONAL',
+      '805.00 USD',
       '345.00 USD',
-      'Available',
+      'SEASONAL',
+      'Maximum 2 adults',
+      '2 rooms available throughout stay',
     ])
       expect(text).toContain(value);
-    const details: HTMLDetailsElement = fixture.nativeElement.querySelector('details');
-    expect(details.open).toBe(false);
-    details.open = true;
-    expect(fixture.nativeElement.querySelectorAll('tbody tr')).toHaveLength(3);
-    expect(fixture.nativeElement.querySelectorAll('.room-availability')).toHaveLength(1);
-    expect(text).not.toContain('Contracted rooms');
-    expect(text).not.toContain('Hotelier rate');
+    expect(text).toContain('Hotels are ordered by hotel ID');
     expect(text).not.toContain('Markup');
-    expect(text).not.toContain('C004');
-  });
-  it('keeps search informational and offers a separate reservation review action', () => {
-    setup();
-    fill();
-    c.search();
-    http.expectOne(api + '/search/quotations').flush(response);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain(
-      'Prices and availability may change until you confirm your booking.',
-    );
-    const buttons = Array.from(
-      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    );
-    const button = buttons.find((b) => b.textContent?.trim() === 'Book This Room')!;
-    expect(button.disabled).toBe(false);
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    button.click();
-    expect(navigate).toHaveBeenCalledWith(['/reservations/new']);
-    http.expectNone('/api/reservations');
-    TestBed.inject(ReservationService).clearDraft();
-  });
-  it('shows helpful successful empty state', () => {
-    setup();
-    fill();
-    c.search();
-    http
-      .expectOne(api + '/search/quotations')
-      .flush({ ...response, quotations: [], matchingOptions: 0 });
-    fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain(
-      'No Single Room Type Can Accommodate This Request',
-    );
-    expect(c.error()).toBe('');
-  });
-  it('preserves fields on conflict and supports retry without a fake quotation', () => {
-    setup();
-    fill();
-    c.search();
-    http
-      .expectOne(api + '/search/quotations')
-      .flush(
-        { message: 'Search cannot safely quote inconsistent inventory data' },
-        { status: 409, statusText: 'Conflict' },
-      );
-    fixture.detectChanges();
-    expect(c.error()).toContain('inconsistent inventory');
-    expect(c.response()).toBeNull();
-    expect(c.form.controls.checkIn.value).toBe('2026-10-24');
-    c.search();
-    http.expectOne(api + '/search/quotations').flush(response);
-    expect(c.error()).toBe('');
-    expect(c.response()?.quotations).toHaveLength(1);
-  });
-  it('shows loading and network errors without allowing duplicate calls', () => {
-    setup();
-    fill();
-    c.search();
-    fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Checking eligible rooms');
-    c.search();
-    http.expectOne(api + '/search/quotations').error(new ProgressEvent('error'));
-    expect(c.error()).toContain('Cannot reach');
-    expect(c.searching()).toBe(false);
-  });
-  it('handles setup failure and retries all reference APIs', () => {
-    http.expectOne(api + '/search/filters').flush({ hotels: [], roomTypes: [] });
-    http.expectOne(api + '/search/limits').error(new ProgressEvent('error'));
-    c.search();
-    http.expectNone(api + '/search/quotations');
-    c.loadSetup();
-    setup();
-    expect(c.setupError()).toBe('');
-  });
-  it('shows backend field errors and missing-filter messages', () => {
-    setup();
-    fill();
-    c.search();
-    http
-      .expectOne(api + '/search/quotations')
-      .flush(
-        { fieldErrors: { 'rooms[0].adults': 'Use a whole number' } },
-        { status: 400, statusText: 'Bad request' },
-      );
-    expect(c.error()).toContain('rooms[0].adults');
-    c.search();
-    http
-      .expectOne(api + '/search/quotations')
-      .flush({ message: 'Selected hotel was not found' }, { status: 404, statusText: 'Not found' });
-    expect(c.error()).toContain('Selected hotel');
-  });
-  it('marks previous results when the form changes and explains truncation', () => {
-    setup();
-    fill();
-    c.search();
-    http
-      .expectOne(api + '/search/quotations')
-      .flush({ ...response, truncated: true, matchingOptions: 25 });
-    c.form.controls.city.setValue('Galle');
-    fixture.detectChanges();
-    expect(c.edited()).toBe(true);
-    expect(fixture.nativeElement.textContent).toContain('The form has changed');
-    expect(fixture.nativeElement.textContent).toContain('of 25 options');
-  });
-  it('starts booking from the exact quotation and refuses edited search results', () => {
-    setup();
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    c.reserve(response.quotations[0]);
-    expect(TestBed.inject(ReservationService).draft()?.rooms[0].offeringId).toBe(8);
-    expect(navigate).toHaveBeenCalledWith(['/reservations/new']);
-    navigate.mockClear();
-    c.edited.set(true);
-    c.reserve(response.quotations[0]);
-    expect(navigate).not.toHaveBeenCalled();
-    TestBed.inject(ReservationService).clearDraft();
-  });
-  it('shows unavailable options by default after available quotations and supports filtering', () => {
-    setup();
-    fill();
-    c.search();
-    http.expectOne(api + '/search/quotations').flush({
-      ...response,
-      unavailableOptions: [unavailableOption],
-      matchingUnavailableOptions: 1,
-    });
-    fixture.detectChanges();
-    const toggle: HTMLInputElement = fixture.nativeElement.querySelector(
-      '.unavailable-toggle input',
-    );
-    expect(toggle.checked).toBe(true);
-    const cards = Array.from(
-      fixture.nativeElement.querySelectorAll('.quotation, .unavailable-option'),
-    ) as HTMLElement[];
-    expect(cards).toHaveLength(2);
-    expect(cards[0].textContent).toContain('Ocean Hotel');
-    expect(cards[1].textContent).toContain('Garden Hotel');
-    expect(cards[1].textContent).toContain('Not Available');
-    expect(cards[1].textContent).toContain('Only 1 room available; 2 requested.');
-    expect(cards[1].textContent).toContain('690.00 USD');
-    expect(cards[1].textContent).toContain('Non-bookable');
-    expect(cards[1].querySelector('button')?.disabled).toBe(true);
-    toggle.click();
-    fixture.detectChanges();
+    expect(text).not.toContain('Hotelier rate');
+    expect(fixture.nativeElement.querySelector('details').open).toBe(false);
     expect(fixture.nativeElement.querySelector('.unavailable-option')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.unavailable-toggle')).toBeNull();
   });
-  it('offers to reveal unavailable reasons when no complete allocation exists', () => {
-    setup();
-    fill();
-    c.showUnavailable.setValue(false);
-    c.search();
-    http.expectOne(api + '/search/quotations').flush({
-      ...response,
-      quotations: [],
-      matchingOptions: 0,
-      unavailableOptions: [{ ...unavailableOption, indicativeTotalPrice: null }],
-      matchingUnavailableOptions: 1,
-    });
-    fixture.detectChanges();
-    const reveal = Array.from(
-      fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
-    ).find((button) => button.textContent?.includes('Show unavailable options and reasons'))!;
-    reveal.click();
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.unavailable-option')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('.indicative-price')).toBeNull();
-  });
-  it('refuses to start reservations from unavailable options even when invoked directly', () => {
-    setup();
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    const draft = vi.spyOn(TestBed.inject(ReservationService), 'saveDraft');
-    c.reserve(unavailableOption);
-    expect(draft).not.toHaveBeenCalled();
-    expect(navigate).not.toHaveBeenCalled();
-    c.reserve(response.quotations[0]);
-    expect(draft).toHaveBeenCalled();
-    expect(navigate).toHaveBeenCalledWith(['/reservations/new']);
-    TestBed.inject(ReservationService).clearDraft();
-  });
-  it('renders and reserves complete quotations from an older API without availability fields', () => {
-    setup();
-    fill();
-    c.search();
-    const { availabilityStatus, ...legacyQuote } = response.quotations[0];
-    const {
-      unavailableOptions,
-      matchingUnavailableOptions,
-      unavailableTruncated,
-      ...legacyResponse
-    } = response;
-    http
-      .expectOne(api + '/search/quotations')
-      .flush({ ...legacyResponse, quotations: [legacyQuote] });
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelectorAll('.quotation')).toHaveLength(1);
-    expect(fixture.nativeElement.textContent).toContain('Ocean Hotel');
-    expect(fixture.nativeElement.textContent).toContain('805.00 USD');
-    expect(c.response()?.unavailableOptions).toEqual([]);
-    const reserve = fixture.nativeElement.querySelector(
-      '.quote-actions button',
-    ) as HTMLButtonElement;
-    expect(reserve.disabled).toBe(false);
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    reserve.click();
-    expect(navigate).toHaveBeenCalledWith(['/reservations/new']);
-    TestBed.inject(ReservationService).clearDraft();
-  });
-  it('never promotes an explicitly unavailable quotation to available', () => {
-    setup();
-    fill();
-    c.search();
-    http.expectOne(api + '/search/quotations').flush({
-      ...response,
-      quotations: [{ ...response.quotations[0], availabilityStatus: 'NOT_AVAILABLE' }],
-      unavailableOptions: [unavailableOption],
-      matchingUnavailableOptions: 1,
-    });
-    fixture.detectChanges();
-    expect(c.groupedQuotations()).toEqual([]);
-    expect(fixture.nativeElement.querySelector('.quotation')).toBeNull();
-    expect(fixture.nativeElement.textContent).toContain('0 Available Room-type Options');
-    c.showUnavailable.setValue(true);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.unavailable-option button').disabled).toBe(true);
-  });
-  // Supplies occupancy reference responses for the selected search filters.
-  function occupancySelection() {
-    setup();
-    fill();
-    c.form.patchValue({ hotelId: 7, roomTypeId: 3 });
-    return http.expectOne((r) => r.url === api + '/search/occupancy');
-  }
-  const doubleOccupancy = { offeringId: 8, roomTypeId: 3, roomTypeName: 'Double', maxAdults: 2 };
-  it('shows the applicable limit and blocks each oversized room without changing its count', () => {
-    const request = occupancySelection();
-    c.showUnavailable.setValue(false);
-    expect(request.request.method).toBe('GET');
-    expect(request.request.params.get('hotelId')).toBe('7');
-    expect(request.request.params.get('roomTypeId')).toBe('3');
-    expect(request.request.params.get('checkOut')).toBe('2026-10-27');
-    c.addRoom();
-    c.rooms.at(1).controls.adults.setValue(3);
-    request.flush([doubleOccupancy]);
-    fixture.detectChanges();
-    expect(c.rooms.at(0).valid).toBe(true);
-    expect(c.rooms.at(1).controls.adults.hasError('occupancyMax')).toBe(true);
-    expect(c.rooms.at(1).controls.adults.value).toBe(3);
-    expect(fixture.nativeElement.textContent).toContain(
-      'Double allows a maximum of 2 adults per room.',
-    );
-    expect(fixture.nativeElement.querySelectorAll('.invalid-input')).toHaveLength(1);
-    expect(fixture.nativeElement.querySelector('button[type="submit"]').disabled).toBe(true);
-    c.search();
-    http.expectNone(api + '/search/quotations');
-    c.rooms.at(1).controls.adults.setValue(2);
-    fixture.detectChanges();
-    expect(c.form.valid).toBe(true);
-    expect(fixture.nativeElement.querySelector('button[type="submit"]').disabled).toBe(false);
-    http.expectNone((r) => r.url === api + '/search/occupancy');
-  });
-  it('refreshes on hotel, room type and stay changes and cancels obsolete requests', () => {
-    const stale = occupancySelection();
-    c.showUnavailable.setValue(false);
-    c.form.controls.nights.setValue(4);
-    expect(stale.cancelled).toBe(true);
-    http
-      .expectOne(
-        (r) => r.url === api + '/search/occupancy' && r.params.get('checkOut') === '2026-10-28',
-      )
-      .flush([doubleOccupancy]);
-    c.rooms.at(0).controls.adults.setValue(3);
-    expect(c.form.invalid).toBe(true);
-    for (const change of [{ hotelId: 9 }, { roomTypeId: 4 }, { checkIn: '2026-10-25' }]) {
-      c.form.patchValue(change);
-      expect(c.occupancyMax()).toBeNull();
-      expect(c.rooms.at(0).controls.adults.hasError('occupancyMax')).toBe(false);
-      http
-        .expectOne((r) => r.url === api + '/search/occupancy')
-        .flush([{ ...doubleOccupancy, maxAdults: 4 }]);
-    }
-    expect(c.rooms.at(0).controls.adults.value).toBe(3);
-    expect(c.form.valid).toBe(true);
-  });
-  it('defers ambiguous limits and preserves optional-filter and empty-result searches', () => {
-    occupancySelection().flush([
-      doubleOccupancy,
-      { ...doubleOccupancy, offeringId: 9, maxAdults: 4 },
-    ]);
-    c.rooms.at(0).controls.adults.setValue(3);
-    expect(c.occupancyMax()).toBeNull();
-    expect(c.form.valid).toBe(true);
-    expect(c.occupancyGuidance()).toContain('contractual adult limits');
-    c.form.controls.roomTypeId.setValue(null);
-    expect(c.occupancyGuidance()).toContain('Actual capacity depends');
-    http.expectNone((r) => r.url === api + '/search/occupancy');
-    c.form.controls.roomTypeId.setValue(3);
-    http.expectOne((r) => r.url === api + '/search/occupancy').flush([]);
-    expect(c.form.valid).toBe(true);
-    expect(c.occupancyGuidance()).toContain('No eligible offering');
-    c.form.controls.hotelId.setValue(null);
-    expect(c.form.valid).toBe(true);
-    http.expectNone((r) => r.url === api + '/search/occupancy');
-  });
-  it('does not impose one capacity when multiple offerings are eligible', () => {
-    c.showUnavailable.setValue(false);
-    occupancySelection().flush([doubleOccupancy, { ...doubleOccupancy, offeringId: 9 }]);
-    expect(c.occupancyMax()).toBeNull();
-    c.addRoom();
-    c.rooms.at(1).controls.adults.setValue(3);
-    expect(c.rooms.at(1).controls.adults.hasError('occupancyMax')).toBe(false);
-    expect(c.rooms.at(0).valid).toBe(true);
-    c.form.controls.hotelId.setValue(null);
-    expect(c.form.valid).toBe(true);
-    expect(c.rooms.at(1).controls.adults.value).toBe(3);
-    http.expectNone((r) => r.url === api + '/search/occupancy');
-  });
-  it('allows occupancy diagnostics when unavailable options are enabled without weakening global input limits', () => {
-    c.showUnavailable.setValue(false);
-    occupancySelection().flush([doubleOccupancy]);
-    c.rooms.at(0).controls.adults.setValue(4);
-    fixture.detectChanges();
-    expect(c.form.invalid).toBe(true);
-    c.showUnavailable.setValue(true);
-    fixture.detectChanges();
-    expect(c.form.valid).toBe(true);
-    expect(c.rooms.at(0).controls.adults.value).toBe(4);
-    c.search();
-    const request = http.expectOne(api + '/search/quotations');
-    expect(request.request.body.rooms).toEqual([{ adults: 4 }]);
-    request.flush({
-      ...response,
-      quotations: [],
-      unavailableOptions: [
-        {
-          ...unavailableOption,
-          indicativeTotalPrice: null,
-          reasons: [{ code: 'MAX_ADULT_OCCUPANCY', message: 'Maximum 2 adults per room.' }],
-        },
-      ],
-    });
-    fixture.detectChanges();
-    expect(fixture.nativeElement.textContent).toContain('Maximum 2 adults per room.');
-    c.rooms.at(0).controls.adults.setValue(2147483648);
-    expect(c.form.invalid).toBe(true);
-    c.rooms.at(0).controls.adults.setValue(4);
-    c.showUnavailable.setValue(false);
-    fixture.detectChanges();
-    expect(c.form.invalid).toBe(true);
-  });
-  it('clears stale occupancy on invalid dates and lets authoritative search handle lookup failures', () => {
-    occupancySelection().flush([doubleOccupancy]);
-    c.form.controls.nights.setValue(0);
-    expect(c.occupancyMax()).toBeNull();
-    http.expectNone((r) => r.url === api + '/search/occupancy');
-    c.form.controls.nights.setValue(3);
-    http.expectOne((r) => r.url === api + '/search/occupancy').error(new ProgressEvent('error'));
-    c.rooms.at(0).controls.adults.setValue(3);
-    expect(c.occupancyLoading()).toBe(false);
-    expect(c.occupancyError()).toContain('still search');
-    expect(c.form.valid).toBe(true);
-    c.search();
-    http.expectOne(api + '/search/quotations').flush({ ...response, quotations: [] });
-  });
-
-  it('calculates exclusive checkout and never changes entered adult counts', () => {
-    setup();
-    fill();
-    c.rooms.at(0).controls.adults.setValue(7);
-    c.form.controls.nights.setValue(5);
-    expect(c.form.controls.checkOut.value).toBe('2026-10-29');
-    expect(c.rooms.at(0).controls.adults.value).toBe(7);
-    expect(c.form.valid).toBe(true);
-    for (const nights of [null, 0, 1.5, 32]) {
-      c.form.controls.nights.setValue(nights);
-      expect(c.form.invalid).toBe(true);
-    }
-  });
-  it('renders independent Standard and Sea View cards for the same contract', () => {
-    setup();
-    fill();
-    c.addRoom();
-    c.search();
-    const q = response.quotations[0],
-      r = q.rooms[0];
-    http.expectOne(api + '/search/quotations').flush({
-      ...response,
-      quotations: [
-        { ...q, totalPrice: 362.25, rooms: [{ ...r, roomTypeName: 'Standard', offeringId: 7 }] },
-        { ...q, totalPrice: 569.25, rooms: [{ ...r, roomTypeName: 'Sea View', offeringId: 8 }] },
-      ],
-    });
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelectorAll('.quotation')).toHaveLength(2);
-    for (const text of ['Standard', 'Sea View', '362.25 USD', '569.25 USD'])
-      expect(fixture.nativeElement.textContent).toContain(text);
-  });
-  it('quotes exact custom choices and preserves selected offerings', () => {
-    setup();
-    fill();
-    c.addRoom();
-    c.search();
-    const choices = [7, 8].map((id, i) => ({
-      hotelId: 7,
-      hotelName: 'Ocean Hotel',
-      contractId: 4,
-      offeringId: id,
-      roomTypeName: i ? 'Sea View' : 'Standard',
-      maxAdults: 2,
-      availableRoomsForStay: 1,
-      currencyCode: 'USD',
-      rooms: [
-        { roomNumber: 1, adults: 2, totalPrice: i ? 379.5 : 241.5 },
-        { roomNumber: 2, adults: 1, totalPrice: i ? 189.75 : 120.75 },
-      ],
-    }));
-    http.expectOne(api + '/search/quotations').flush({ ...response, selectionOfferings: choices });
-    c.customize(choices[0]);
-    c.choose(0, { target: { value: '8' } } as unknown as Event);
-    expect(c.optionReason(choices[1], 1)).toContain('inventory');
-    c.choose(1, { target: { value: '7' } } as unknown as Event);
-    const req = http.expectOne(api + '/search/selection');
-    expect(req.request.body.rooms).toEqual([
-      { offeringId: 8, adults: 2 },
-      { offeringId: 7, adults: 1 },
-    ]);
-    const q = response.quotations[0],
-      room = q.rooms[0];
-    req.flush({
-      ...q,
-      totalPrice: 500.25,
-      rooms: [
-        {
-          ...room,
-          roomNumber: 1,
-          offeringId: 8,
+  it('groups two offerings under one hotel card', () => {
+    const data = page();
+    const offering = data.hotels[0].offerings[0];
+    data.hotels[0].offerings.push({
+      ...offering,
+      offeringId: 9,
+      roomChoices: { ...offering.roomChoices, offeringId: 9 },
+      quotation: {
+        ...offering.quotation,
+        rooms: offering.quotation.rooms.map((r) => ({
+          ...r,
+          offeringId: 9,
           roomTypeName: 'Sea View',
-          adults: 2,
-          totalPrice: 379.5,
-        },
-        {
-          ...room,
-          roomNumber: 2,
-          offeringId: 7,
-          roomTypeName: 'Standard',
-          adults: 1,
-          totalPrice: 120.75,
-        },
-      ],
+        })),
+      },
     });
-    expect(c.selectedIds()).toEqual([8, 7]);
-    expect(c.customQuote()?.totalPrice).toBe(500.25);
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    c.reserve(c.customQuote()!);
-    expect(
-      TestBed.inject(ReservationService)
-        .draft()
-        ?.rooms.map((r) => ({ offeringId: r.offeringId, adults: r.adults })),
-    ).toEqual([
-      { offeringId: 8, adults: 2 },
-      { offeringId: 7, adults: 1 },
-    ]);
-    expect(navigate).toHaveBeenCalledWith(['/reservations/new']);
-    TestBed.inject(ReservationService).clearDraft();
+    search(data);
+    expect(fixture.nativeElement.querySelectorAll('.hotel-card')).toHaveLength(1);
+    expect(fixture.nativeElement.querySelectorAll('.quotation')).toHaveLength(2);
   });
-  it('ignores obsolete custom quotation responses and surfaces errors', () => {
-    setup();
-    fill();
-    c.addRoom();
-    c.search();
-    const choice = {
-      hotelId: 7,
-      hotelName: 'Ocean',
-      contractId: 4,
-      offeringId: 8,
-      roomTypeName: 'Sea View',
-      maxAdults: 2,
-      availableRoomsForStay: 2,
-      currencyCode: 'USD',
-      rooms: [
-        { roomNumber: 1, adults: 2, totalPrice: 805 },
-        { roomNumber: 2, adults: 1, totalPrice: 402.5 },
-      ],
-    };
-    http.expectOne(api + '/search/quotations').flush({ ...response, selectionOfferings: [choice] });
-    c.customize(choice);
-    c.choose(0, { target: { value: '8' } } as unknown as Event);
-    c.choose(1, { target: { value: '8' } } as unknown as Event);
-    const old = http.expectOne(api + '/search/selection');
-    c.customize(choice);
-    old.flush(response.quotations[0]);
-    expect(c.customQuote()).toBeNull();
-    c.choose(0, { target: { value: '8' } } as unknown as Event);
-    c.choose(1, { target: { value: '8' } } as unknown as Event);
+  it('appends pages, sends the candidate cursor and prevents duplicate requests', () => {
+    search(page(7, 20));
+    c.loadMore();
+    c.loadMore();
+    const req = http.expectOne((r) => r.url === api + '/search/hotel-pages');
+    expect(req.request.params.get('afterHotelId')).toBe('20');
+    expect(req.request.body.rooms).toEqual([{ adults: 2 }]);
+    req.flush(page(21));
+    fixture.detectChanges();
+    expect(c.hotelGroups().map((h) => h.hotelId)).toEqual([7, 21]);
+    expect(fixture.nativeElement.querySelectorAll('.hotel-card')).toHaveLength(2);
+    expect(fixture.nativeElement.querySelector('.load-more')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('All matching hotels have been checked');
+  });
+  it('deduplicates hotel cards when a repeated hotel is returned', () => {
+    search(page(7, 20));
+    c.loadMore();
+    http.expectOne((r) => r.url === api + '/search/hotel-pages').flush(page(7));
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelectorAll('.hotel-card')).toHaveLength(1);
+    expect(c.groupedQuotations()).toHaveLength(1);
+  });
+  it('continues through an empty available page with a cursor', () => {
+    search({ ...page(), hotels: [], nextAfterHotelId: 20 });
+    expect(fixture.nativeElement.textContent).toContain('More hotels remain to check');
+    expect(fixture.nativeElement.querySelector('.load-more')).not.toBeNull();
+    c.loadMore();
+    http.expectOne((r) => r.url === api + '/search/hotel-pages').flush(page(21));
+    expect(c.hotelGroups()[0].hotelId).toBe(21);
+  });
+  it('distinguishes final empty results from an empty intermediate page', () => {
+    search({ ...page(), hotels: [] });
+    expect(c.nextAfterHotelId()).toBeNull();
+    expect(fixture.nativeElement.querySelector('.load-more')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('No Single Room Type');
+  });
+  it('keeps earlier pages and retries the same cursor after a load error', () => {
+    search(page(7, 20));
+    c.loadMore();
     http
-      .expectOne(api + '/search/selection')
-      .flush(
-        { message: 'Selected rooms are unavailable' },
-        { status: 400, statusText: 'Bad request' },
-      );
-    expect(c.selectionError()).toContain('unavailable');
-    expect(c.selectionLoading()).toBe(false);
+      .expectOne((r) => r.url === api + '/search/hotel-pages')
+      .flush({ message: 'Try again' }, { status: 503, statusText: 'Unavailable' });
+    expect(c.hotelGroups()).toHaveLength(1);
+    expect(c.nextAfterHotelId()).toBe(20);
+    expect(c.error()).toContain('try again');
+    c.loadMore();
+    const retry = http.expectOne((r) => r.url === api + '/search/hotel-pages');
+    expect(retry.request.params.get('afterHotelId')).toBe('20');
+    retry.flush(page(21));
+    expect(c.error()).toBe('');
   });
-
-  // Builds a quotation response fixture for the requested number of rooms.
-  function resultWithRooms(count: number): QuotationResponse {
-    const q = response.quotations[0],
-      room = q.rooms[0];
-    const quoted = Array.from({ length: count }, (_, i) => ({
-      ...room,
-      roomNumber: i + 1,
-      adults: i ? 1 : 2,
-      allocatedRoomsForOffering: count,
-      availableRoomsForStay: 3,
-      remainingRoomsAfterAllocation: 3 - count,
-      totalPrice: i ? 402.5 : 805,
-      nightlyPrices: room.nightlyPrices.map((n) => ({
-        ...n,
-        sellingPrice: i ? n.sellingPrice / 2 : n.sellingPrice,
-      })),
-    }));
-    const selectionOfferings = [8, 9].map((id, i) => ({
-      hotelId: 7,
-      hotelName: 'Ocean Hotel',
-      contractId: 4,
-      offeringId: id,
-      roomTypeName: i ? 'Standard' : 'Sea View',
-      maxAdults: 2,
-      availableRoomsForStay: 3,
-      currencyCode: 'USD',
-      rooms: quoted.map((r) => ({
-        roomNumber: r.roomNumber,
+  it.each(['city', 'checkIn', 'nights', 'hotelId', 'roomTypeId', 'adults', 'rooms'])(
+    'clears results and cursor when %s changes',
+    (field) => {
+      search(page(7, 20));
+      if (field === 'city') c.form.controls.city.setValue('Galle');
+      if (field === 'checkIn') c.form.controls.checkIn.setValue('2026-10-25');
+      if (field === 'nights') c.form.controls.nights.setValue(4);
+      if (field === 'hotelId') {
+        c.form.controls.hotelId.setValue(7);
+        http
+          .expectOne(api + '/search/hotels/7')
+          .flush({ hotelId: 7, name: 'Ocean Hotel', city: 'Colombo' });
+      }
+      if (field === 'roomTypeId') c.form.controls.roomTypeId.setValue(3);
+      if (field === 'adults') c.rooms.at(0).controls.adults.setValue(1);
+      if (field === 'rooms') c.addRoom();
+      expect(c.response()).toBeNull();
+      expect(c.nextAfterHotelId()).toBeNull();
+      c.loadMore();
+      http.expectNone((r) => r.url === api + '/search/hotel-pages');
+    },
+  );
+  it('ignores an obsolete response after the criteria change and a new search starts', () => {
+    c.search();
+    const old = http.expectOne(api + '/search/hotel-pages');
+    c.form.controls.city.setValue('Galle');
+    c.search();
+    const current = http.expectOne(api + '/search/hotel-pages');
+    old.flush(page(7, 20));
+    expect(c.response()).toBeNull();
+    expect(c.searching()).toBe(true);
+    current.flush(page(21));
+    expect(c.hotelGroups().map((h) => h.hotelId)).toEqual([21]);
+  });
+  it('passes the displayed quotation unchanged to the existing reservation draft', () => {
+    const data = page();
+    search(data);
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
+    (fixture.nativeElement.querySelector('.quote-actions button') as HTMLButtonElement).click();
+    const draft = TestBed.inject(ReservationService).draft()!;
+    const quote = data.hotels[0].offerings[0].quotation;
+    expect(draft).toMatchObject({
+      hotelId: quote.hotelId,
+      contractId: quote.contractId,
+      checkIn: quote.checkIn,
+      checkOut: quote.checkOut,
+      currencyCode: quote.currencyCode,
+      totalPrice: quote.totalPrice,
+      rooms: quote.rooms.map((r) => ({
+        offeringId: r.offeringId,
         adults: r.adults,
         totalPrice: r.totalPrice,
+        nightlyPrices: r.nightlyPrices.map((n) => ({
+          occupiedDate: n.occupiedDate,
+          sellingPrice: n.sellingPrice,
+        })),
       })),
-    }));
-    return {
-      ...response,
-      selectionOfferings,
-      quotations: [
-        {
-          ...q,
-          rooms: quoted.map((r) => ({ ...r, roomTypeName: 'Sea View' })),
-          totalPrice: quoted.reduce((sum, r) => sum + r.totalPrice, 0),
-        },
-      ],
-    };
-  }
-  // Executes a room search and supplies its quotation response fixture.
-  function searchRooms(count: number) {
-    setup();
-    fill();
-    while (c.rooms.length < count) c.addRoom();
-    c.search();
-    const data = resultWithRooms(count);
-    http.expectOne(api + '/search/quotations').flush(data);
-    fixture.detectChanges();
-    return data;
-  }
-  it('hides all customization for one room and books through the existing review flow', () => {
-    searchRooms(1);
-    expect(fixture.nativeElement.querySelector('.customization-action')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.selection-panel')).toBeNull();
-    expect(fixture.nativeElement.textContent).not.toContain('Customize Room Selection');
-    const button = fixture.nativeElement.querySelector(
-      '.quote-actions button',
-    ) as HTMLButtonElement;
-    expect(button.textContent?.trim()).toBe('Book This Room');
-    const navigate = vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    button.click();
+    });
     expect(navigate).toHaveBeenCalledWith(['/reservations/new']);
-    expect(c.customizationOpen()).toBe(false);
-    http.expectNone(api + '/search/selection');
     http.expectNone(api + '/reservations');
     TestBed.inject(ReservationService).clearDraft();
   });
-  it.each([2, 3])('keeps customization collapsed and labels booking for %i rooms', (count) => {
-    searchRooms(count);
-    const trigger = fixture.nativeElement.querySelector(
-      '.customization-action button',
-    ) as HTMLButtonElement;
-    expect(trigger.textContent?.trim()).toBe('Customize Room Selection');
-    expect(trigger.getAttribute('aria-expanded')).toBe('false');
-    expect(fixture.nativeElement.querySelector('.selection-panel')).toBeNull();
-    const button = fixture.nativeElement.querySelector(
-      '.quote-actions button',
-    ) as HTMLButtonElement;
-    expect(button.textContent?.trim()).toBe('Book All ' + count + ' Rooms as Sea View');
-    vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
-    button.click();
-    expect(c.customizationOpen()).toBe(false);
-    http.expectNone(api + '/search/selection');
-    TestBed.inject(ReservationService).clearDraft();
+  it('refuses unavailable quotations and stale results', () => {
+    const save = vi.spyOn(TestBed.inject(ReservationService), 'saveDraft');
+    c.reserve(unavailableOption);
+    expect(save).not.toHaveBeenCalled();
+    search();
+    c.form.controls.city.setValue('Galle');
+    c.reserve(response.quotations[0]);
+    expect(save).not.toHaveBeenCalled();
   });
-  it('opens scoped customization on demand and closes without booking or holding inventory', () => {
-    const data = searchRooms(2);
-    c.response.set({
-      ...data,
-      selectionOfferings: [
-        ...data.selectionOfferings!,
-        {
-          ...data.selectionOfferings![0],
-          hotelId: 99,
-          contractId: 99,
-          offeringId: 99,
-          hotelName: 'Other hotel',
-        },
-      ],
-    });
-    fixture.detectChanges();
-    const trigger = fixture.nativeElement.querySelector(
-      '.customization-action button',
-    ) as HTMLButtonElement;
-    trigger.click();
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.selection-panel')).not.toBeNull();
-    const group = fixture.nativeElement.querySelector(
-      '.selection-panel > button',
-    ) as HTMLButtonElement;
-    group.click();
-    fixture.detectChanges();
-    expect(c.customOptions().every((o) => o.hotelId === 7 && o.contractId === 4)).toBe(true);
-    expect(fixture.nativeElement.querySelectorAll('.selection-panel select')).toHaveLength(2);
-    expect(fixture.nativeElement.querySelector('.quotation')).not.toBeNull();
-    (fixture.nativeElement.querySelector('.selection-heading button') as HTMLButtonElement).click();
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.selection-panel')).toBeNull();
-    expect(c.selectedIds()).toEqual([]);
-    expect(document.activeElement).toBe(trigger);
-    http.expectNone(api + '/search/selection');
-    http.expectNone(api + '/reservations');
-  });
-  it('clears customization on edited adults, room count, dates, filters and new searches', () => {
-    const data = searchRooms(2);
-    c.customize(data.selectionOfferings![0]);
-    c.choose(0, { target: { value: '8' } } as unknown as Event);
-    c.rooms.at(0).controls.adults.setValue(1);
-    fixture.detectChanges();
-    expect(c.customizationOpen()).toBe(false);
-    expect(c.selectedIds()).toEqual([]);
-    expect(c.customQuote()).toBeNull();
-    expect(fixture.nativeElement.querySelector('.quotation')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('.customization-action')).toBeNull();
-    c.removeRoom(1);
-    expect(c.customizationOpen()).toBe(false);
-    c.search();
-    http.expectOne(api + '/search/quotations').flush(resultWithRooms(1));
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.selection-panel')).toBeNull();
-    expect(c.customOptions()).toEqual([]);
-    for (const change of [{ nights: 4 }, { city: 'Galle' }, { checkIn: '2026-10-25' }]) {
-      c.form.patchValue(change);
-      expect(c.selectedIds()).toEqual([]);
-    }
-  });
-  it('uses stay-wide backend inventory and hides incompatible custom room types', () => {
-    const data = searchRooms(2),
-      base = data.selectionOfferings![0];
-    c.response.set({
-      ...data,
-      selectionOfferings: [
-        base,
-        {
-          ...base,
-          offeringId: 10,
-          maxAdults: 1,
-          rooms: [
-            { roomNumber: 1, adults: 2, totalPrice: null },
-            { roomNumber: 2, adults: 1, totalPrice: 402.5 },
-          ],
-        },
-        { ...base, offeringId: 11, availableRoomsForStay: 0 },
-      ],
-    });
-    c.customize(base);
+  it('loads mixed-room choices explicitly and preserves selected IDs and adult counts', () => {
+    openCustom();
     expect(c.roomOptions(0).map((o) => o.offeringId)).toEqual([8]);
     c.choose(0, { target: { value: '8' } } as unknown as Event);
-    expect(c.roomOptions(1).map((o) => o.offeringId)).toEqual([8, 10]);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.room-type-title').textContent).toContain(
-      'Sea View',
-    );
-    expect(fixture.nativeElement.querySelector('.hotel-context').textContent).toContain(
-      'Ocean Hotel',
-    );
-    expect(fixture.nativeElement.querySelectorAll('.room-availability')).toHaveLength(1);
-    expect(fixture.nativeElement.querySelector('.room-availability').textContent).toContain(
-      '3 rooms available throughout stay',
-    );
-    expect(fixture.nativeElement.querySelector('.quote-total').textContent).toContain(
-      '1,207.50 USD',
-    );
-    expect(fixture.nativeElement.textContent).not.toContain('C004');
-    c.closeCustomization();
-    http.expectNone(api + '/reservations');
-  });
-  it('does not restore a custom quotation after closing while a quote request is in flight', () => {
-    const data = searchRooms(2);
-    c.customize(data.selectionOfferings![0]);
-    c.choose(0, { target: { value: '8' } } as unknown as Event);
-    c.choose(1, { target: { value: '9' } } as unknown as Event);
-    const pending = http.expectOne(api + '/search/selection');
-    c.closeCustomization();
-    pending.flush(data.quotations[0]);
-    expect(c.customQuote()).toBeNull();
-    expect(c.selectionLoading()).toBe(false);
-    expect(c.customizationOpen()).toBe(false);
-  });
-
-  it('closes customization with Escape and hides it after reducing the request to one room', () => {
-    searchRooms(2);
-    (
-      fixture.nativeElement.querySelector('.customization-action button') as HTMLButtonElement
-    ).click();
-    fixture.detectChanges();
-    fixture.nativeElement
-      .querySelector('.selection-panel')
-      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    fixture.detectChanges();
-    expect(c.customizationOpen()).toBe(false);
-    expect(fixture.nativeElement.querySelector('.selection-panel')).toBeNull();
-    c.openCustomization();
-    fixture.detectChanges();
-    c.removeRoom(1);
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.selection-panel')).toBeNull();
-    expect(fixture.nativeElement.querySelector('.customization-action')).toBeNull();
-    expect(c.selectedIds()).toEqual([]);
-    http.expectNone(api + '/reservations');
-  });
-  it('does not invent missing inventory or expose a bookable custom option without it', () => {
-    searchRooms(2);
-    expect(c.knownInventory(undefined)).toBe(false);
-    expect(c.knownInventory(-1)).toBe(false);
-    const option = resultWithRooms(2).selectionOfferings![0];
-    expect(
-      c.optionReason({ ...option, availableRoomsForStay: undefined as unknown as number }, 0),
-    ).toContain('Inventory is unavailable');
-  });
-
-  it('allows adults above ten without filters and protects the integer representation boundary', () => {
-    setup();
-    fill();
-    c.rooms.at(0).controls.adults.setValue(12);
-    fixture.detectChanges();
-    expect(c.form.valid).toBe(true);
-    expect(c.occupancyMax()).toBeNull();
-    expect(
-      fixture.nativeElement.querySelector('#requested-adults-0').getAttribute('max'),
-    ).toBeNull();
-    expect(c.occupancyGuidance()).toContain('Actual capacity depends');
-    c.search();
-    const req = http.expectOne(api + '/search/quotations');
-    expect(req.request.body.rooms).toEqual([{ adults: 12 }]);
-    req.flush({ ...response, quotations: [] });
-    c.rooms.at(0).controls.adults.setValue(2147483647);
-    expect(c.form.valid).toBe(true);
-    for (const adults of [2147483648, Number.MAX_SAFE_INTEGER, Infinity, 1.5, 0, -1, null]) {
-      c.rooms.at(0).controls.adults.setValue(adults);
-      expect(c.form.invalid).toBe(true);
-    }
-  });
-  it('uses a specifically identified offering capacity above ten and revalidates lower capacities', () => {
-    c.showUnavailable.setValue(false);
-    occupancySelection().flush([{ ...doubleOccupancy, maxAdults: 12 }]);
-    c.rooms.at(0).controls.adults.setValue(12);
-    expect(c.form.valid).toBe(true);
-    c.form.controls.roomTypeId.setValue(4);
-    http
-      .expectOne((r) => r.url === api + '/search/occupancy')
-      .flush([{ ...doubleOccupancy, roomTypeId: 4, maxAdults: 6 }]);
-    expect(c.rooms.at(0).controls.adults.value).toBe(12);
-    expect(c.rooms.at(0).controls.adults.hasError('occupancyMax')).toBe(true);
-    c.form.controls.roomTypeId.setValue(null);
-    expect(c.form.valid).toBe(true);
-  });
-  it('preserves differing adults when selecting customized offerings with lower capacities', () => {
-    const data = searchRooms(2);
-    c.rooms.at(0).controls.adults.setValue(12);
-    c.rooms.at(1).controls.adults.setValue(5);
-    c.search();
-    const choices = [
-      {
-        ...data.selectionOfferings![0],
-        maxAdults: 12,
-        rooms: [
-          { roomNumber: 1, adults: 12, totalPrice: 4140 },
-          { roomNumber: 2, adults: 5, totalPrice: 1725 },
-        ],
-      },
-      {
-        ...data.selectionOfferings![1],
-        maxAdults: 6,
-        rooms: [
-          { roomNumber: 1, adults: 12, totalPrice: null },
-          { roomNumber: 2, adults: 5, totalPrice: 1725 },
-        ],
-      },
-    ];
-    http.expectOne(api + '/search/quotations').flush({ ...data, selectionOfferings: choices });
-    c.customize(choices[0]);
-    expect(c.roomOptions(0).map((o) => o.offeringId)).toEqual([8]);
-    c.choose(0, { target: { value: '8' } } as unknown as Event);
-    c.choose(0, { target: { value: '9' } } as unknown as Event);
-    expect(c.selectedIds()[0]).toBe(8);
-    expect(c.rooms.at(0).controls.adults.value).toBe(12);
     c.choose(1, { target: { value: '9' } } as unknown as Event);
     const req = http.expectOne(api + '/search/selection');
     expect(req.request.body.rooms).toEqual([
-      { offeringId: 8, adults: 12 },
-      { offeringId: 9, adults: 5 },
+      { offeringId: 8, adults: 2 },
+      { offeringId: 9, adults: 1 },
     ]);
-    req.flush(
-      { message: 'Room capacity has changed; search again' },
-      { status: 400, statusText: 'Bad request' },
-    );
-    expect(c.customQuote()).toBeNull();
-    expect(c.selectionError()).toContain('capacity');
+    req.flush({
+      ...response.quotations[0],
+      rooms: page(7, null, 2).hotels[0].offerings[0].quotation.rooms,
+    });
+    expect(c.customQuote()).not.toBeNull();
+    expect(c.selectedIds()).toEqual([8, 9]);
+    http.expectNone(api + '/reservations');
   });
-  it('groups required stay inputs separately from optional filters without changing the request', () => {
-    setup();
-    fill();
-    fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('.checkout-preview output')?.textContent).toContain(
-      '2026-10-27',
-    );
-    expect(fixture.nativeElement.querySelector('.optional-filters')?.textContent).toContain(
-      'Optional filters',
-    );
-    expect(fixture.nativeElement.querySelectorAll('.room-number').length).toBe(1);
-    expect(fixture.nativeElement.querySelector('.selection-panel')).toBeNull();
-    expect(c.selectionRoomPrice(0, 999)).toBeNull();
+  it('supports explicit customization even when no whole-request offering is available', () => {
+    c.addRoom();
+    search({ ...page(), hotels: [] });
+    c.openCustomization();
+    http
+      .expectOne(api + '/search/quotations')
+      .flush({ ...response, quotations: [], selectionOfferings: mixedChoices() });
+    expect(c.customizationGroups()).toHaveLength(1);
+    c.customize(mixedChoices()[0]);
+    expect(c.roomOptions(1).map((o) => o.offeringId)).toEqual([8, 9]);
+  });
+  it('prevents duplicate customization loads and ignores choices after criteria change', () => {
+    c.addRoom();
+    search(page(7, null, 2));
+    c.openCustomization();
+    c.openCustomization();
+    const pending = http.expectOne(api + '/search/quotations');
+    c.form.controls.city.setValue('Galle');
+    pending.flush({ ...response, selectionOfferings: mixedChoices() });
+    expect(c.response()).toBeNull();
+    expect(c.customizationOpen()).toBe(false);
+    expect(c.selectionLoading()).toBe(false);
+  });
+  it('ignores custom quotation responses after closing customization', () => {
+    openCustom();
+    c.choose(0, { target: { value: '8' } } as unknown as Event);
+    c.choose(1, { target: { value: '9' } } as unknown as Event);
+    const req = http.expectOne(api + '/search/selection');
+    c.closeCustomization();
+    req.flush(response.quotations[0]);
+    expect(c.customQuote()).toBeNull();
+    expect(c.customizationOpen()).toBe(false);
+  });
+  it('enforces shared inventory without silently changing selections', () => {
+    openCustom();
+    c.customOptions.update((options) => options.map((o) => ({ ...o, availableRoomsForStay: 1 })));
+    c.choose(0, { target: { value: '8' } } as unknown as Event);
+    expect(c.roomOptions(1).map((o) => o.offeringId)).toEqual([9]);
+    c.choose(1, { target: { value: '8' } } as unknown as Event);
+    expect(c.selectedIds()).toEqual([8, 0]);
+    http.expectNone(api + '/search/selection');
+  });
+  it('applies a specific offering occupancy limit without changing adult counts', () => {
+    c.form.patchValue({ hotelId: 7, roomTypeId: 3 });
+    http
+      .expectOne(api + '/search/hotels/7')
+      .flush({ hotelId: 7, name: 'Ocean Hotel', city: 'Colombo' });
+    http
+      .expectOne((r) => r.url === api + '/search/occupancy')
+      .flush([{ offeringId: 8, roomTypeId: 3, roomTypeName: 'Double', maxAdults: 1 }]);
     expect(c.rooms.at(0).controls.adults.value).toBe(2);
-    expect(c.limits()?.maxRooms).toBe(8);
+    expect(c.form.invalid).toBe(true);
+    c.search();
+    http.expectNone(api + '/search/hotel-pages');
   });
 });

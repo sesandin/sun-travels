@@ -40,6 +40,7 @@ import java.util.UUID;
 @Transactional( readOnly = true )
 public class ContractService
 {
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(ContractService.class);
     private final ContractRepository repository;
     private final HotelRepository hotels;
     private final Validator validator;
@@ -90,6 +91,7 @@ public class ContractService
     public ContractResponse createContract( ContractRequest request )
     {
         validate( request );
+        LOG.debug("Contract creation requested hotelId={}", request.hotelId());
         Hotel hotel = lockedHotel( request.hotelId() );
         Contract contract = new Contract();
         apply( contract, request, hotel );
@@ -107,6 +109,7 @@ public class ContractService
                         "Generated contract code " + code + " already exists. No contract was created." );
             }
             contract.setContractCode( code );
+            BusinessEvents.afterCommit(LOG, "contract_created", contract.getContractId());
             return response( repository.saveAndFlush( contract ) );
         }
         catch( DataIntegrityViolationException ex )
@@ -271,6 +274,7 @@ public class ContractService
                                                       " under another contract for the same hotel and room type" );
         }
         contract.setStatus( ContractStatus.APPROVED );
+        BusinessEvents.afterCommit(LOG, "contract_approved", contract.getContractId());
         return persist( contract );
     }
 
@@ -385,6 +389,7 @@ public class ContractService
     // Saves the contract and translates database conflicts into a business error.
     private ContractResponse persist( Contract contract )
     {
+        LOG.debug("Persisting contract id={} status={}", contract.getContractId(), contract.getStatus());
         try
         {
             return response( repository.saveAndFlush( contract ) );

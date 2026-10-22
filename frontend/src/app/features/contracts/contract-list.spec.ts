@@ -39,7 +39,7 @@ describe('Contract management', () => {
   // Completes the pending API request with test fixture data.
   function load(rows: Contract[] = [row]) {
     http.expectOne((r) => r.url === url + '/page').flush(directoryPage(rows));
-    http.expectOne(hotelsUrl).flush([{ hotelId: 3, name: 'Ocean Hotel' }]);
+    http.expectNone(hotelsUrl);
     fixture.detectChanges();
   }
   // Populates the form with valid test input.
@@ -168,7 +168,7 @@ describe('Contract management', () => {
   });
   it('handles list errors, retries and the empty state', () => {
     http.expectOne((r) => r.url === url + '/page').error(new ProgressEvent('error'));
-    http.expectOne(hotelsUrl).flush([]);
+    http.expectNone(hotelsUrl);
     fixture.detectChanges();
     expect(component.error()).toContain('Cannot reach');
     component.loadContracts();
@@ -176,17 +176,58 @@ describe('Contract management', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No Contracts Yet');
   });
-  it('blocks creation when hotels cannot be loaded and supports retry', () => {
+  it('debounces lookup, handles errors and supports retry without downloading all hotels', async () => {
+    vi.useFakeTimers();
     http.expectOne((r) => r.url === url + '/page').flush(directoryPage([]));
-    http.expectOne(hotelsUrl).error(new ProgressEvent('error'));
     component.openEditor();
+    component.hotelQuery.setValue('Ocean');
+    http.expectNone(hotelsUrl + '/options');
+    await vi.advanceTimersByTimeAsync(300);
+    http.expectOne(r => r.url === hotelsUrl + '/options').error(new ProgressEvent('error'));
     fill();
     component.save();
     http.expectNone(url);
     expect(component.hotelError()).toContain('Cannot reach');
     component.loadHotels();
-    http.expectOne(hotelsUrl).flush([{ hotelId: 3, name: 'Ocean Hotel' }]);
+    await vi.advanceTimersByTimeAsync(300);
+    http.expectOne(r => r.url === hotelsUrl + '/options').flush([]);
     expect(component.hotelError()).toBe('');
+    expect(component.hotelLookupDone()).toBe(true);
+    expect(component.hotels()).toEqual([]);
+  });
+  it('cancels stale suggestions, filters status, selects an ID and clears it', async () => {
+    vi.useFakeTimers();
+    load();
+    component.openEditor();
+    component.hotelQuery.setValue('Oc');
+    await vi.advanceTimersByTimeAsync(300);
+    const old = http.expectOne(r => r.url === hotelsUrl + '/options');
+    component.hotelQuery.setValue('Ocean');
+    expect(old.cancelled).toBe(true);
+    component.hotelStatus.setValue('INACTIVE');
+    await vi.advanceTimersByTimeAsync(300);
+    const request = http.expectOne(r => r.url === hotelsUrl + '/options' && r.params.get('status') === 'INACTIVE');
+    const hotel = { hotelId: 3, name: 'Ocean Hotel', city: 'Galle', country: 'Sri Lanka', status: 'INACTIVE' as const };
+    request.flush([hotel]);
+    component.selectHotel(hotel);
+    expect(component.form.controls.hotelId.value).toBe(3);
+    expect(component.selectedHotel()).toEqual(hotel);
+    component.clearHotel();
+    expect(component.form.controls.hotelId.value).toBeNull();
+    http.expectNone(hotelsUrl);
+  });
+  it('retries selected hotel resolution and cancels it when the user types a replacement', () => {
+    load();
+    component.openEditor(row);
+    http.expectOne(hotelsUrl + '/options/3').error(new ProgressEvent('error'));
+    expect(component.hotelError()).toContain('Cannot reach');
+    component.retryHotels();
+    const resolution = http.expectOne(hotelsUrl + '/options/3');
+    component.hotelQuery.setValue('A');
+    expect(resolution.cancelled).toBe(true);
+    expect(component.form.controls.hotelId.value).toBeNull();
+    expect(component.hotelsLoading()).toBe(false);
+    http.expectNone(hotelsUrl);
   });
   it('validates required fields, date range, markup precision and currency', () => {
     load();
@@ -234,6 +275,7 @@ describe('Contract management', () => {
   it('edits drafts and preserves form values after backend conflicts', () => {
     load();
     component.openEditor(row);
+    http.expectOne(hotelsUrl + '/options/3').flush({ hotelId: 3, name: 'Ocean Hotel', city: 'Galle', country: 'Sri Lanka', status: 'INACTIVE' });
     expect(component.selected()?.contractCode).toBe(row.contractCode);
     component.form.controls.currencyCode.setValue('LKR');
     component.save();

@@ -1,4 +1,5 @@
 package com.suntravels.dto;
+import com.suntravels.validation.CountryValue;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Max;
@@ -11,26 +12,27 @@ public class HotelUpdateRequest
 {
 
     @NotBlank
-    @Size( max = 150 )
+    @Size( max = 150, message = "Name must be at most 150 characters" )
     private String name;
 
     @NotBlank
-    @Size( max = 255 )
+    @Size( max = 255, message = "Address must be at most 255 characters" )
     private String address;
 
     @NotBlank
-    @Size( max = 100 )
+    @Size( max = 100, message = "City must be at most 100 characters" )
     private String city;
 
     @NotBlank
-    @Size( max = 100 )
+    @Size( max = 100, message = "Country must be at most 100 characters" )
+    @CountryValue
     private String country;
 
-    @Size( max = 20 )
+    @Size( max = 20, message = "Phone must be at most 20 characters" )
     private String phone;
 
     @Email
-    @Size( max = 100 )
+    @Size( max = 100, message = "Email must be at most 100 characters" )
     private String email;
 
     @NotNull

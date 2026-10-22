@@ -8,6 +8,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { Hotel, HotelStatus, HotelUpdateRequest } from '../../../models/hotel.model';
+import { countries, findCountry } from '../../../shared/location/country-catalog';
 // Rejects values containing only whitespace.
 const notBlank: ValidatorFn = (control: AbstractControl) =>
   typeof control.value === 'string' && !control.value.trim() ? { required: true } : null;
@@ -24,6 +25,18 @@ export class HotelForm {
   readonly submitted = output<HotelUpdateRequest & { status?: HotelStatus }>();
   readonly cancelled = output<void>();
   editing = false;
+  readonly countryQuery = new FormControl('', { nonNullable: true });
+  legacyCountry = '';
+  get countryOptions() {
+    const query = this.countryQuery.value.trim().toLocaleLowerCase('en');
+    const selected = findCountry(this.form.controls.country.value)?.code;
+    return countries.filter(
+      (country) =>
+        country.code === selected ||
+        country.name.toLocaleLowerCase('en').includes(query) ||
+        country.code.toLowerCase().includes(query),
+    );
+  }
   readonly fields = [
     { key: 'name', label: 'Hotel name', type: 'text', required: true },
     { key: 'address', label: 'Address', type: 'text', required: true },
@@ -57,17 +70,21 @@ export class HotelForm {
     this.editing = !!hotel;
     for (const field of this.fields) {
       const validators: ValidatorFn[] = field.required ? [notBlank] : [];
-      if (field.key === 'name') validators.push(Validators.maxLength(150));
+      validators.push(Validators.maxLength(this.maximumLength(field.key)));
       if (field.key === 'email') validators.push(Validators.email);
-      if (field.key !== 'name')
-        validators.push(Validators.maxLength(this.maximumLength(field.key)));
+      if (field.key === 'country')
+        validators.push((control) =>
+          !control.value || findCountry(control.value) ? null : { country: true },
+        );
       this.form.controls[field.key].setValidators(validators);
     }
+    this.countryQuery.setValue('');
+    this.legacyCountry = hotel?.country && !findCountry(hotel.country) ? hotel.country : '';
     this.form.reset({
       name: hotel?.name ?? '',
       address: hotel?.address ?? '',
       city: hotel?.city ?? '',
-      country: hotel?.country ?? '',
+      country: hotel?.country ? (findCountry(hotel.country)?.code ?? hotel.country) : '',
       phone: hotel?.phone ?? '',
       email: hotel?.email ?? '',
       starRating: hotel?.starRating ?? 3,
@@ -95,7 +112,7 @@ export class HotelForm {
       name: raw.name.trim(),
       address: raw.address.trim(),
       city: raw.city.trim(),
-      country: raw.country.trim(),
+      country: findCountry(raw.country)!.name,
       phone: raw.phone.trim() || null,
       email: raw.email.trim() || null,
       starRating: raw.starRating,
@@ -104,7 +121,8 @@ export class HotelForm {
   }
 
   // Returns the configured length limit for a hotel form field.
-  private maximumLength(key: string): number {
+  maximumLength(key: string): number {
+    if (key === 'name') return 150;
     if (key === 'address') return 255;
     if (key === 'phone') return 20;
     return 100;

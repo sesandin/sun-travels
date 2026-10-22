@@ -384,7 +384,10 @@ class ReservationMySqlIntegrationTest
         } ).when( repository ).night( anyInt(), any(), any(), any(), any() );
         var requestForAssertion9 = request( "690", 2 );
 
-        assertThrows( IllegalStateException.class, () -> service.confirm( requestForAssertion9 ) );
+        var failure = assertThrows( org.springframework.dao.InvalidDataAccessApiUsageException.class,
+                () -> service.confirm( requestForAssertion9 ) );
+        assertEquals( IllegalStateException.class, failure.getMostSpecificCause().getClass() );
+        assertEquals( "Injected second-night failure", failure.getMostSpecificCause().getMessage() );
         assertEquals( 0, bookingCount() );
         assertEquals( 2, writes.get() );
         assertEquals( 0, jdbc.queryForObject( "select count(*) from reservation_item where offering_id=?",
@@ -557,7 +560,7 @@ class ReservationMySqlIntegrationTest
         assertEquals( new BigDecimal( "4140.00" ), booked.totalPrice() );
     }
 
-    // Changes the fixture hotel’s status through the hotel service.
+    // Changes the fixture hotelâ€™s status through the hotel service.
     void hotelStatus( HotelStatus status )
     {
         var request = new HotelStatusUpdateRequest();
@@ -607,9 +610,9 @@ class ReservationMySqlIntegrationTest
 
         assertThrows( ReservationException.class, () -> service.confirm( requestForAssertion11 ) );
         assertEquals( 1, bookingCount() );
-        assertEquals( current.warnings(),
+        assertEquals( !current.warnings().isEmpty(),
                 service.list( Integer.toString( booked.reservationId() ), "CONFIRMED", 0, 20 ).reservations().get(
-                        0 ).warnings() );
+                        0 ).hasOperationalWarnings() );
         hotelStatus( HotelStatus.ACTIVE );
         assertTrue( service.detail( booked.reservationId() ).warnings().isEmpty() );
     }
@@ -924,7 +927,7 @@ class ReservationMySqlIntegrationTest
         Collections.reverse( expected );
         var actual = new ArrayList<Integer>();
         for( var page : List.of( first, second, last ) )
-            actual.addAll( page.reservations().stream().map( ReservationResponse::reservationId ).toList() );
+            actual.addAll( page.reservations().stream().map( ReservationResponse.Summary::reservationId ).toList() );
         assertEquals( expected, actual );
         assertEquals( 9, service.list( name, "", 0, 10, null, null, "UPCOMING" ).totalElements() );
         assertEquals( 8, service.list( name, "", 0, 10, null, null, "ONGOING" ).totalElements() );
@@ -957,8 +960,9 @@ class ReservationMySqlIntegrationTest
         var filtered = service.list( Integer.toString( booked.reservationId() ), "CONFIRMED", 0, 10, null, null,
                 "UPCOMING" );
         assertEquals( 1, filtered.totalElements() );
-        assertEquals( before.warnings(), filtered.reservations().get( 0 ).warnings() );
-        assertEquals( before.rooms(), filtered.reservations().get( 0 ).rooms() );
+        assertEquals( !before.warnings().isEmpty(), filtered.reservations().get( 0 ).hasOperationalWarnings() );
+        assertEquals( before.rooms().stream().map(r -> new ReservationResponse.RoomSummary(
+                r.hotelId(),r.hotelName(),r.roomTypeName(),r.adults())).toList(), filtered.reservations().get( 0 ).rooms() );
         assertEquals( "CONFIRMED", filtered.reservations().get( 0 ).status() );
     }
 }

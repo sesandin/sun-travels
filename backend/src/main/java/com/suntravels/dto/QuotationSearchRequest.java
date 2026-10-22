@@ -16,9 +16,16 @@ public record QuotationSearchRequest(
         @NotNull @Size( min = 1, max = 8 ) List<@NotNull @Valid RequestedRoom> rooms,
         @Size( max = 100 ) String city,
         @Positive @JsonDeserialize( using = StrictSearchInteger.class ) Integer hotelId,
-        @Positive @JsonDeserialize( using = StrictSearchInteger.class ) Integer roomTypeId
+        @Positive @JsonDeserialize( using = StrictSearchInteger.class ) Integer roomTypeId,
+        @Size( max = 100 ) String country
 )
 {
+    // Preserve callers constructing the original request without a country filter.
+    public QuotationSearchRequest(LocalDate checkIn, LocalDate checkOut, List<RequestedRoom> rooms,
+                                  String city, Integer hotelId, Integer roomTypeId)
+    {
+        this( checkIn, checkOut, rooms, city, hotelId, roomTypeId, null );
+    }
     public record RequestedRoom(@NotNull @Min( 1 ) @JsonDeserialize( using = StrictSearchInteger.class ) Integer adults)
     {
     }

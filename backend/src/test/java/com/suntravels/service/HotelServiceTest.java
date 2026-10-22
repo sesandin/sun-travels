@@ -57,7 +57,7 @@ class HotelServiceTest
         request.setStarRating( ( byte ) 5 );
         request.setStatus( HotelStatus.ACTIVE );
 
-        when( hotelRepository.save( any( Hotel.class ) ) ).thenAnswer( invocation -> invocation.getArgument( 0 ) );
+        when( hotelRepository.saveAndFlush( any( Hotel.class ) ) ).thenAnswer( invocation -> invocation.getArgument( 0 ) );
 
         // ACT
         HotelResponse response = hotelService.createHotel( request );
@@ -75,7 +75,7 @@ class HotelServiceTest
 
         ArgumentCaptor<Hotel> hotelCaptor = ArgumentCaptor.forClass( Hotel.class );
 
-        verify( hotelRepository ).save( hotelCaptor.capture() );
+        verify( hotelRepository ).saveAndFlush( hotelCaptor.capture() );
 
         Hotel capturedHotel = hotelCaptor.getValue();
 
@@ -93,13 +93,14 @@ class HotelServiceTest
         // Arrange
         HotelRequest request = new HotelRequest();
         request.setName( "Hilton Colombo" );
+        request.setCountry( "LK" );
         request.setStarRating( ( byte ) 5 );
         request.setStatus( HotelStatus.ACTIVE );
 
         Hotel savedHotel = mock( Hotel.class );
 
         when( savedHotel.getHotelId() ).thenReturn( 25 );
-        when( hotelRepository.save( any( Hotel.class ) ) ).thenReturn( savedHotel );
+        when( hotelRepository.saveAndFlush( any( Hotel.class ) ) ).thenReturn( savedHotel );
 
         // Act
         HotelResponse response = hotelService.createHotel( request );
@@ -108,7 +109,7 @@ class HotelServiceTest
         assertNotNull( response );
         assertEquals( 25, response.getHotelId() );
 
-        verify( hotelRepository ).save( any( Hotel.class ) );
+        verify( hotelRepository ).saveAndFlush( any( Hotel.class ) );
     }
 
     // Verifies get all hotels return hotel responses.
@@ -249,14 +250,14 @@ class HotelServiceTest
         request.setName( "Hilton Colombo" );
         request.setAddress( "2 Sir Chittampalam A Gardiner Mawatha" );
         request.setCity( "Colombo" );
-        request.setCountry( "Sri Lanka" );
+        request.setCountry( "lk" );
         request.setPhone( "0119999999" );
         request.setEmail( "updated@example.com" );
         request.setStarRating( ( byte ) 5 );
 
         when( hotelRepository.findById( hotelId ) ).thenReturn( Optional.of( existingHotel ) );
 
-        when( hotelRepository.save( existingHotel ) ).thenReturn( existingHotel );
+        when( hotelRepository.saveAndFlush( existingHotel ) ).thenReturn( existingHotel );
 
         // Act
         HotelResponse result = hotelService.updateHotel( hotelId, request );
@@ -275,8 +276,8 @@ class HotelServiceTest
 
         // The service must update the same existing entity
         verify( hotelRepository ).findById( hotelId );
-        verify( hotelRepository ).save( same( existingHotel ) );
-        verify( hotelRepository, times( 1 ) ).save( any( Hotel.class ) );
+        verify( hotelRepository ).saveAndFlush( same( existingHotel ) );
+        verify( hotelRepository, times( 1 ) ).saveAndFlush( any( Hotel.class ) );
     }
 
     // Verifies update hotel throw exception when hotel does not exist.
@@ -299,7 +300,7 @@ class HotelServiceTest
         assertEquals( "Hotel not found with ID: 99999", exception.getMessage() );
 
         verify( hotelRepository ).findById( hotelId );
-        verify( hotelRepository, never() ).save( any( Hotel.class ) );
+        verify( hotelRepository, never() ).saveAndFlush( any( Hotel.class ) );
     }
 
     // Verifies update hotel status activate inactive hotel.

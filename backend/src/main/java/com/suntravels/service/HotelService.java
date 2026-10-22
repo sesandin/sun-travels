@@ -1,4 +1,8 @@
 package com.suntravels.service;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+import com.suntravels.entity.HotelStatus;
+import com.suntravels.dto.ManagementHotelOption;
 
 import com.suntravels.dto.HotelRequest;
 import com.suntravels.dto.HotelResponse;
@@ -7,6 +11,7 @@ import com.suntravels.dto.HotelUpdateRequest;
 import com.suntravels.entity.Hotel;
 import com.suntravels.exception.HotelNotFoundException;
 import com.suntravels.repository.HotelRepository;
+import com.suntravels.validation.CountryCatalog;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,23 +30,40 @@ public class HotelService
     }
 
     // Creates the hotel.
+    @Transactional
     public HotelResponse createHotel( HotelRequest request )
     {
-
+        checkDuplicate(request.getName(), request.getCountry(), request.getCity(), request.getAddress(), null);
         Hotel hotel = new Hotel();
 
         hotel.setName( request.getName() );
         hotel.setAddress( request.getAddress() );
         hotel.setCity( request.getCity() );
-        hotel.setCountry( request.getCountry() );
+        hotel.setCountry( CountryCatalog.canonicalName( request.getCountry() ) );
         hotel.setPhone( request.getPhone() );
         hotel.setEmail( request.getEmail() );
         hotel.setStarRating( request.getStarRating() );
         hotel.setStatus( request.getStatus() );
 
-        Hotel savedHotel = hotelRepository.save( hotel );
+        Hotel savedHotel = hotelRepository.saveAndFlush( hotel );
 
         return toResponse( savedHotel );
+    }
+
+    // Bound management suggestions in SQL instead of loading the catalogue.
+    public List<ManagementHotelOption> options(String term, HotelStatus status)
+    {
+        if (term.length() > 150) throw new ResponseStatusException(
+                HttpStatus.BAD_REQUEST, "Hotel name must be at most 150 characters");
+        String text = term.trim();
+        if (text.length() < 2) return List.of();
+        String prefix = text.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
+        return status == null ? hotelRepository.allStatusOptions(prefix) : hotelRepository.options(prefix, status.name());
+    }
+
+    public ManagementHotelOption option(Integer id)
+    {
+        return hotelRepository.option(id).orElseThrow(() -> new HotelNotFoundException(id));
     }
 
     // Returns the all hotels.
@@ -64,23 +86,32 @@ public class HotelService
     }
 
     // Updates the hotel.
+    @Transactional
     public HotelResponse updateHotel( Integer hotelId, HotelUpdateRequest request )
     {
 
         Hotel hotel = hotelRepository.findById( hotelId ).orElseThrow(
                 () -> new HotelNotFoundException( hotelId ) );
 
+        checkDuplicate(request.getName(), request.getCountry(), request.getCity(), request.getAddress(), hotelId);
+
         hotel.setName( request.getName() );
         hotel.setAddress( request.getAddress() );
         hotel.setCity( request.getCity() );
-        hotel.setCountry( request.getCountry() );
+        hotel.setCountry( CountryCatalog.canonicalName( request.getCountry() ) );
         hotel.setPhone( request.getPhone() );
         hotel.setEmail( request.getEmail() );
         hotel.setStarRating( request.getStarRating() );
 
-        Hotel updatedHotel = hotelRepository.save( hotel );
+        Hotel updatedHotel = hotelRepository.saveAndFlush( hotel );
 
         return toResponse( updatedHotel );
+    }
+
+    private void checkDuplicate(String name, String country, String city, String address, Integer excluded)
+    {
+        if (hotelRepository.countIdentity(name, CountryCatalog.canonicalName(country), city, address, excluded) > 0)
+            throw new com.suntravels.exception.DuplicateHotelException();
     }
 
     // Maps the stored record to its API response fields.

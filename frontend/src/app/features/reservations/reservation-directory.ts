@@ -11,10 +11,10 @@ import {
 } from '@angular/core';
 import { debounceTime, Subscription, tap } from 'rxjs';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { FormControl, FormGroup, ReactiveFormsModule } from '@angular/forms';
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Reservation, ReservationPage, StayPeriod } from '../../models/reservation.model';
+import { Reservation, ReservationSummary, ReservationPage, StayPeriod } from '../../models/reservation.model';
 import { ReservationService } from '../../services/reservation.service';
 import { apiError } from '../../services/api-error';
 
@@ -35,7 +35,7 @@ export class ReservationDirectory implements OnInit {
   readonly result = signal<ReservationPage | null>(null);
   readonly loading = signal(false);
   readonly error = signal('');
-  readonly query = new FormControl('', { nonNullable: true });
+  readonly query = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(150)] });
   readonly status = new FormControl('', { nonNullable: true });
   readonly stayPeriod = new FormControl<StayPeriod>('', { nonNullable: true });
   readonly stayFrom = new FormControl('', { nonNullable: true });
@@ -66,6 +66,10 @@ export class ReservationDirectory implements OnInit {
     },
   );
   readonly selected = signal<Reservation | null>(null);
+  readonly detailsLoading = signal(false);
+  readonly detailsError = signal('');
+  private detailRequest?: Subscription;
+  private detailId: number | null = null;
   readonly detailsDialog = viewChild.required<ElementRef<HTMLDialogElement>>('detailsDialog');
   private readonly service = inject(ReservationService);
   private readonly destroyRef = inject(DestroyRef);
@@ -79,9 +83,21 @@ export class ReservationDirectory implements OnInit {
   private requestedPage = 0;
 
   // Opens the selected reservation in the details dialog.
-  openDetails(reservation: Reservation) {
-    this.selected.set(reservation);
+  openDetails(reservation: Pick<ReservationSummary, 'reservationId'>) {
+    this.detailRequest?.unsubscribe();
+    this.selected.set(null);
+    this.detailsError.set('');
+    this.detailsLoading.set(true);
+    this.detailId = reservation.reservationId;
     this.detailsDialog().nativeElement.showModal();
+    this.detailRequest = this.service.get(reservation.reservationId)
+      .pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: (detail) => { this.selected.set(detail); this.detailsLoading.set(false); },
+        error: (e) => { this.detailsError.set(apiError(e)); this.detailsLoading.set(false); },
+      });
+  }
+  retryDetails() {
+    if (this.detailId !== null) this.openDetails({ reservationId: this.detailId });
   }
 
   // Retries the failed reservation directory request.
@@ -91,6 +107,9 @@ export class ReservationDirectory implements OnInit {
 
   // Closes the reservation details dialog.
   closeDetails() {
+    this.detailRequest?.unsubscribe();
+    this.detailsLoading.set(false);
+    this.selected.set(null);
     this.detailsDialog().nativeElement.close();
   }
 

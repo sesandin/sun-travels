@@ -289,7 +289,56 @@ public class ReservationRepository
                 "select r.reservation_id from reservation r join customer c on c.customer_id=r.customer_id" +
                         where + " order by r.reservation_id desc limit ? offset ?", Integer.class,
                 params.toArray() );
-        return new Page( ids.stream().map( this::detail ).toList(), page, size, count );
+        return new Page( summaries(ids), page, size, count );
+    }
+
+    /** Two batched reads restricted to the selected page; no nightly DTOs or repricing. */
+    private List<ReservationResponse.Summary> summaries(List<Integer> ids)
+    {
+        if (ids.isEmpty()) return List.of();
+        String placeholders = String.join(",", java.util.Collections.nCopies(ids.size(), "?"));
+        var rooms = new java.util.HashMap<Integer,List<ReservationResponse.RoomSummary>>();
+        var totals = new java.util.HashMap<Integer,BigDecimal>();
+        var incomplete = new java.util.HashSet<Integer>();
+        var affected = new java.util.HashSet<Integer>();
+        // Aggregate each room independently so partial legacy snapshots never yield a guessed total.
+        jdbc.query("""
+                select i.reservation_id,i.reservation_item_id,h.hotel_id,h.name as hotel_name,t.name as room_name,
+                 i.number_of_adults,r.status,r.check_out_date,h.status as hotel_status,c.status as contract_status,
+                 o.status as offering_status,
+                 case when datediff(r.check_out_date,r.check_in_date)>0
+                  and count(n.nightly_rate_id)=datediff(r.check_out_date,r.check_in_date)
+                  and min(n.occupied_date)>=r.check_in_date and max(n.occupied_date)<r.check_out_date
+                 then sum(n.selling_price) else null end as room_total
+                from reservation_item i join reservation r on r.reservation_id=i.reservation_id
+                join contract_room_offering o on o.offering_id=i.offering_id
+                join contract c on c.contract_id=o.contract_id join hotel h on h.hotel_id=c.hotel_id
+                join room_type t on t.room_type_id=o.room_type_id
+                left join reservation_item_nightly_rate n on n.reservation_item_id=i.reservation_item_id
+                where i.reservation_id in (
+                """ + placeholders + ") group by i.reservation_item_id order by i.reservation_item_id", r -> {
+            int id = r.getInt("reservation_id");
+            rooms.computeIfAbsent(id, ignored -> new ArrayList<>()).add(new ReservationResponse.RoomSummary(
+                    r.getInt("hotel_id"), r.getString("hotel_name"), r.getString("room_name"), r.getInt("number_of_adults")));
+            BigDecimal total = r.getBigDecimal("room_total");
+            if (total == null) incomplete.add(id);
+            else totals.merge(id, total, BigDecimal::add);
+            if ("CONFIRMED".equals(r.getString("status"))
+                    && r.getObject("check_out_date", LocalDate.class).isAfter(LocalDate.now(clock))
+                    && ("INACTIVE".equals(r.getString("hotel_status"))
+                    || "SUSPENDED".equals(r.getString("contract_status"))
+                    || "SUSPENDED".equals(r.getString("offering_status")))) affected.add(id);
+        }, ids.toArray());
+        return jdbc.query("""
+                select r.reservation_id,r.customer_id,c.name,r.check_in_date,r.check_out_date,r.status,r.currency_code
+                from reservation r join customer c on c.customer_id=r.customer_id where r.reservation_id in (
+                """ + placeholders + ") order by r.reservation_id desc", (r, n) -> {
+            int id = r.getInt("reservation_id");
+            return new ReservationResponse.Summary(id, r.getInt("customer_id"), r.getString("name"),
+                    r.getObject("check_in_date", LocalDate.class), r.getObject("check_out_date", LocalDate.class),
+                    r.getString("status"), r.getString("currency_code"), incomplete.contains(id) ? null : totals.get(id),
+                    List.copyOf(rooms.getOrDefault(id, List.of())), affected.contains(id));
+        }, ids.toArray());
     }
 
     /**

@@ -1,4 +1,7 @@
 package com.suntravels.controller;
+import org.springframework.web.bind.annotation.RequestParam;
+import com.suntravels.entity.HotelStatus;
+import com.suntravels.dto.ManagementHotelOption;
 
 import com.suntravels.dto.HotelRequest;
 import com.suntravels.dto.HotelResponse;
@@ -39,6 +42,21 @@ public class HotelController
         HotelResponse response = hotelService.createHotel( request );
 
         return ResponseEntity.status( 201 ).body( response );
+    }
+
+    // Management lookup includes inactive hotels; search eligibility is unchanged.
+    @GetMapping("/options")
+    public List<ManagementHotelOption> options(
+            @RequestParam(defaultValue = "") String term,
+            @RequestParam(required = false) HotelStatus status)
+    {
+        return hotelService.options(term, status);
+    }
+
+    @GetMapping("/options/{id}")
+    public ManagementHotelOption option(@PathVariable Integer id)
+    {
+        return hotelService.option(id);
     }
 
     // Returns the all hotels.

@@ -40,6 +40,7 @@ import java.util.stream.Collectors;
 @Transactional( readOnly = true )
 public class ReservationService
 {
+    private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(ReservationService.class);
     private final ReservationRepository reservations;
     private final HotelRepository hotels;
     private final CustomerRepository customers;
@@ -111,6 +112,8 @@ public class ReservationService
     public ReservationResponse confirm( ReservationRequest request )
     {
         validate( request );
+        LOG.debug("Confirmation requested hotelId={} contractId={} rooms={}",
+                request.hotelId(), request.contractId(), request.rooms().size());
         hotels.findForUpdate( request.hotelId() ).orElseThrow( ReservationException::unavailable );
         if( !customers.existsById( request.customerId() ) )
         {
@@ -138,6 +141,7 @@ public class ReservationService
                         r -> new QuotationSearchRequest.RequestedRoom( r.adults() ) ).toList(), null,
                 request.hotelId(), null );
         var candidates = search.candidates( query );
+        LOG.debug("Confirmation eligibility candidates={}", candidates.size());
         if( candidates.size() > QuotationSearchRepository.MAX_OFFERINGS )
         {
             throw ReservationException.unavailable();
@@ -166,6 +170,7 @@ public class ReservationService
         if( !parent.currency().equals( request.acceptedCurrency() ) ||
                     total.compareTo( request.acceptedTotal() ) != 0 )
         {
+            LOG.debug("Confirmation rejected: accepted quotation no longer matches current pricing");
             throw new ReservationException( 409, "PRICE_CHANGED",
                     "The selling quotation changed. Review and explicitly accept the current quotation before confirming again.",
                     current );
@@ -267,6 +272,7 @@ public class ReservationService
                         pricing.nightly( night, room.adults(), offering.markup() ) );
             }
         }
+        BusinessEvents.afterCommit(LOG, "reservation_confirmed", reservation);
         return reservations.detail( reservation );
     }
 
@@ -304,6 +310,7 @@ public class ReservationService
             hotels.findForUpdate( hotel ).orElseThrow( ReservationException::unavailable );
         }
         String status = reservations.lockStatus( id );
+        LOG.debug("Cancellation requested reservationId={} currentStatus={}", id, status);
         if( !status.equals( "CONFIRMED" ) && !status.equals( "CANCELLED" ) )
         {
             throw new ReservationException( 409, "INVALID_STATUS",
@@ -312,6 +319,7 @@ public class ReservationService
         if( status.equals( "CONFIRMED" ) )
         {
             reservations.cancel( id );
+            BusinessEvents.afterCommit(LOG, "reservation_cancelled", id);
         }
         return reservations.detail( id );
     }

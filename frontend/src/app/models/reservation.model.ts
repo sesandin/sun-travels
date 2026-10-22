@@ -67,8 +67,20 @@ export interface Reservation {
     })[];
   }[];
 }
+export interface ReservationSummary {
+  reservationId: number;
+  customerId: number;
+  customerName: string;
+  checkIn: string;
+  checkOut: string;
+  status: 'CONFIRMED' | 'CANCELLED';
+  currencyCode: string | null;
+  totalPrice: number | null;
+  rooms: { hotelId: number; hotelName: string; roomTypeName: string; adults: number }[];
+  hasOperationalWarnings: boolean;
+}
 export interface ReservationPage {
-  reservations: Reservation[];
+  reservations: ReservationSummary[];
   page: number;
   size: number;
   totalElements: number;

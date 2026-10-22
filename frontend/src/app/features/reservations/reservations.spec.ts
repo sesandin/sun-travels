@@ -308,6 +308,40 @@ describe('Reservation directory and details', () => {
     http = TestBed.inject(HttpTestingController);
   });
   afterEach(() => http.verify());
+  it('loads summaries alone, then retries and cancels stale on-demand detail requests', () => {
+    const f = TestBed.createComponent(ReservationDirectory);
+    f.detectChanges();
+    const summary = {
+      reservationId: 101, customerId: 9, customerName: 'Traveller', checkIn: saved.checkIn,
+      checkOut: saved.checkOut, status: 'CONFIRMED' as const, currencyCode: 'USD', totalPrice: 230,
+      rooms: [{hotelId: 1, hotelName: 'Ocean', roomTypeName: 'Double', adults: 2}],
+      hasOperationalWarnings: false,
+    };
+    http.expectOne(r => r.url === '/api/reservations').flush({reservations: [summary],page: 0,size: 10,totalElements: 1});
+    http.expectNone('/api/reservations/101');
+    f.detectChanges();
+    expect(f.componentInstance.selected()).toBeNull();
+    expect(f.nativeElement.textContent).toContain('230.00 USD');
+    const c = f.componentInstance;
+    const dialog = c.detailsDialog().nativeElement;
+    dialog.showModal = vi.fn(); dialog.close = vi.fn();
+    c.openDetails(summary);
+    expect(c.detailsLoading()).toBe(true);
+    http.expectOne('/api/reservations/101').error(new ProgressEvent('error'));
+    expect(c.detailsError()).toContain('Cannot reach');
+    c.retryDetails();
+    const stale = http.expectOne('/api/reservations/101');
+    c.openDetails({reservationId: 102});
+    expect(stale.cancelled).toBe(true);
+    http.expectOne('/api/reservations/102').flush({...saved,reservationId: 102});
+    expect(c.selected()?.reservationId).toBe(102);
+    c.closeDetails();
+    c.openDetails(summary);
+    const closing = http.expectOne('/api/reservations/101');
+    c.closeDetails();
+    expect(closing.cancelled).toBe(true);
+    expect(c.selected()).toBeNull();
+  });
   it('loads the directory with customer and status filters and selling totals', () => {
     const f = TestBed.createComponent(ReservationDirectory);
     f.detectChanges();
@@ -448,7 +482,7 @@ describe('Reservation directory and details', () => {
   it('shows an operational list indicator and explanatory messages in the details popup', () => {
     const f = TestBed.createComponent(ReservationDirectory);
     f.detectChanges();
-    const affected = { ...saved, warnings: operationalWarnings };
+    const affected = { ...saved, warnings: operationalWarnings, hasOperationalWarnings: true };
     http
       .expectOne((r) => r.url === '/api/reservations')
       .flush({
@@ -468,6 +502,7 @@ describe('Reservation directory and details', () => {
     const dialog = f.componentInstance.detailsDialog().nativeElement;
     dialog.showModal = vi.fn();
     f.componentInstance.openDetails(affected);
+    http.expectOne('/api/reservations/101').flush(affected);
     f.detectChanges();
     for (const warning of operationalWarnings)
       expect(f.nativeElement.querySelector('.reservation-warning').textContent).toContain(
@@ -479,7 +514,7 @@ describe('Reservation directory and details', () => {
   it('opens the selected reservation using its View button and explains why arrangements need verification', () => {
     const f = TestBed.createComponent(ReservationDirectory);
     f.detectChanges();
-    const affected = { ...saved, warnings: operationalWarnings };
+    const affected = { ...saved, warnings: operationalWarnings, hasOperationalWarnings: true };
     http
       .expectOne((r) => r.url === '/api/reservations')
       .flush({
@@ -499,6 +534,7 @@ describe('Reservation directory and details', () => {
     expect(buttons[0].textContent?.trim()).toBe('View / Manage');
     expect(buttons[0].getAttribute('aria-label')).toBe('View details for reservation #101');
     buttons[0].click();
+    http.expectOne('/api/reservations/101').flush(affected);
     f.detectChanges();
     expect(dialog.showModal).toHaveBeenCalled();
     expect(f.componentInstance.selected()?.reservationId).toBe(101);
@@ -508,6 +544,7 @@ describe('Reservation directory and details', () => {
       expect(dialog.textContent).toContain(warning.message);
     expect(dialog.textContent).toContain('This reservation remains confirmed');
     buttons[1].click();
+    http.expectOne('/api/reservations/102').flush({ ...saved, reservationId: 102, warnings: [] });
     f.detectChanges();
     expect(f.componentInstance.selected()?.reservationId).toBe(102);
     expect(dialog.querySelector('.reservation-warning')).toBeNull();

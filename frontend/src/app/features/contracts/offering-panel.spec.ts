@@ -73,7 +73,7 @@ describe('Contract offerings', () => {
     http.expectOne(api + '/contracts/7/offerings').flush(rows);
     fixture.detectChanges();
     for (const row of rows)
-      http.expectOne(api + '/offerings/' + row.offeringId + '/seasonal-rates').flush([]);
+      http.expectNone(api + '/offerings/' + row.offeringId + '/seasonal-rates');
     fixture.detectChanges();
   }
   // Opens the offering editor and supplies room-type choices.
@@ -98,7 +98,7 @@ describe('Contract offerings', () => {
     load([offering]);
     expect(fixture.nativeElement.textContent).toContain('Double');
     expect(fixture.nativeElement.textContent).toContain('100 USD');
-    expect(fixture.nativeElement.textContent).toContain('No seasonal periods');
+    expect(fixture.nativeElement.textContent).toContain('Show seasonal rates');
   });
   it('has empty state and draft add action', () => {
     load();

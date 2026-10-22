@@ -48,7 +48,7 @@ describe('Contract offering directory links', () => {
     fixture = TestBed.createComponent(ContractList);
     fixture.detectChanges();
     http.expectOne((r) => r.url === api + '/contracts/page').flush(directoryPage([contract]));
-    http.expectOne(api + '/hotels').flush([]);
+    http.expectNone(api + '/hotels');
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -65,7 +65,7 @@ describe('Contract offering directory links', () => {
     fixture.detectChanges();
     http.expectOne(api + '/contracts/4/offerings').flush([offering]);
     fixture.detectChanges();
-    http.expectOne(api + '/offerings/8/seasonal-rates').flush([]);
+    http.expectNone(api + '/offerings/8/seasonal-rates');
   }
   it('opens existing details and focuses the relevant offering', async () => {
     open();
@@ -154,7 +154,7 @@ describe('Contract offering directory links', () => {
       .expectOne(api + '/contracts/5/offerings')
       .flush([{ ...offering, offeringId: 9, contractId: 5 }]);
     fixture.detectChanges();
-    http.expectOne(api + '/offerings/9/seasonal-rates').flush([]);
+    http.expectNone(api + '/offerings/9/seasonal-rates');
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('#offering-8')).toBeNull();
     expect(fixture.nativeElement.querySelector('#offering-9').textContent).not.toContain(

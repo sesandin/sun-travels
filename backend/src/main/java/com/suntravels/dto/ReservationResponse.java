@@ -94,8 +94,14 @@ public record ReservationResponse(
     {
     }
 
+    public record RoomSummary(int hotelId, String hotelName, String roomTypeName, int adults) {}
+
+    public record Summary(int reservationId, int customerId, String customerName,
+            LocalDate checkIn, LocalDate checkOut, String status, String currencyCode,
+            BigDecimal totalPrice, List<RoomSummary> rooms, boolean hasOperationalWarnings) {}
+
     public record Page(
-            List<ReservationResponse> reservations,
+            List<Summary> reservations,
             int page,
             int size,
             long totalElements

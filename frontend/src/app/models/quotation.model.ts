@@ -4,13 +4,46 @@ export interface OfferingOccupancy {
   roomTypeName: string;
   maxAdults: number;
 }
+export interface HotelPage {
+  businessDate: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  hotels: HotelResult[];
+  nextAfterHotelId: number | null;
+}
+export interface HotelResult {
+  hotelId: number;
+  hotelName: string;
+  city: string | null;
+  offerings: {
+    offeringId: number;
+    roomTypeId: number;
+    contractedRooms: number;
+    roomChoices: SelectionOffering;
+    availabilityStatus: 'AVAILABLE';
+    quotation: AccommodationQuotation;
+    unavailableOption: null;
+  }[];
+}
 export interface QuotationRequest {
   checkIn: string;
   checkOut: string;
   rooms: { adults: number }[];
   city: string | null;
+  country?: string | null;
   hotelId: number | null;
   roomTypeId: number | null;
+}
+export interface CitySuggestion {
+  city: string;
+  country: string | null;
+}
+export interface HotelSuggestion {
+  hotelId: number;
+  name: string;
+  city: string | null;
+  country?: string | null;
 }
 export interface SearchLimits {
   businessDate: string;
