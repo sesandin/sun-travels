@@ -1,12 +1,28 @@
 <section aria-label="Seasonal rates" class="seasonal-section">
   <div class="seasonal-header">
     <h4>Seasonal Rates</h4>
-    <button (click)="toggle()" [attr.aria-expanded]="expanded()" [disabled]="saving()" type="button">
-      {{ expanded() ? 'Hide seasonal rates' : 'Show seasonal rates' }}
-    </button>
-    @if (expanded() && canMaintain()) {
-    <button (click)="open()" [disabled]="saving() || loading() || !!error()" type="button">Add Seasonal Rate</button>
-    }
+    <div class="seasonal-actions">
+      <button
+        (click)="toggle()"
+        [attr.aria-expanded]="expanded()"
+        [disabled]="saving()"
+        class="seasonal-toggle"
+        type="button"
+      >
+        <span aria-hidden="true">{{ expanded() ? '▾' : '▸' }}</span>
+        {{ expanded() ? 'Hide seasonal rates' : 'Show seasonal rates' }}
+      </button>
+      @if (expanded() && canMaintain()) {
+      <button
+        (click)="open()"
+        [disabled]="saving() || loading() || !!error()"
+        class="primary"
+        type="button"
+      >
+        Add Seasonal Rate
+      </button>
+      }
+    </div>
   </div>
   @if (expanded()) {
   <p class="section-description">

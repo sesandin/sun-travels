@@ -98,13 +98,14 @@
     </button>
   </div>
   } @else {
-  <form (ngSubmit)="searchCustomers()" [formGroup]="customerSearch" class="filters">
-    <label
-    >Find by name, phone, email or ID<input formControlName="query" maxlength="150"/>
-    </label>
-    <button [disabled]="customerBusy() || busy()" class="secondary" type="submit">
-      Find customers
-    </button>
+  <form (ngSubmit)="searchCustomers()" [formGroup]="customerSearch" class="filters customer-search-form">
+    <label for="customer-search-query">Find by name, phone, email or ID</label>
+    <div class="customer-search-controls">
+      <input id="customer-search-query" formControlName="query" maxlength="150"/>
+      <button [disabled]="customerBusy() || busy()" class="secondary" type="submit">
+        Find customers
+      </button>
+    </div>
   </form>
   @if (customerBusy()) {
   <p>

@@ -58,6 +58,22 @@
   flex: 1;
   min-width: 180px;
 }
+.customer-search-form {
+  display: block;
+}
+.customer-search-form > label {
+  display: block;
+  margin-bottom: 8px;
+}
+.customer-search-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+  gap: 12px;
+}
+.customer-search-controls button {
+  height: 100%;
+}
 
 label input,
 label select {
@@ -619,6 +635,14 @@ summary {
   }
   .reservation-filters button {
     grid-column: 2;
+  }
+}
+@media (max-width: 520px) {
+  .customer-search-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .customer-search-controls button {
+    width: 100%;
   }
 }
 @media (max-width: 650px) {
