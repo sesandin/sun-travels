@@ -67,8 +67,29 @@ const integer: ValidatorFn = (c) => (Number.isInteger(c.value) ? null : { intege
   imports: [ReactiveFormsModule, DecimalPipe],
   templateUrl: './quotation-search.html',
   styleUrl: './quotation-search.scss',
+  host: { '(document:click)': 'dismissLookupOutside($event)' },
 })
 export class QuotationSearch implements OnInit {
+  readonly activeLookup = signal<'city' | 'hotel' | null>(null);
+  private readonly cityLookup = viewChild<ElementRef<HTMLElement>>('cityLookup');
+  private readonly hotelLookup = viewChild<ElementRef<HTMLElement>>('hotelLookup');
+
+  dismissLookupOutside(event: MouseEvent): void {
+    const lookup = this.activeLookup() === 'city' ? this.cityLookup() : this.hotelLookup();
+    if (event.target instanceof Node && !lookup?.nativeElement.contains(event.target)) {
+      this.activeLookup.set(null);
+    }
+  }
+
+  leaveLookup(event: FocusEvent): void {
+    if (
+      !(event.relatedTarget instanceof Node) ||
+      !(event.currentTarget as HTMLElement).contains(event.relatedTarget)
+    ) {
+      this.activeLookup.set(null);
+    }
+  }
+
   readonly limits = signal<SearchLimits | null>(null);
   readonly hotelQuery = new FormControl('', { nonNullable: true });
   readonly hotelMatches = signal<HotelSuggestion[]>([]);
@@ -634,6 +655,7 @@ export class QuotationSearch implements OnInit {
     this.selectedCity.set(city);
     this.form.patchValue({ city: city.city, country: city.country });
     this.cityQuery.setValue(city.city);
+    this.activeLookup.set(null);
   }
 
   clearCity() {
@@ -646,6 +668,7 @@ export class QuotationSearch implements OnInit {
     if (!this.hotelFitsLocation(hotel)) return;
     this.selectedHotel.set(hotel);
     this.form.controls.hotelId.setValue(hotel.hotelId);
+    this.activeLookup.set(null);
   }
 
   clearHotel() {

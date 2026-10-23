@@ -7,22 +7,21 @@ import { Reservation } from '../../models/reservation.model';
   imports: [DecimalPipe],
   template: `
     <details open>
-      <summary>Nightly price breakdown for room {{ roomNumber() }}</summary>
+      <summary>Price per night for room {{ roomNumber() }}</summary>
       <p class="explanation">
-        These are the saved prices for this room at booking, including markup and all
-        {{ room().adults }} {{ room().adults === 1 ? 'adult' : 'adults' }}. Nightly prices may
-        differ when seasonal rates apply. Checkout day is not charged.
+        Prices cover {{ room().adults }} {{ room().adults === 1 ? 'adult' : 'adults' }}.
+        The checkout night is not charged.
       </p>
       @if (room().nightlyPrices.length) {
         <div class="prices" tabindex="0" role="region" aria-label="Booked nightly price breakdown">
           <table>
             <thead>
               <tr>
-                <th scope="col">Occupied night</th>
-                <th scope="col">Booked rate / adult / night</th>
-                <th scope="col">Booked markup</th>
+                <th scope="col">Night</th>
+                <th scope="col">Rate per adult</th>
+                <th scope="col">Markup</th>
                 <th scope="col">Adults</th>
-                <th scope="col">Selling price / room</th>
+                <th scope="col">Room price</th>
               </tr>
             </thead>
             <tbody>
@@ -48,7 +47,7 @@ import { Reservation } from '../../models/reservation.model';
                 </tr>
               }
             </tbody>
-            @if (room().totalPrice !== null) {
+            @if (showTotal() && room().totalPrice !== null) {
               <tfoot>
                 <tr>
                   <th scope="row" colspan="4">
@@ -63,15 +62,9 @@ import { Reservation } from '../../models/reservation.model';
       }
       @if (room().totalPrice === null) {
         <p class="explanation">
-          Some booked nightly prices are missing, so a complete room total is unavailable.
+          The room total is unavailable because some original prices are missing.
         </p>
       }
-      <p class="explanation">
-        Each night's room price = booked rate per adult × adults × (1 + booked markup ÷ 100),
-        rounded to 2 decimal places. The room total adds these nightly prices. These are the rates
-        saved at confirmation, including any seasonal rate that applied. Later rate changes do not
-        change your booked price.
-      </p>
     </details>
   `,
   styles: `
@@ -130,4 +123,5 @@ export class BookedPriceBreakdown {
   readonly currency = input.required<string>();
   readonly nights = input.required<number>();
   readonly roomNumber = input(1);
+  readonly showTotal = input(true);
 }

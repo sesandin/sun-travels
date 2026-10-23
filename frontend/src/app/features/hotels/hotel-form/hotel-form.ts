@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, ElementRef, input, output, viewChild } from '@angular/core';
 import {
   AbstractControl,
   FormControl,
@@ -18,6 +18,7 @@ const notBlank: ValidatorFn = (control: AbstractControl) =>
   imports: [ReactiveFormsModule],
   templateUrl: './hotel-form.html',
   styleUrl: './hotel-form.scss',
+  host: { '(document:click)': 'closeCountryPickerOutside($event)' },
 })
 export class HotelForm {
   readonly busy = input(false);
@@ -26,13 +27,42 @@ export class HotelForm {
   readonly cancelled = output<void>();
   editing = false;
   readonly countryQuery = new FormControl('', { nonNullable: true });
+  private readonly countryPicker = viewChild<ElementRef<HTMLDetailsElement>>('countryPicker');
   legacyCountry = '';
+  get selectedCountryName(): string {
+    return findCountry(this.form.controls.country.value)?.name ?? '';
+  }
+
+  countryPickerClicked(event: MouseEvent): void {
+    if (this.busy()) event.preventDefault();
+  }
+
+  closeCountryPickerOutside(event: MouseEvent): void {
+    const picker = this.countryPicker()?.nativeElement;
+    if (picker?.open && event.target instanceof Node && !picker.contains(event.target)) {
+      picker.open = false;
+    }
+  }
+
+  selectCountry(code: string, picker: HTMLDetailsElement): void {
+    this.form.controls.country.setValue(code);
+    this.form.controls.country.markAsDirty();
+    this.form.controls.country.markAsTouched();
+    picker.open = false;
+    picker.querySelector('summary')?.focus();
+  }
+
+  countryPickerToggled(picker: HTMLDetailsElement): void {
+    if (picker.open) {
+      this.countryQuery.setValue('');
+      picker.querySelector('input')?.focus();
+    }
+  }
+
   get countryOptions() {
     const query = this.countryQuery.value.trim().toLocaleLowerCase('en');
-    const selected = findCountry(this.form.controls.country.value)?.code;
     return countries.filter(
       (country) =>
-        country.code === selected ||
         country.name.toLocaleLowerCase('en').includes(query) ||
         country.code.toLowerCase().includes(query),
     );

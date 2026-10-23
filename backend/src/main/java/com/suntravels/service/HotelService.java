@@ -33,12 +33,15 @@ public class HotelService
     @Transactional
     public HotelResponse createHotel( HotelRequest request )
     {
-        checkDuplicate(request.getName(), request.getCountry(), request.getCity(), request.getAddress(), null);
+        String name = stripWhitespace( request.getName() );
+        String city = stripWhitespace( request.getCity() );
+        String address = stripWhitespace( request.getAddress() );
+        checkDuplicate( name, request.getCountry(), city, address, null );
         Hotel hotel = new Hotel();
 
-        hotel.setName( request.getName() );
-        hotel.setAddress( request.getAddress() );
-        hotel.setCity( request.getCity() );
+        hotel.setName( name );
+        hotel.setAddress( address );
+        hotel.setCity( city );
         hotel.setCountry( CountryCatalog.canonicalName( request.getCountry() ) );
         hotel.setPhone( request.getPhone() );
         hotel.setEmail( request.getEmail() );
@@ -57,8 +60,9 @@ public class HotelService
                 HttpStatus.BAD_REQUEST, "Hotel name must be at most 150 characters");
         String text = term.trim();
         if (text.length() < 2) return List.of();
-        String prefix = text.replace("!", "!!").replace("%", "!%").replace("_", "!_") + "%";
-        return status == null ? hotelRepository.allStatusOptions(prefix) : hotelRepository.options(prefix, status.name());
+        String pattern = "%" + text.replace( "!", "!!" ).replace( "%", "!%" ).replace( "_", "!_" ) + "%";
+        return status == null ? hotelRepository.allStatusOptions( pattern ) :
+                       hotelRepository.options( pattern, status.name() );
     }
 
     public ManagementHotelOption option(Integer id)
@@ -93,11 +97,14 @@ public class HotelService
         Hotel hotel = hotelRepository.findById( hotelId ).orElseThrow(
                 () -> new HotelNotFoundException( hotelId ) );
 
-        checkDuplicate(request.getName(), request.getCountry(), request.getCity(), request.getAddress(), hotelId);
+        String name = stripWhitespace( request.getName() );
+        String city = stripWhitespace( request.getCity() );
+        String address = stripWhitespace( request.getAddress() );
+        checkDuplicate( name, request.getCountry(), city, address, hotelId );
 
-        hotel.setName( request.getName() );
-        hotel.setAddress( request.getAddress() );
-        hotel.setCity( request.getCity() );
+        hotel.setName( name );
+        hotel.setAddress( address );
+        hotel.setCity( city );
         hotel.setCountry( CountryCatalog.canonicalName( request.getCountry() ) );
         hotel.setPhone( request.getPhone() );
         hotel.setEmail( request.getEmail() );
@@ -106,6 +113,11 @@ public class HotelService
         Hotel updatedHotel = hotelRepository.saveAndFlush( hotel );
 
         return toResponse( updatedHotel );
+    }
+
+    private String stripWhitespace( String value )
+    {
+        return value == null ? null : value.strip();
     }
 
     private void checkDuplicate(String name, String country, String city, String address, Integer excluded)

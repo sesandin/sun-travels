@@ -29,7 +29,7 @@ class HotelIdentityMySqlIntegrationTest
         name="IdentityFixture-"+UUID.randomUUID();
     }
     @AfterEach void cleanup() {
-        if(name!=null) jdbc.update("delete from hotel where identity_name like ?",name.toLowerCase(java.util.Locale.ROOT)+"%");
+        if(name!=null) jdbc.update("delete from hotel where lower(regexp_replace(coalesce(name,''),'^[[:space:]]+|[[:space:]]+$','')) like ?",name.toLowerCase(java.util.Locale.ROOT)+"%");
     }
     HotelRequest request(String city,String address) {
         var r=new HotelRequest(); r.setName(name); r.setCountry("LK"); r.setCity(city); r.setAddress(address);
@@ -47,7 +47,9 @@ class HotelIdentityMySqlIntegrationTest
         assertEquals(first.getHotelId(),service.updateHotel(first.getHotelId(),self).getHotelId());
         assertEquals(HotelStatus.INACTIVE,service.getHotelById(first.getHotelId()).getStatus());
         var other=service.createHotel(request("Galle","11 Main Street"));
-        assertThrows(DuplicateHotelException.class,()->service.updateHotel(other.getHotelId(),update("galle","10 main street")));
+        int otherId = other.getHotelId();
+        var conflictingUpdate = update("galle","10 main street");
+        assertThrows(DuplicateHotelException.class,()->service.updateHotel(otherId,conflictingUpdate));
         assertEquals("11 Main Street",service.getHotelById(other.getHotelId()).getAddress());
         assertNotNull(service.createHotel(request("Colombo","10 Main Street")));
         var country=request("Galle","10 Main Street"); country.setCountry("US");
@@ -55,9 +57,10 @@ class HotelIdentityMySqlIntegrationTest
     }
     @Test void databaseRejectsBypassAndPreservesAccents() {
         service.createHotel(request("Galle","Road"));
+        String duplicateName = "\t"+name.toUpperCase(java.util.Locale.ROOT)+"\n";
         assertThrows(org.springframework.dao.DataIntegrityViolationException.class,()->jdbc.update(
                 "insert into hotel(name,country,city,address,status) values (?,?,?,?, 'ACTIVE')",
-                "\t"+name.toUpperCase(java.util.Locale.ROOT)+"\n"," SRI LANKA "," GALLE "," road "));
+                duplicateName," SRI LANKA "," GALLE "," road "));
         assertNotNull(service.createHotel(request("Gallé","Road")));
     }
     @Test void concurrentDirectInsertsCannotRegisterTheSameIdentity() throws Exception {
@@ -75,7 +78,7 @@ class HotelIdentityMySqlIntegrationTest
             var a=pool.submit(insert); var b=pool.submit(insert);
             var outcomes=new java.util.ArrayList<>(java.util.List.of(a.get(20,TimeUnit.SECONDS),b.get(20,TimeUnit.SECONDS)));
             outcomes.sort(Integer::compareTo); assertEquals(java.util.List.of(0,1062),outcomes);
-            assertEquals(1,jdbc.queryForObject("select count(*) from hotel where identity_name=?",Integer.class,name.toLowerCase(java.util.Locale.ROOT)));
+            assertEquals(1,jdbc.queryForObject("select count(*) from hotel where lower(regexp_replace(coalesce(name,''),'^[[:space:]]+|[[:space:]]+$',''))=?",Integer.class,name.toLowerCase(java.util.Locale.ROOT)));
         } finally { pool.shutdownNow(); }
     }
 }

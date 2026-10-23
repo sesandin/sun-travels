@@ -1,5 +1,6 @@
 package com.suntravels.controller;
 
+import static org.mockito.Mockito.never;
 import com.suntravels.dto.EvaluatedHotelPage;
 import com.suntravels.dto.OfferingOccupancy;
 import com.suntravels.dto.QuotationSearchFilters;
@@ -76,7 +77,7 @@ class QuotationSearchControllerTest
         when( service.roomTypeFilters() ).thenReturn( List.of( new QuotationSearchFilters.RoomTypeOption( 3, "Double" ) ) );
         mvc.perform( get( "/api/search/room-types" ) ).andExpect( status().isOk() )
                 .andExpect( jsonPath( "$[0].name" ).value( "Double" ) );
-        org.mockito.Mockito.verify( service, org.mockito.Mockito.never() ).filters();
+        verify( service, never() ).filters();
     }
 
     @ParameterizedTest

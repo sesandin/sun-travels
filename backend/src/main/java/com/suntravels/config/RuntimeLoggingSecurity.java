@@ -22,7 +22,7 @@ public class RuntimeLoggingSecurity
             CookieCsrfTokenRepository csrfRepository,
             org.springframework.core.env.Environment environment,
             @Value("${management.server.port:9091}") int managementPort,
-            @Value("${server.port:8080}") int applicationPort) throws Exception
+            @Value("${server.port:8080}") int applicationPort)
     {
         var handler = new CsrfTokenRequestAttributeHandler();
         handler.setCsrfRequestAttributeName(null); // GET returns the XSRF-TOKEN cookie for subsequent POSTs.

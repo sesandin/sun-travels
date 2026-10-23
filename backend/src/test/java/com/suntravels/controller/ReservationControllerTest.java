@@ -1,5 +1,6 @@
 package com.suntravels.controller;
 
+import static org.mockito.Mockito.never;
 import com.suntravels.config.SecurityConfig;
 import com.suntravels.dto.ReservationResponse;
 import com.suntravels.exception.ReservationException;
@@ -97,7 +98,7 @@ class ReservationControllerTest
                 .andExpect(jsonPath("$.reservations[0].rooms[0].hotelName").value("Hotel"))
                 .andExpect(jsonPath("$.reservations[0].rooms[0].nightlyPrices").doesNotExist())
                 .andExpect(jsonPath("$.reservations[0].phone").doesNotExist());
-        org.mockito.Mockito.verify(reservations,org.mockito.Mockito.never()).detail(org.mockito.ArgumentMatchers.anyInt());
+        verify(reservations,never()).detail(org.mockito.ArgumentMatchers.anyInt());
     }
 
     // Verifies anonymous requests return401 and authenticated mutations require csrf.

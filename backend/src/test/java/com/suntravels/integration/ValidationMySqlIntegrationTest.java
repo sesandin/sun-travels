@@ -33,14 +33,18 @@ class ValidationMySqlIntegrationTest
         Integer id = jdbc.queryForObject("select last_insert_id()", Integer.class);
         jdbc.update("update hotel set " + column + "=? where hotel_id=?", "a".repeat(max), id);
         assertEquals(max, jdbc.queryForObject("select char_length(" + column + ") from hotel where hotel_id=?", Integer.class, id));
-        assertThrows(DataAccessException.class, () -> jdbc.update("update hotel set " + column + "=? where hotel_id=?", "a".repeat(max+1), id));
+        String updateSql = "update hotel set " + column + "=? where hotel_id=?";
+        String tooLong = "a".repeat(max+1);
+        assertThrows(DataAccessException.class, () -> jdbc.update(updateSql, tooLong, id));
     }
 
     @Test void actualRoomAndCustomerBoundaries()
     {
         jdbc.update("insert into room_type(name,description) values (?,?)", "a".repeat(100), "a".repeat(255));
-        assertThrows(DataAccessException.class, () -> jdbc.update("insert into room_type(name) values (?)", "a".repeat(101)));
+        String longRoomName = "a".repeat(101);
+        assertThrows(DataAccessException.class, () -> jdbc.update("insert into room_type(name) values (?)", longRoomName));
         jdbc.update("insert into customer(name,phone,email) values (?,?,?)", "a".repeat(150), "1".repeat(20), "a".repeat(150));
-        assertThrows(DataAccessException.class, () -> jdbc.update("insert into customer(name) values (?)", "a".repeat(151)));
+        String longCustomerName = "a".repeat(151);
+        assertThrows(DataAccessException.class, () -> jdbc.update("insert into customer(name) values (?)", longCustomerName));
     }
 }

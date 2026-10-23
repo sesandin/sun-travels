@@ -14,6 +14,89 @@ const hotel: Hotel = {
   status: 'INACTIVE',
 };
 describe('HotelForm', () => {
+  it('keeps the picker open for inside clicks and closes it for outside clicks', () => {
+    const fixture = TestBed.createComponent(HotelForm);
+    fixture.componentInstance.reset(hotel);
+    fixture.detectChanges();
+    const picker = fixture.nativeElement.querySelector('details') as HTMLDetailsElement;
+    picker.querySelector('summary')!.click();
+    expect(picker.open).toBe(true);
+    picker.querySelector('input')!.click();
+    expect(picker.open).toBe(true);
+    picker.querySelector('.country-menu')!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(picker.open).toBe(true);
+    document.body.click();
+    expect(picker.open).toBe(false);
+    expect(fixture.componentInstance.form.controls.country.value).toBe('LK');
+    picker.querySelector('summary')!.click();
+    expect(picker.open).toBe(true);
+    (fixture.nativeElement.querySelector('#city') as HTMLInputElement).click();
+    expect(picker.open).toBe(false);
+  });
+
+  it('allows a real click to open the picker and typing to filter its options', async () => {
+    const fixture = TestBed.createComponent(HotelForm);
+    fixture.detectChanges();
+    const picker = fixture.nativeElement.querySelector('details') as HTMLDetailsElement;
+    const summary = picker.querySelector('summary')!;
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    summary.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(false);
+    expect(picker.open).toBe(true);
+    await fixture.whenStable();
+    const search = picker.querySelector('input')!;
+    search.value = 'Sri Lanka';
+    search.dispatchEvent(new Event('input', { bubbles: true }));
+    fixture.detectChanges();
+    expect(fixture.componentInstance.countryQuery.value).toBe('Sri Lanka');
+    expect(picker.querySelectorAll('.country-option')).toHaveLength(1);
+    expect(picker.querySelector('.country-option')!.textContent).toContain('Sri Lanka');
+  });
+
+  it('prevents opening the picker while saving', () => {
+    const fixture = TestBed.createComponent(HotelForm);
+    fixture.componentRef.setInput('busy', true);
+    fixture.detectChanges();
+    const picker = fixture.nativeElement.querySelector('details') as HTMLDetailsElement;
+    const click = new MouseEvent('click', { bubbles: true, cancelable: true });
+    picker.querySelector('summary')!.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(true);
+    expect(picker.open).toBe(false);
+  });
+
+  it('searches and selects a country in one dropdown, then allows clearing', () => {
+    const fixture = TestBed.createComponent(HotelForm);
+    const form = fixture.componentInstance;
+    form.reset(hotel);
+    fixture.detectChanges();
+    const picker = fixture.nativeElement.querySelector('details') as HTMLDetailsElement;
+    expect(picker.querySelector('summary')!.textContent).toContain('Sri Lanka');
+    picker.open = true;
+    form.countryQuery.setValue('US');
+    fixture.detectChanges();
+    const option = Array.from(picker.querySelectorAll<HTMLButtonElement>('.country-option')).find(
+      (button) => button.textContent?.includes('United States'),
+    )!;
+    option.click();
+    fixture.detectChanges();
+    expect(form.form.controls.country.value).toBe('US');
+    expect(picker.open).toBe(false);
+    expect(form.form.valid).toBe(true);
+    picker.open = true;
+    (picker.querySelector('.country-clear') as HTMLButtonElement).click();
+    fixture.detectChanges();
+    expect(form.form.controls.country.hasError('required')).toBe(true);
+    expect(fixture.nativeElement.querySelector('#country-error').textContent).toContain('required');
+  });
+
+  it('shows useful feedback when a country search has no matches', () => {
+    const fixture = TestBed.createComponent(HotelForm);
+    fixture.componentInstance.countryQuery.setValue('no such country');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.country-empty').textContent).toContain(
+      'No countries found',
+    );
+  });
   let component: HotelForm;
   beforeEach(() => {
     TestBed.configureTestingModule({ imports: [HotelForm] });

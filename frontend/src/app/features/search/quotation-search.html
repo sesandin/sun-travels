@@ -1,34 +1,24 @@
 <header class="page-heading">
   <div>
-    <span class="eyebrow">ACCOMMODATION PLANNING</span>
     <h1>Search &amp; Quotations</h1>
-    <p>
-      Compare individual room types for your guests, with a clear price for every occupied night.
-    </p>
+    <p>Find rooms for your guests and compare prices for the full stay.</p>
   </div>
 </header>
 <section aria-labelledby="search-title" class="panel">
-  <h2 id="search-title">Stay and Requested Rooms</h2>
+  <h2 id="search-title">Plan your stay</h2>
   @if (setupLoading()) {
     <p>
-      <output>Loading search dates, hotels and room types...</output>
+      <output>Loading search options...</output>
     </p>
   }
   @if (setupError()) {
     <p class="error-message" role="alert">{{ setupError() }}</p>
     <button (click)="loadSetup()" class="secondary" type="button">Retry search setup</button>
   }
-  @if (limits(); as l) {
-    <p class="muted">
-      Business date: {{ l.businessDate }} (Asia/Colombo). Up to {{ l.maxRooms }} rooms and
-      {{ l.maxNights }} nights. Adult capacity depends on each room offering.
-    </p>
-  }
   <form (ngSubmit)="search()" [formGroup]="form">
     <fieldset [disabled]="searching() || setupLoading() || !!setupError()">
       <div class="form-section-heading">
         <h3>Stay Dates</h3>
-        <span class="field-kind">Required</span>
       </div>
       <div class="form-grid">
         <div>
@@ -77,7 +67,7 @@
         <div aria-live="polite" class="checkout-preview">
           <span class="field-kind">Calculated checkout</span>
           <output>{{ form.controls.checkOut.value || 'Select the customer’s stay dates' }}</output>
-          <small>Checkout day is not an occupied night.</small>
+          <small>You are not charged for the checkout night.</small>
         </div>
       </div>
       @if (form.touched && (form.hasError('dates') || form.hasError('stay'))) {
@@ -89,8 +79,7 @@
       }
       <div class="room-requests" formArrayName="rooms">
         <div class="form-section-heading">
-          <h3>Number of Rooms: {{ rooms.length }}</h3>
-          <span class="field-kind">Adults are required for each room</span>
+          <h3>Rooms &amp; guests ({{ rooms.length }})</h3>
         </div>
         @for (room of rooms.controls; track room; let i = $index) {
           <div [formGroupName]="i" class="requested-room">
@@ -161,92 +150,141 @@
           <h3 id="optional-filters-title">Destination and Filters</h3>
           <span class="field-kind">City or hotel required</span>
         </div>
-        <div class="form-grid">
-          <div>
-            <label for="search-city">Destination city (required unless a hotel is selected)</label>
-            <input
-              [formControl]="cityQuery"
-              id="search-city"
-              [attr.aria-required]="form.controls.hotelId.value === null"
-              aria-describedby="destination-guidance"
-              aria-controls="city-matches"
-              [attr.aria-expanded]="cityMatches().length > 0"
-              maxlength="100"
-              placeholder="Type at least two characters"
-            />
-            <small id="destination-guidance"
-              >Select a city and country from the suggestions, or select a specific hotel
-              below.</small
-            >
-            @if (cityQuery.value || selectedCity()) {
-              <button class="text-button" type="button" (click)="clearCity()">
-                Clear destination
-              </button>
-            }
-            @if (selectedCity(); as destination) {
-              <small
-                >Selected: {{ destination.city }} -
-                {{ destination.country || 'Country not recorded' }}</small
-              >
-            }
-            @if (cityLoading()) {
-              <p role="status">Loading cities...</p>
-            }
-            <ul id="city-matches" aria-label="Matching destinations">
-              @for (city of cityMatches(); track city.city + ':' + city.country) {
-                <li>
-                  <button class="text-button" type="button" (click)="selectCity(city)">
-                    {{ city.city }} - {{ city.country || 'Country not recorded' }}
-                  </button>
-                </li>
+        <p class="destination-hint">Choose a city or a specific hotel from the suggestions.</p>
+        <div class="form-grid destination-grid">
+          <div
+            #cityLookup
+            class="destination-lookup"
+            (focusin)="activeLookup.set('city')"
+            (focusout)="leaveLookup($event)"
+            (keydown.escape)="activeLookup.set(null)"
+          >
+            <label for="search-city">Destination city</label>
+            <div class="lookup-input" [class.has-selection]="selectedCity()">
+              <input
+                [formControl]="cityQuery"
+                id="search-city"
+                autocomplete="off"
+                [attr.aria-required]="form.controls.hotelId.value === null"
+                aria-describedby="destination-guidance"
+                aria-controls="city-matches"
+                [attr.aria-expanded]="activeLookup() === 'city' && cityMatches().length > 0"
+                (click)="activeLookup.set('city')"
+                maxlength="100"
+                placeholder="Search cities..."
+              />
+              @if (cityQuery.value || selectedCity()) {
+                <button
+                  type="button"
+                  class="lookup-clear"
+                  aria-label="Clear destination"
+                  (click)="clearCity()"
+                >
+                  &times;
+                </button>
               }
-            </ul>
-            @if (cityLookupDone() && !cityMatches().length && !cityError()) {
-              <p role="status">No matching destinations.</p>
-            }
+            </div>
+            <small id="destination-guidance" class="lookup-selection">
+              @if (selectedCity(); as destination) {
+                {{ destination.city }} &middot; {{ destination.country || 'Country not recorded' }}
+              } @else {
+                Select a city to confirm your destination.
+              }
+            </small>
+            <div
+              class="lookup-menu"
+              [hidden]="activeLookup() !== 'city' || !(cityLoading() || cityLookupDone())"
+            >
+              @if (cityLoading()) {
+                <output aria-live="polite">Searching cities...</output>
+              }
+              <ul id="city-matches" aria-label="Matching destinations">
+                @for (city of cityMatches(); track city.city + ':' + city.country) {
+                  <li>
+                    <button type="button" (click)="selectCity(city)">
+                      <strong>{{ city.city }}</strong>
+                      <span>{{ city.country || 'Country not recorded' }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+              @if (cityLookupDone() && !cityMatches().length && !cityError()) {
+                <output aria-live="polite">No matching destinations.</output>
+              }
+            </div>
             @if (cityError()) {
               <p class="field-error" role="alert">{{ cityError() }}</p>
             }
-            @if (form.hasError('destination')) {
-              <p class="field-error" role="alert">Enter a city or select a hotel.</p>
+            @if (
+              form.hasError('destination') &&
+              (form.touched || cityQuery.touched || hotelQuery.touched)
+            ) {
+              <p class="field-error" role="alert">Select a suggested city or hotel.</p>
             }
           </div>
-          <div>
-            <label for="search-hotel">Hotel (optional)</label>
-            <input
-              id="search-hotel"
-              type="search"
-              [formControl]="hotelQuery"
-              maxlength="100"
-              autocomplete="off"
-              placeholder="Type at least two characters"
-              aria-describedby="hotel-help"
-              aria-controls="hotel-matches"
-              [attr.aria-expanded]="hotelMatches().length > 0"
-            />
-            <small id="hotel-help"
-              >Search by the start of a hotel name, then select a match. Optional when a city is
-              entered.</small
-            >
-            @if (hotelQuery.value || selectedHotel()) {
-              <button type="button" class="text-button" (click)="clearHotel()">Clear hotel</button>
-            }
-            @if (hotelLoading() || hotelResolving()) {
-              <p role="status">Loading hotels...</p>
-            }
-            <ul id="hotel-matches" aria-label="Matching hotels">
-              @for (hotel of hotelMatches(); track hotel.hotelId) {
-                <li>
-                  <button class="text-button" type="button" (click)="selectHotel(hotel)">
-                    {{ hotel.name }}{{ hotel.city ? ' - ' + hotel.city : ''
-                    }}{{ hotel.country ? ' - ' + hotel.country : '' }}
-                  </button>
-                </li>
+          <div
+            #hotelLookup
+            class="destination-lookup"
+            (focusin)="activeLookup.set('hotel')"
+            (focusout)="leaveLookup($event)"
+            (keydown.escape)="activeLookup.set(null)"
+          >
+            <label for="search-hotel">Hotel <span class="optional-label">(optional)</span></label>
+            <div class="lookup-input" [class.has-selection]="selectedHotel()">
+              <input
+                id="search-hotel"
+                type="text"
+                [formControl]="hotelQuery"
+                maxlength="100"
+                autocomplete="off"
+                placeholder="Search hotel names..."
+                aria-describedby="hotel-help"
+                aria-controls="hotel-matches"
+                (click)="activeLookup.set('hotel')"
+                [attr.aria-expanded]="activeLookup() === 'hotel' && hotelMatches().length > 0"
+              />
+              @if (hotelQuery.value || selectedHotel()) {
+                <button
+                  type="button"
+                  class="lookup-clear"
+                  aria-label="Clear hotel"
+                  (click)="clearHotel()"
+                >
+                  &times;
+                </button>
               }
-            </ul>
-            @if (hotelLookupDone() && !hotelMatches().length && !hotelError()) {
-              <p role="status">No matching hotels.</p>
-            }
+            </div>
+            <small id="hotel-help" class="lookup-selection">
+              @if (selectedHotel(); as hotel) {
+                {{ hotel.city }}{{ hotel.country ? ' - ' + hotel.country : '' }}
+              } @else {
+                Leave blank to search all hotels in your destination.
+              }
+            </small>
+            <div
+              class="lookup-menu"
+              [hidden]="
+                activeLookup() !== 'hotel' ||
+                !(hotelLoading() || hotelResolving() || hotelLookupDone())
+              "
+            >
+              @if (hotelLoading() || hotelResolving()) {
+                <output aria-live="polite">Searching hotels...</output>
+              }
+              <ul id="hotel-matches" aria-label="Matching hotels">
+                @for (hotel of hotelMatches(); track hotel.hotelId) {
+                  <li>
+                    <button type="button" (click)="selectHotel(hotel)">
+                      <strong>{{ hotel.name }}</strong>
+                      <span>{{ hotel.city }}{{ hotel.country ? ' - ' + hotel.country : '' }}</span>
+                    </button>
+                  </li>
+                }
+              </ul>
+              @if (hotelLookupDone() && !hotelMatches().length && !hotelError()) {
+                <output aria-live="polite">No matching hotels.</output>
+              }
+            </div>
             @if (hotelError()) {
               <p class="field-error" role="alert">{{ hotelError() }}</p>
             }
@@ -272,11 +310,20 @@
         </button>
       </div>
     </fieldset>
+    @if (limits(); as l) {
+      <details class="search-help search-limits-footer">
+        <summary>Search limits</summary>
+        <p class="muted">
+          Up to {{ l.maxRooms }} rooms and {{ l.maxNights }} nights. Guest limits vary by room type.
+          Booking date: {{ l.businessDate }} (Asia/Colombo).
+        </p>
+      </details>
+    }
   </form>
 </section>
 @if (searching()) {
   <section class="panel state">
-    <output> Checking eligible rooms, nightly inventory and prices...</output>
+    <output> Checking rooms and prices...</output>
   </section>
 }
 @if (error()) {
@@ -295,14 +342,19 @@
         {{ result.checkIn }} to {{ result.checkOut }} &middot; {{ result.nights }} occupied nights
       </p>
     </div>
-    <p class="muted">
-      Prices and availability may change until you confirm your booking. Each room-type option
-      covers all the rooms you requested. Hotels are ordered by hotel ID, not by lowest price.
-      Prices are shown in their original currency without conversion.
+    <p class="muted results-note">
+      Prices include all rooms and nights. Subject to availability at booking.
     </p>
+    <details class="search-help">
+      <summary>About these prices</summary>
+      <p class="muted">
+        Results are not sorted by price; currencies are not converted. Each option covers all
+        requested rooms and nights. Prices may change until booking.
+      </p>
+    </details>
     @if (!groupedQuotations().length) {
       <div aria-atomic="true" aria-live="polite" class="panel state">
-        <h3>No Single Room Type Can Accommodate This Request</h3>
+        <h3>No single room type fits your request</h3>
         <p>
           {{
             canCustomize() && customizationGroups().length
@@ -321,11 +373,13 @@
           {{ hotel.hotelName }}{{ hotel.city ? ' - ' + hotel.city : '' }}
         </h3>
         @for (quote of hotel.quotations; track quote.rooms[0].offeringId) {
-          <article class="panel quotation">
+          <article class="quotation">
             <header class="quote-heading">
               <div>
-                <h3 class="room-type-title">{{ quote.rooms[0].roomTypeName }}</h3>
-                <span class="availability-status available">Available</span>
+                <div class="room-title-line">
+                  <h3 class="room-type-title">{{ quote.rooms[0].roomTypeName }}</h3>
+                  <span class="availability-status available">Available</span>
+                </div>
                 <p>
                   {{ quote.rooms.length }}
                   {{ quote.rooms.length === 1 ? 'room' : 'rooms' }} requested &middot;
@@ -335,7 +389,16 @@
               <div class="quote-total">
                 <span>Complete stay total</span>
                 <strong>{{ quote.totalPrice | number: '1.2-2' }} {{ quote.currencyCode }}</strong>
-                <small>Customer selling price - all requested rooms and nights</small>
+                <div class="quote-actions">
+                  <button
+                    (click)="reserve(quote)"
+                    [disabled]="quote.availabilityStatus !== 'AVAILABLE' || edited() || searching()"
+                    class="primary"
+                    type="button"
+                  >
+                    {{ bookLabel(quote) }}
+                  </button>
+                </div>
               </div>
             </header>
             @for (group of quote.offeringGroups; track group.offeringId) {
@@ -354,83 +417,81 @@
                     }
                   </div>
                 </header>
-                @for (room of group.rooms; track room.roomNumber) {
-                  <section class="quoted-room">
-                    <div class="room-summary">
-                      <div class="room-info">
-                        <h4>Room {{ room.roomNumber }}</h4>
-                        <p class="room-adults">
-                          {{ room.adults }} {{ room.adults === 1 ? 'adult' : 'adults' }}
-                        </p>
+                <details class="room-details">
+                  <summary>Room details and nightly prices</summary>
+                  @for (room of group.rooms; track room.roomNumber) {
+                    <section class="quoted-room">
+                      <div class="room-summary">
+                        <div class="room-info">
+                          <h4>Room {{ room.roomNumber }}</h4>
+                          <p class="room-adults">
+                            {{ room.adults }} {{ room.adults === 1 ? 'adult' : 'adults' }}
+                          </p>
+                        </div>
+                        <div class="room-pricing">
+                          <p class="room-total">
+                            <span class="sr-only">Room total: </span>
+                            <strong
+                              >{{ room.totalPrice | number: '1.2-2' }}
+                              {{ quote.currencyCode }}</strong
+                            >
+                          </p>
+                        </div>
                       </div>
-                      <div class="room-pricing">
-                        <p class="room-total">
-                          <span class="sr-only">Room total: </span>
-                          <strong
-                            >{{ room.totalPrice | number: '1.2-2' }}
-                            {{ quote.currencyCode }}</strong
-                          >
-                        </p>
-                      </div>
-                    </div>
-                    <details>
-                      <summary>Nightly price breakdown for room {{ room.roomNumber }}</summary>
-                      <section aria-label="Scrollable results" class="table-scroll" tabindex="0">
-                        <table>
-                          <caption class="sr-only">
-                            Room
-                            {{
-                              room.roomNumber
-                            }}
-                            nightly selling prices in
-                            {{
-                              quote.currencyCode
-                            }}
-                          </caption>
-                          <thead>
-                            <tr>
-                              <th scope="col">Occupied night</th>
-                              <th scope="col">Rate source</th>
-                              <th scope="col">Adults</th>
-                              <th scope="col">Selling price / room</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            @for (night of room.nightlyPrices; track night.occupiedDate) {
+                      <details>
+                        <summary>Nightly price breakdown for room {{ room.roomNumber }}</summary>
+                        <section
+                          aria-label="Scrollable results"
+                          class="table-scroll"
+                          tabindex="0"
+                          role="region"
+                        >
+                          <table>
+                            <caption class="sr-only">
+                              Room
+                              {{
+                                room.roomNumber
+                              }}
+                              nightly selling prices in
+                              {{
+                                quote.currencyCode
+                              }}
+                            </caption>
+                            <thead>
                               <tr>
-                                <td>{{ night.occupiedDate }}</td>
-                                <td>
-                                  <span
-                                    [class.seasonal]="night.source === 'SEASONAL'"
-                                    class="badge"
-                                    >{{ night.source }}</span
-                                  >
-                                </td>
-                                <td>{{ room.adults }}</td>
-                                <td>
-                                  {{ night.sellingPrice | number: '1.2-2' }}
-                                  {{ quote.currencyCode }}
-                                </td>
+                                <th scope="col">Occupied night</th>
+                                <th scope="col">Rate source</th>
+                                <th scope="col">Adults</th>
+                                <th scope="col">Selling price / room</th>
                               </tr>
-                            }
-                          </tbody>
-                        </table>
-                      </section>
-                    </details>
-                  </section>
-                }
+                            </thead>
+                            <tbody>
+                              @for (night of room.nightlyPrices; track night.occupiedDate) {
+                                <tr>
+                                  <td>{{ night.occupiedDate }}</td>
+                                  <td>
+                                    <span
+                                      [class.seasonal]="night.source === 'SEASONAL'"
+                                      class="badge"
+                                      >{{ night.source }}</span
+                                    >
+                                  </td>
+                                  <td>{{ room.adults }}</td>
+                                  <td>
+                                    {{ night.sellingPrice | number: '1.2-2' }}
+                                    {{ quote.currencyCode }}
+                                  </td>
+                                </tr>
+                              }
+                            </tbody>
+                          </table>
+                        </section>
+                      </details>
+                    </section>
+                  }
+                </details>
               </section>
             }
-            <footer class="quote-actions">
-              <button
-                (click)="reserve(quote)"
-                [disabled]="quote.availabilityStatus !== 'AVAILABLE' || edited() || searching()"
-                class="primary"
-                type="button"
-              >
-                {{ bookLabel(quote) }}
-              </button>
-            </footer>
           </article>
         }
       </section>
@@ -475,9 +536,7 @@
             Close customization
           </button>
         </header>
-        <p>
-          Choose room types within one hotel and approved contract. Adult counts remain as entered.
-        </p>
+        <p>Choose a room type for each room. All rooms must use the same hotel and contract.</p>
         @if (!selectionLoading() && !selectionError() && !customizationGroups().length) {
           <p>No room choices are available for customization. Try different filters or dates.</p>
         }
@@ -495,9 +554,8 @@
         @if (customOptions().length) {
           <h3>{{ customOptions()[0].hotelName }}</h3>
           <p class="muted">
-            All rooms below use the same approved contract. Inventory counts are for the entire stay
-            before these selections. Only room types that fit each room's adult count and remaining
-            shared inventory are listed.
+            Available choices fit your guest counts and room selections. Room counts show
+            availability for the full stay before your selections.
           </p>
           @for (id of selectedIds(); track $index; let i = $index) {
             <div class="requested-room">
@@ -528,8 +586,7 @@
               }
               @if (!roomOptions(i).length) {
                 <p class="field-error">
-                  No room type can accommodate this room with the current selections. Change another
-                  room type or search again.
+                  No rooms fit this selection. Change another room type or try a new search.
                 </p>
               }
             </div>

@@ -17,37 +17,72 @@
     <div class="fields">
       @for (field of fields; track field.key) {
         <div [class.wide]="field.key === 'address' || field.key === 'name'">
-          <label [for]="field.key"
+          <label [attr.for]="field.key === 'country' ? 'country-search' : field.key"
             >{{ field.label }} <span>{{ field.required ? '*' : '(optional)' }}</span>
           </label>
           @if (field.key === 'country') {
-            <label for="country-search">Find a country</label>
-            <input
-              id="country-search"
-              type="search"
-              [formControl]="countryQuery"
-              placeholder="Search country name or code"
-            />
-            <select
-              id="country"
-              formControlName="country"
-              required
-              aria-describedby="country-error"
-              [attr.aria-invalid]="!!validationMessage('country')"
+            <details
+              #countryPicker
+              class="country-picker"
+              (toggle)="countryPickerToggled(countryPicker)"
+              (keydown.escape)="countryPicker.open = false; countrySummary.focus()"
             >
-              <option value="">Choose a country</option>
-              @if (legacyCountry) {
-                <option [value]="legacyCountry" disabled>
-                  {{ legacyCountry }} (select an ISO country)
-                </option>
+              <summary
+                #countrySummary
+                id="country"
+                aria-label="Country (required)"
+                aria-describedby="country-help country-error"
+                [attr.aria-disabled]="busy()"
+                (click)="countryPickerClicked($event)"
+                [class.placeholder]="!selectedCountryName"
+                [attr.aria-invalid]="!!validationMessage('country')"
+              >
+                <span>{{ selectedCountryName || 'Select a country' }}</span>
+                <span class="country-chevron" aria-hidden="true">⌄</span>
+              </summary>
+              <div class="country-menu">
+                <input
+                  id="country-search"
+                  type="search"
+                  autocomplete="off"
+                  [formControl]="countryQuery"
+                  placeholder="Search by name or code…"
+                />
+                <div class="country-options" aria-label="Countries">
+                  @for (country of countryOptions; track country.code) {
+                    <button
+                      type="button"
+                      class="country-option"
+                      [attr.aria-pressed]="form.controls.country.value === country.code"
+                      (click)="selectCountry(country.code, countryPicker)"
+                    >
+                      <span>{{ country.name }}</span>
+                      <span class="country-code">{{ country.code }}</span>
+                    </button>
+                  } @empty {
+                    <p class="country-empty" role="status">
+                      No countries found. Try another name or code.
+                    </p>
+                  }
+                </div>
+                @if (selectedCountryName) {
+                  <button
+                    type="button"
+                    class="country-clear"
+                    (click)="selectCountry('', countryPicker)"
+                  >
+                    Clear selection
+                  </button>
+                }
+              </div>
+            </details>
+            <small id="country-help" class="country-help">
+              @if (legacyCountry && !selectedCountryName) {
+                Previously saved as “{{ legacyCountry }}”. Please select a country.
+              } @else {
+                Type a country name or two-letter code to find it quickly.
               }
-              @for (country of countryOptions; track country.code) {
-                <option [value]="country.code">{{ country.name }}</option>
-              }
-            </select>
-            @if (!countryOptions.length) {
-              <small>No matching countries.</small>
-            }
+            </small>
           } @else {
             <input
               [attr.aria-describedby]="field.key + '-error'"

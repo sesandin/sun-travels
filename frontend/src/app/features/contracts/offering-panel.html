@@ -6,8 +6,7 @@
   </p>
   @if (targetMissing()) {
   <p class="error-message" role="alert">
-    The linked offering is not part of this contract. The current contract offerings are shown
-    below.
+    This room offering is not in this contract. This contract's offerings are shown below.
   </p>
   }
   @if (loading()) {
@@ -84,12 +83,11 @@
   @if (!canMaintain()) {
   @if (contract().status === 'SUSPENDED' && !isExpired()) {
   <p>
-    Offering status can still be changed. ENABLED offerings remain unavailable for new sales
-    until the contract is APPROVED and the hotel is ACTIVE.
+    You can change room status, but new bookings require an active hotel and an approved contract.
   </p>
   }
   <p>
-    Historical offerings are preserved. Rate and seasonal maintenance is unavailable for
+    Rates cannot be edited for
     {{ isExpired() ? 'expired' : contract().status }} contracts.
   </p>
   }
@@ -240,8 +238,7 @@
         </p>
         }
         <p>
-          Room type, allocated rooms and maximum adults remain locked. Confirmed pricing remains
-          unchanged.
+          Only the rate can be edited. Existing bookings keep their prices.
         </p>
         <div class="editor-actions">
           <button (click)="cancel()" [disabled]="saving()" class="secondary" type="button">
@@ -263,8 +260,7 @@
           <option>SUSPENDED</option>
         </select>
         <p>
-          Suspension prevents this offering being used for new business. Existing confirmed
-          reservations remain unchanged.
+          Suspension stops new bookings for this room type. Existing bookings are unchanged.
         </p>
         <div class="editor-actions">
           <button (click)="cancel()" [disabled]="saving()" class="secondary" type="button">

@@ -16,19 +16,20 @@ import java.util.UUID;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class RequestCorrelationFilter extends OncePerRequestFilter
 {
+    private static final String REQUEST_ID = "requestId";
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException
     {
-        String previous = MDC.get("requestId");
+        String previous = MDC.get(REQUEST_ID);
         // Generate locally: client headers cannot inject log text or impersonate another request.
         String id = UUID.randomUUID().toString();
-        MDC.put("requestId", id);
+        MDC.put(REQUEST_ID, id);
         response.setHeader("X-Request-ID", id);
         try { chain.doFilter(request, response); }
         finally {
-            if (previous == null) MDC.remove("requestId");
-            else MDC.put("requestId", previous);
+            if (previous == null) MDC.remove(REQUEST_ID);
+            else MDC.put(REQUEST_ID, previous);
         }
     }
 }

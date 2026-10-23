@@ -195,7 +195,7 @@ describe('Contract management', () => {
     expect(component.hotelLookupDone()).toBe(true);
     expect(component.hotels()).toEqual([]);
   });
-  it('cancels stale suggestions, filters status, selects an ID and clears it', async () => {
+  it('cancels stale suggestions, searches all statuses, selects an ID and clears it', async () => {
     vi.useFakeTimers();
     load();
     component.openEditor();
@@ -204,9 +204,8 @@ describe('Contract management', () => {
     const old = http.expectOne(r => r.url === hotelsUrl + '/options');
     component.hotelQuery.setValue('Ocean');
     expect(old.cancelled).toBe(true);
-    component.hotelStatus.setValue('INACTIVE');
     await vi.advanceTimersByTimeAsync(300);
-    const request = http.expectOne(r => r.url === hotelsUrl + '/options' && r.params.get('status') === 'INACTIVE');
+    const request = http.expectOne(r => r.url === hotelsUrl + '/options' && !r.params.has('status'));
     const hotel = { hotelId: 3, name: 'Ocean Hotel', city: 'Galle', country: 'Sri Lanka', status: 'INACTIVE' as const };
     request.flush([hotel]);
     component.selectHotel(hotel);
@@ -330,7 +329,7 @@ describe('Contract management', () => {
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
     ).find((b) => b.textContent?.trim() === 'Approve');
     expect(approve?.disabled).toBe(false);
-    expect(fixture.nativeElement.textContent).toContain('conflicting confirmed commitments');
+    expect(fixture.nativeElement.textContent).toContain('Changes must not conflict with confirmed bookings');
     http.expectOne(url + '/7/offerings').flush([]);
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No offerings for this contract');

@@ -1,5 +1,6 @@
 import {
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
@@ -23,6 +24,9 @@ import { apiError } from '../../services/api-error';
 })
 export class ReservationDetail implements OnInit {
   readonly reservation = signal<Reservation | null>(null);
+  readonly hotelNames = computed(() => [
+    ...new Map(this.reservation()?.rooms.map((room) => [room.hotelId, room.hotelName])).values(),
+  ]);
   readonly loading = signal(false);
   readonly cancelling = signal(false);
   readonly error = signal('');

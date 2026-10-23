@@ -24,6 +24,8 @@ class ContractHotelLookupMySqlIntegrationTest
         for (int i=0; i<25; i++) jdbc.update("insert into hotel(name,city,country,address,status) values ('Lookup Same','Galle','Sri Lanka',?,?)", "Fixture street " + i, i%2==0 ? "ACTIVE" : "INACTIVE");
         var options = service.options("lookup", null);
         assertEquals(20, options.size());
+        assertEquals( options.stream().map( h -> h.getHotelId() ).toList(),
+                service.options( "sAmE", null ).stream().map( h -> h.getHotelId() ).toList() );
         var json = tools.jackson.databind.json.JsonMapper.builder().build().valueToTree(options);
         assertEquals(5, json.get(0).size());
         assertEquals(options.get(0).getHotelId().intValue(), json.get(0).get("hotelId").asInt());
@@ -42,5 +44,8 @@ class ContractHotelLookupMySqlIntegrationTest
         assertTrue(service.options("missing fixture", null).isEmpty());
         jdbc.update("insert into hotel(name,status) values ('Lookup%Literal','ACTIVE')");
         assertEquals(1, service.options("Lookup%", null).size());
+        assertEquals(1, service.options("%liTERal", null).size());
+        jdbc.update("insert into hotel(name,status) values ('Lookup!_Literal','INACTIVE')");
+        assertEquals(1, service.options("!_literal", HotelStatus.INACTIVE).size());
     }
 }

@@ -40,16 +40,17 @@ describe('Booked price breakdown', () => {
     expect(element.querySelector('tbody')?.textContent).not.toContain('2026-11-13');
     expect(element.querySelector('tfoot')?.textContent).toContain('369.60 USD');
     expect(element.textContent).toContain('2 adults');
-    expect(element.textContent).toContain('including markup');
+    expect(element.textContent).toContain('The checkout night is not charged.');
+    expect(element.textContent).not.toContain('rounded to 2 decimal places');
     expect(element.querySelector('summary')?.textContent).toContain('room 1');
     expect(
       Array.from(element.querySelectorAll('thead th'), (cell) => cell.textContent?.trim()),
     ).toEqual([
-      'Occupied night',
-      'Booked rate / adult / night',
-      'Booked markup',
+      'Night',
+      'Rate per adult',
+      'Markup',
       'Adults',
-      'Selling price / room',
+      'Room price',
     ]);
     expect(element.querySelector('tbody tr td:nth-child(2)')?.textContent).toContain('55.00 USD');
     expect(element.querySelector('tbody tr td:nth-child(3)')?.textContent).toContain('12%');
@@ -88,7 +89,7 @@ describe('Booked price breakdown', () => {
   it('does not invent a total when historical snapshots are incomplete', () => {
     const element = render(null, []);
     expect(element.querySelector('tfoot')).toBeNull();
-    expect(element.textContent).toContain('complete room total is unavailable');
+    expect(element.textContent).toContain('room total is unavailable');
     expect(element.textContent).not.toContain('0.00 USD');
   });
 });

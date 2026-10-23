@@ -3,8 +3,7 @@
     <span class="eyebrow">RESERVATIONS</span>
     <h1>Review and Confirm</h1>
     <p>
-      Confirm accommodation directly with the customer. Availability and price are rechecked when
-      you confirm.
+      Review the booking with your customer. We will check the price and availability again at confirmation.
     </p>
   </div>
   <a routerLink="/search">Back to search</a>
@@ -21,7 +20,7 @@
       </dd>
     </div>
     <div>
-      <dt>Checkout (exclusive)</dt>
+      <dt>Checkout</dt>
       <dd>
         <time [attr.datetime]="q.checkOut">{{ q.checkOut }}</time>
       </dd>
@@ -43,7 +42,7 @@
     </p>
     <details>
       <summary>Nightly selling prices</summary>
-      <section aria-label="Nightly selling prices" class="table-scroll" tabindex="0">
+      <section aria-label="Nightly selling prices" class="table-scroll" tabindex="0" role="region">
         <table>
           <thead>
           <tr>
@@ -193,8 +192,7 @@
     <p>Previously: {{ old.totalPrice | number: '1.2-2' }} {{ old.currencyCode }}</p>
     <p>Current: {{ q.totalPrice | number: '1.2-2' }} {{ q.currencyCode }}</p>
     <p>
-      Review the updated amount with the customer and accept it below. No reservation was
-      created by the price-change response.
+      The price has changed. Review and accept the new total before booking. No booking has been made yet.
     </p>
   </div>
   }

@@ -18,5 +18,6 @@ class CountryCatalogTest
         assertFalse( CountryCatalog.contains( null ) );
         assertEquals( "Historical country", CountryCatalog.filterName( " Historical country " ) );
         assertEquals( "Sri Lanka", CountryCatalog.filterName( "LK" ) );
+        assertThrows( IllegalArgumentException.class, () -> CountryCatalog.filterName( null ) );
     }
 }

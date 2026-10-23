@@ -128,6 +128,31 @@ describe('Hotel-paginated accommodation search', () => {
     vi.useRealTimers();
   });
 
+  it('opens suggestion panels on focus and dismisses them outside or with Escape', () => {
+    c.cityMatches.set([{ city: 'Colombo', country: 'Sri Lanka' }]);
+    c.cityLookupDone.set(true);
+    fixture.detectChanges();
+    const city = fixture.nativeElement.querySelector('#search-city') as HTMLInputElement;
+    city.focus();
+    fixture.detectChanges();
+    const menu = fixture.nativeElement.querySelector('#city-matches').parentElement as HTMLElement;
+    expect(menu.hidden).toBe(false);
+    expect(menu.querySelector('strong')!.textContent).toBe('Colombo');
+    city.click();
+    fixture.detectChanges();
+    expect(menu.hidden).toBe(false);
+    document.body.click();
+    fixture.detectChanges();
+    expect(menu.hidden).toBe(true);
+    city.click();
+    fixture.detectChanges();
+    expect(menu.hidden).toBe(false);
+    city.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    expect(menu.hidden).toBe(true);
+    expect(c.form.controls.city.value).toBe('Colombo');
+  });
+
   it('debounces city lookup, keeps countries distinct and sends the selected country on every page', async () => {
     vi.useFakeTimers();
     c.form.controls.city.setValue('');
@@ -234,8 +259,11 @@ describe('Hotel-paginated accommodation search', () => {
     expect(req.request.params.get('term')).toBe('Oc');
     req.flush([{ hotelId: 7, name: 'Ocean Hotel', city: 'Colombo' }]);
     fixture.detectChanges();
-    expect(fixture.nativeElement.querySelector('#hotel-matches').textContent).toContain(
-      'Ocean Hotel - Colombo',
+    expect(fixture.nativeElement.querySelector('#hotel-matches strong').textContent).toBe(
+      'Ocean Hotel',
+    );
+    expect(fixture.nativeElement.querySelector('#hotel-matches span').textContent).toContain(
+      'Colombo',
     );
     expect(c.form.controls.hotelId.value).toBeNull();
   });
@@ -324,7 +352,8 @@ describe('Hotel-paginated accommodation search', () => {
     expect(c.form.valid).toBe(valid);
     if (!valid) {
       c.search();
-      expect(fixture.nativeElement.textContent).toContain('Enter a city or select a hotel.');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.textContent).toContain('Select a suggested city or hotel.');
       http.expectNone(api + '/search/hotel-pages');
     } else {
       c.search();
@@ -472,7 +501,7 @@ describe('Hotel-paginated accommodation search', () => {
       '2 rooms available throughout stay',
     ])
       expect(text).toContain(value);
-    expect(text).toContain('Hotels are ordered by hotel ID');
+    expect(text).toContain('Results are not sorted by price');
     expect(text).not.toContain('Markup');
     expect(text).not.toContain('Hotelier rate');
     expect(fixture.nativeElement.querySelector('details').open).toBe(false);
@@ -533,7 +562,7 @@ describe('Hotel-paginated accommodation search', () => {
     search({ ...page(), hotels: [] });
     expect(c.nextAfterHotelId()).toBeNull();
     expect(fixture.nativeElement.querySelector('.load-more')).toBeNull();
-    expect(fixture.nativeElement.textContent).toContain('No Single Room Type');
+    expect(fixture.nativeElement.textContent).toContain('No single room type fits your request');
   });
   it('keeps earlier pages and retries the same cursor after a load error', () => {
     search(page(7, 20));

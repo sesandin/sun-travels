@@ -42,13 +42,33 @@ const dateRange: ValidatorFn = (group) => {
   imports: [Pagination, ReactiveFormsModule, OfferingPanel],
   templateUrl: './contract-list.html',
   styleUrl: './contract-list.scss',
+  host: { '(document:click)': 'dismissHotelLookup($event)' },
 })
 export class ContractList implements OnInit {
+  readonly hotelLookupOpen = signal(false);
+  private readonly hotelPicker = viewChild<ElementRef<HTMLElement>>('hotelPicker');
+
+  dismissHotelLookup(event: MouseEvent): void {
+    if (event.target instanceof Node && !this.hotelPicker()?.nativeElement.contains(event.target)) {
+      this.hotelLookupOpen.set(false);
+    }
+  }
+
+  leaveHotelLookup(event: FocusEvent): void {
+    if (
+      !(event.relatedTarget instanceof Node) ||
+      !(event.currentTarget as HTMLElement).contains(event.relatedTarget)
+    ) {
+      this.hotelLookupOpen.set(false);
+    }
+  }
   readonly linkedOffering = signal<number | null>(null);
   readonly linkError = signal('');
   readonly hotels = signal<ManagementHotelOption[]>([]);
-  readonly hotelQuery = new FormControl('', { nonNullable: true, validators: [Validators.maxLength(150)] });
-  readonly hotelStatus = new FormControl('', { nonNullable: true });
+  readonly hotelQuery = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.maxLength(150)],
+  });
   readonly selectedHotel = signal<ManagementHotelOption | null>(null);
   readonly hotelLookupDone = signal(false);
   private readonly hotelLookup = new Subject<void>();
@@ -82,7 +102,11 @@ export class ContractList implements OnInit {
       markupPercentage: new FormControl<number | null>(0, [Validators.required, decimal]),
       currencyCode: new FormControl('', {
         nonNullable: true,
-        validators: [Validators.required, Validators.maxLength(3), Validators.pattern(/^[A-Z]{3}$/)],
+        validators: [
+          Validators.required,
+          Validators.maxLength(3),
+          Validators.pattern(/^[A-Z]{3}$/),
+        ],
       }),
     },
     { validators: dateRange },
@@ -114,34 +138,40 @@ export class ContractList implements OnInit {
   // Loads the initial data and subscriptions needed by this component.
   ngOnInit() {
     this.loadContracts();
-    this.hotelLookup.pipe(
-      switchMap(() => {
-        this.hotels.set([]);
-        this.hotelError.set('');
-        this.hotelLookupDone.set(false);
+    this.hotelLookup
+      .pipe(
+        switchMap(() => {
+          this.hotels.set([]);
+          this.hotelError.set('');
+          this.hotelLookupDone.set(false);
+          this.hotelsLoading.set(false);
+          const term = this.hotelQuery.value.trim();
+          if (this.hotelQuery.invalid || term.length < 2) return of([]);
+          return timer(300).pipe(
+            switchMap(() => {
+              this.hotelsLoading.set(true);
+              return this.hotelService.options(term).pipe(
+                catchError((e) => {
+                  this.hotelError.set(apiError(e));
+                  return of([]);
+                }),
+              );
+            }),
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe((rows) => {
+        this.hotels.set(rows);
         this.hotelsLoading.set(false);
-        const term = this.hotelQuery.value.trim();
-        if (this.hotelQuery.invalid || term.length < 2) return of([]);
-        return timer(300).pipe(switchMap(() => {
-          this.hotelsLoading.set(true);
-          return this.hotelService.options(term, this.hotelStatus.value).pipe(catchError((e) => {
-            this.hotelError.set(apiError(e));
-            return of([]);
-          }));
-        }));
-      }), takeUntilDestroyed(this.destroyRef),
-    ).subscribe((rows) => {
-      this.hotels.set(rows);
-      this.hotelsLoading.set(false);
-      this.hotelLookupDone.set(this.hotelQuery.value.trim().length >= 2 && this.hotelQuery.valid);
-    });
+        this.hotelLookupDone.set(this.hotelQuery.value.trim().length >= 2 && this.hotelQuery.valid);
+      });
     this.hotelQuery.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
       this.hotelResolution?.unsubscribe();
       this.selectedHotel.set(null);
       this.form.controls.hotelId.setValue(null);
       this.loadHotels();
     });
-    this.hotelStatus.valueChanges.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.loadHotels());
     this.route?.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((params) => this.openLink(params));
@@ -161,6 +191,7 @@ export class ContractList implements OnInit {
     else this.loadHotels();
   }
   selectHotel(hotel: ManagementHotelOption) {
+    this.hotelLookupOpen.set(false);
     this.hotelResolution?.unsubscribe();
     this.hotelQuery.setValue('', { emitEvent: false });
     this.loadHotels();
@@ -174,10 +205,19 @@ export class ContractList implements OnInit {
   private resolveHotel(id: number) {
     this.hotelError.set('');
     this.hotelsLoading.set(true);
-    this.hotelResolution = this.hotelService.option(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (hotel) => { this.selectHotel(hotel); this.hotelsLoading.set(false); },
-      error: (e) => { this.hotelsLoading.set(false); this.hotelError.set(apiError(e)); },
-    });
+    this.hotelResolution = this.hotelService
+      .option(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (hotel) => {
+          this.selectHotel(hotel);
+          this.hotelsLoading.set(false);
+        },
+        error: (e) => {
+          this.hotelsLoading.set(false);
+          this.hotelError.set(apiError(e));
+        },
+      });
   }
   // Opens contract creation, draft editing, or approved markup maintenance.
   openEditor(row: Contract | null = null) {

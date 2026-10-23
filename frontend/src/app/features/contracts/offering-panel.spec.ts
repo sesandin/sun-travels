@@ -271,7 +271,7 @@ describe('Contract offerings', () => {
     it(status + ' exposes history with no maintenance actions', () => {
       fixture.componentRef.setInput('contract', { ...contract, status });
       load([offering]);
-      expect(fixture.nativeElement.textContent).toContain('Historical offerings are preserved');
+      expect(fixture.nativeElement.textContent).toContain('Rates cannot be edited for');
       expect(fixture.nativeElement.textContent).not.toContain('Add Offering');
       expect(fixture.nativeElement.textContent).not.toContain('Edit base rate');
       expect(fixture.nativeElement.textContent).not.toContain('Add Seasonal Rate');
@@ -286,7 +286,7 @@ describe('Contract offerings', () => {
     load([{ ...offering, status: 'SUSPENDED' }]);
     expect(fixture.nativeElement.textContent).toContain('Change offering status');
     expect(fixture.nativeElement.textContent).not.toContain('Edit base rate');
-    expect(fixture.nativeElement.textContent).toContain('remain unavailable for new sales');
+    expect(fixture.nativeElement.textContent).toContain('new bookings require an active hotel and an approved contract');
     c.open({ ...offering, status: 'SUSPENDED' }, 'status');
     c.statusForm.controls.status.setValue('ENABLED');
     c.save();

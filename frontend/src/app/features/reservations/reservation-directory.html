@@ -53,8 +53,8 @@
   <button (click)="retry()" [disabled]="loading()" class="secondary">Retry</button>
   }
   @if (result(); as r) {
-  <section aria-label="Scrollable results" class="table-scroll" tabindex="0">
-    <table>
+  <section aria-label="Scrollable results" class="table-scroll" tabindex="0" role="region">
+    <table class="reservation-table">
       <thead>
       <tr>
         <th scope="col">Reference</th>
@@ -62,7 +62,7 @@
         <th scope="col">Hotel</th>
         <th scope="col">Stay</th>
         <th scope="col">Status</th>
-        <th scope="col">Booked total</th>
+        <th scope="col" class="reservation-total">Booked total</th>
         <th scope="col">Actions</th>
       </tr>
       </thead>
@@ -79,9 +79,9 @@
             #{{ booking.reservationId }}
           </button>
         </td>
-        <td>{{ booking.customerName }}</td>
-        <td>{{ booking.rooms[0]?.hotelName }}</td>
-        <td>{{ booking.checkIn }} → {{ booking.checkOut }}
+        <td class="reservation-customer">{{ booking.customerName }}</td>
+        <td class="reservation-hotel">{{ booking.rooms[0]?.hotelName }}</td>
+        <td class="reservation-stay"><span class="stay-dates">{{ booking.checkIn }} → {{ booking.checkOut }}</span>
           <small>{{ booking.rooms.length }} rooms</small>
           @for (room of booking.rooms; track $index) {
             <small>{{ room.roomTypeName }} · {{ room.adults }} adults</small>
@@ -95,7 +95,7 @@
           <span class="reservation-warning-indicator">Verify hotel arrangements</span>
           }
         </td>
-        <td class="money">
+        <td class="money reservation-total">
           @if (booking.totalPrice !== null) {
           {{ booking.totalPrice | number: '1.2-2' }} {{ booking.currencyCode }}
           } @else {
@@ -138,7 +138,7 @@
   @if (detailsLoading() || detailsError()) {
     <h2 id="reservation-modal-title">Reservation details</h2>
     <button type="button" (click)="closeDetails()">Close</button>
-    @if (detailsLoading()) { <p role="status">Loading reservation...</p> }
+    @if (detailsLoading()) { <output aria-live="polite">Loading reservation...</output> }
     @if (detailsError()) {
       <p role="alert">{{ detailsError() }}</p>
       <button type="button" (click)="retryDetails()">Retry details</button>

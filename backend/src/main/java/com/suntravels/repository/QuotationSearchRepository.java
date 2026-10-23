@@ -21,6 +21,7 @@ import java.util.Set;
 @Repository
 public class QuotationSearchRepository
 {
+    private static final String COUNTRY = "country";
     public static final int HOTEL_PAGE_SIZE = 20;
     public static final int MAX_OFFERINGS = 500;
     public static final int MAX_SEASONS = 10000;
@@ -60,7 +61,7 @@ public class QuotationSearchRepository
         if( country != null )
         {
             sql += " and search_country=:country";
-            p.put( "country", country );
+            p.put( COUNTRY, country );
         }
         return jdbc.query( sql + " order by name,hotel_id limit 20", p,
                 ( r, n ) -> new HotelSuggestion( r.getInt( 1 ), r.getString( 2 ), r.getString( 3 ), r.getString( 4 ) ) );
@@ -77,7 +78,7 @@ public class QuotationSearchRepository
         if( country != null )
         {
             sql += " and search_country=:country";
-            p.put( "country", country );
+            p.put( COUNTRY, country );
         }
         return jdbc.query( sql + " order by city,country limit 15", p,
                 ( r, n ) -> new CitySuggestion( r.getString( 1 ), r.getString( 2 ) ) );
@@ -133,7 +134,7 @@ public class QuotationSearchRepository
         if( request.country() != null && !request.country().isBlank() )
         {
             sql += " and h.search_country=:country";
-            p.put( "country", CountryCatalog.filterName( request.country() ) );
+            p.put( COUNTRY, CountryCatalog.filterName( request.country() ) );
         }
         List<Integer> found = jdbc.queryForList(
                 sql + " order by h.hotel_id limit " + ( HOTEL_PAGE_SIZE + 1 ), p, Integer.class );
@@ -190,7 +191,7 @@ public class QuotationSearchRepository
         if( request.country() != null && !request.country().isBlank() )
         {
             sql += " and h.search_country=:country";
-            p.put( "country", CountryCatalog.filterName( request.country() ) );
+            p.put( COUNTRY, CountryCatalog.filterName( request.country() ) );
         }
         sql += " order by h.hotel_id,c.contract_id,o.offering_id";
         // Preserve the legacy guard, but never truncate a candidate hotel's offerings.

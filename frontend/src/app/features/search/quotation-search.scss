@@ -1,6 +1,155 @@
 :host {
   display: block;
 }
+.search-help.search-limits-footer {
+  margin: 16px 0 0;
+}
+.destination-hint {
+  margin: -6px 0 18px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.destination-lookup {
+  position: relative;
+  min-width: 0;
+
+  > label {
+    line-height: 20px;
+    margin-bottom: 8px;
+  }
+}
+.lookup-input {
+  position: relative;
+
+  input {
+    width: 100%;
+    min-height: 46px;
+    padding-right: 42px;
+    box-sizing: border-box;
+  }
+  &.has-selection input {
+    border-color: var(--primary);
+  }
+}
+.lookup-clear {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--surface-soft);
+  }
+}
+.lookup-menu {
+  position: absolute;
+  top: 80px;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  max-height: 280px;
+  overflow-y: auto;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+
+  &[hidden] {
+    display: none;
+  }
+  ul {
+    list-style: none;
+    padding: 4px;
+    margin: 0;
+  }
+  li {
+    margin: 0;
+  }
+  button {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+    padding: 11px 12px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    white-space: normal;
+    overflow-wrap: anywhere;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--surface-soft);
+    }
+    span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+  }
+  output {
+    display: block;
+    padding: 14px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+}
+.optional-label,
+.lookup-selection {
+  color: var(--muted);
+  font-weight: 400;
+}
+.search-help {
+  margin: 8px 0 16px;
+  font-size: 13px;
+  color: var(--muted);
+
+  summary {
+    cursor: pointer;
+  }
+  p {
+    max-width: 75ch;
+    margin: 10px 0;
+  }
+}
+.results-note {
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+.hotel-card > .hotel-context {
+  margin: 0 0 16px;
+}
+.quotation {
+  padding: 20px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+}
+.quotation + .quotation {
+  border-top: 1px solid var(--border);
+}
+.room-details {
+  margin-top: 12px;
+
+  > summary {
+    cursor: pointer;
+    color: var(--primary);
+    font-size: 13px;
+    padding: 8px 0;
+  }
+}
 .availability-status {
   display: inline-flex;
   align-items: center;
@@ -264,7 +413,7 @@ summary {
   overflow-wrap: anywhere;
 }
 .quotation {
-  border-left: 3px solid var(--primary);
+  border-left: 1px solid var(--border);
 }
 .selection-heading {
   display: flex;
@@ -357,13 +506,30 @@ summary {
   padding: 6px;
 }
 .quote-heading {
-  padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+  border-bottom: 0;
 
   align-items: center;
 }
 .quote-heading h3.room-type-title {
-  font-size: 25px;
+  font-size: 19px;
+  margin: 0;
+}
+.room-title-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+.quote-heading p {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.quotation .offering-group {
+  padding: 12px 0 0;
+}
+.quotation .room-details {
+  margin-top: 6px;
 }
 .quote-heading .hotel-context {
   font-weight: 600;
@@ -379,7 +545,7 @@ summary {
   margin: 7px 0;
   color: var(--primary);
 
-  font-size: clamp(24px, 2.2vw, 30px);
+  font-size: clamp(22px, 2.2vw, 26px);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.5px;
 }
@@ -389,10 +555,10 @@ summary {
 .quote-actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
+  margin-top: 10px;
 
-  padding-top: 20px;
-  border-top: 1px solid var(--border);
+  padding-top: 0;
+  border-top: 0;
 }
 .offering-heading p {
   margin: 0;

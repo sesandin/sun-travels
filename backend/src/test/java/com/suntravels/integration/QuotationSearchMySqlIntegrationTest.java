@@ -40,6 +40,7 @@ import java.util.Locale;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -290,7 +291,7 @@ class QuotationSearchMySqlIntegrationTest
         var r = new QuotationSearchRequest( in, out, List.of( new RequestedRoom( 2 ) ), city, null, null );
         var first = search.evaluatedPage( r, null ).availableOnly();
         assertTrue( first.hotels().isEmpty() );
-        assertTrue( first.nextAfterHotelId() != null );
+        assertNotNull( first.nextAfterHotelId() );
         var next = search.evaluatedPage( r, first.nextAfterHotelId() ).availableOnly();
         assertEquals( 1, next.hotels().size() );
         assertEquals( hotel.getHotelId(), next.hotels().get( 0 ).hotelId() );
@@ -326,7 +327,7 @@ class QuotationSearchMySqlIntegrationTest
         assertTrue( first.offerings().stream().anyMatch( c -> c.offeringId() == secondOffering.getOfferingId() ) );
         assertEquals( firstHotel.getHotelId(), first.hotelIds().get( 0 ) );
         var evaluated = search.evaluatedPage( request, null );
-        assertEquals( first.hotelIds(), evaluated.hotels().stream().map( h -> h.hotelId() ).toList() );
+        assertEquals( first.hotelIds(), evaluated.hotels().stream().map( com.suntravels.dto.EvaluatedHotelPage.Hotel::hotelId ).toList() );
         assertEquals( first.nextAfterHotelId(), evaluated.nextAfterHotelId() );
         assertEquals( 2, evaluated.hotels().get( 0 ).offerings().size() );
         assertTrue( evaluated.hotels().stream().flatMap( h -> h.offerings().stream() )

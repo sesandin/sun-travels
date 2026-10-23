@@ -35,7 +35,7 @@ class ManagementHotelLookupTest
         verify(service, never()).getAllHotels();
     }
 
-    @Test void validatesAndEscapesLiteralPrefixWithoutEntityLoading()
+    @Test void validatesAndEscapesLiteralContainsPatternWithoutEntityLoading()
     {
         var repository = mock(HotelRepository.class);
         var service = new HotelService(repository);
@@ -44,7 +44,9 @@ class ManagementHotelLookupTest
         assertThrows(org.springframework.web.server.ResponseStatusException.class,
                 () -> service.options("a".repeat(151), null));
         service.options(" Ab!%_ ", HotelStatus.ACTIVE);
-        verify(repository).options("Ab!!!%!_%", "ACTIVE");
+        verify(repository).options("%Ab!!!%!_%", "ACTIVE");
+        service.options( " beach ", null );
+        verify(repository).allStatusOptions( "%beach%" );
         verify(repository, never()).findAll();
     }
 }

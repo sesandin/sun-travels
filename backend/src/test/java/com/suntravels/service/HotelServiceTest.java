@@ -40,6 +40,51 @@ class HotelServiceTest
     @InjectMocks
     private HotelService hotelService;
 
+    @Test
+    void creationTrimsIdentityBeforeDuplicateCheckAndSaving()
+    {
+        HotelRequest request = new HotelRequest();
+        request.setName( " \tOcean  View Hotel\n " );
+        request.setCity( " \tGalle\n " );
+        request.setAddress( " \t10 Main Street\n " );
+        request.setCountry( " lk " );
+        request.setStatus( HotelStatus.ACTIVE );
+        when( hotelRepository.saveAndFlush( any( Hotel.class ) ) ).thenAnswer(
+                invocation -> invocation.getArgument( 0 ) );
+
+        HotelResponse response = hotelService.createHotel( request );
+
+        verify( hotelRepository ).countIdentity( "Ocean  View Hotel", "Sri Lanka", "Galle",
+                "10 Main Street", null );
+        assertEquals( "Ocean  View Hotel", response.getName() );
+        assertEquals( "Galle", response.getCity() );
+        assertEquals( "10 Main Street", response.getAddress() );
+        assertEquals( "Sri Lanka", response.getCountry() );
+    }
+
+    @Test
+    void editingTrimsIdentityAndExcludesCurrentHotelFromDuplicateCheck()
+    {
+        Hotel hotel = new Hotel();
+        hotel.setStatus( HotelStatus.INACTIVE );
+        HotelUpdateRequest request = new HotelUpdateRequest();
+        request.setName( " \tOcean  View Hotel\n " );
+        request.setCity( " \tGalle\n " );
+        request.setAddress( " \t10 Main Street\n " );
+        request.setCountry( " lk " );
+        when( hotelRepository.findById( 7 ) ).thenReturn( Optional.of( hotel ) );
+        when( hotelRepository.saveAndFlush( hotel ) ).thenReturn( hotel );
+
+        HotelResponse response = hotelService.updateHotel( 7, request );
+
+        verify( hotelRepository ).countIdentity( "Ocean  View Hotel", "Sri Lanka", "Galle",
+                "10 Main Street", 7 );
+        assertEquals( "Ocean  View Hotel", response.getName() );
+        assertEquals( "Galle", response.getCity() );
+        assertEquals( "10 Main Street", response.getAddress() );
+        assertEquals( HotelStatus.INACTIVE, response.getStatus() );
+    }
+
     // Verifies create hotel return saved hotel.
     @Test
     void createHotel_shouldReturnSavedHotel()

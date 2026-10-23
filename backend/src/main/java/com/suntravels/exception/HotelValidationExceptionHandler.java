@@ -11,19 +11,21 @@ import java.util.Map;
 @RestControllerAdvice(assignableTypes = HotelController.class)
 public class HotelValidationExceptionHandler
 {
+    private static final String MESSAGE = "message";
     @ExceptionHandler(DuplicateHotelException.class)
     public ResponseEntity<Map<String,String>> duplicate(DuplicateHotelException ex)
     {
-        return ResponseEntity.status(409).body(Map.of("message", ex.getMessage()));
+        return ResponseEntity.status(409).body(Map.of(MESSAGE, DuplicateHotelException.MESSAGE));
     }
 
     @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
     public ResponseEntity<Map<String,String>> concurrentDuplicate(org.springframework.dao.DataIntegrityViolationException ex)
     {
+        java.util.Objects.requireNonNull(ex, "Data integrity exception is required");
         // Only translate this specific unique constraint; unrelated integrity errors remain errors.
         for (Throwable cause = ex; cause != null; cause = cause.getCause())
             if (cause.getMessage() != null && cause.getMessage().contains("uq_hotel_identity"))
-                return ResponseEntity.status(409).body(Map.of("message", DuplicateHotelException.MESSAGE));
+                return ResponseEntity.status(409).body(Map.of(MESSAGE, DuplicateHotelException.MESSAGE));
         throw ex;
     }
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -33,6 +35,6 @@ public class HotelValidationExceptionHandler
         ex.getBindingResult().getFieldErrors().forEach(
                 error -> errors.putIfAbsent(error.getField(), error.getDefaultMessage()));
         return ResponseEntity.badRequest().body(
-                Map.of("message", "Check the hotel details", "fieldErrors", errors));
+                Map.of(MESSAGE, "Check the hotel details", "fieldErrors", errors));
     }
 }

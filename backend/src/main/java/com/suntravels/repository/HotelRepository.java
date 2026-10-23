@@ -17,10 +17,14 @@ public interface HotelRepository extends JpaRepository<Hotel,Integer>,
 {
     @Query(value = """
             select count(*) from hotel where
-             identity_name=lower(regexp_replace(coalesce(:name,''),'^[[:space:]]+|[[:space:]]+$',''))
-             and identity_country=lower(regexp_replace(coalesce(:country,''),'^[[:space:]]+|[[:space:]]+$',''))
-             and identity_city=lower(regexp_replace(coalesce(:city,''),'^[[:space:]]+|[[:space:]]+$',''))
-             and identity_address=lower(regexp_replace(coalesce(:address,''),'^[[:space:]]+|[[:space:]]+$',''))
+             cast(lower(regexp_replace(coalesce(name,''),'^[[:space:]]+|[[:space:]]+$','')) as char(150) character set utf8mb3) collate utf8mb3_bin
+             =cast(lower(regexp_replace(coalesce(:name,''),'^[[:space:]]+|[[:space:]]+$','')) as char(150) character set utf8mb3) collate utf8mb3_bin
+             and cast(lower(regexp_replace(coalesce(country,''),'^[[:space:]]+|[[:space:]]+$','')) as char(100) character set utf8mb3) collate utf8mb3_bin
+             =cast(lower(regexp_replace(coalesce(:country,''),'^[[:space:]]+|[[:space:]]+$','')) as char(100) character set utf8mb3) collate utf8mb3_bin
+             and cast(lower(regexp_replace(coalesce(city,''),'^[[:space:]]+|[[:space:]]+$','')) as char(100) character set utf8mb3) collate utf8mb3_bin
+             =cast(lower(regexp_replace(coalesce(:city,''),'^[[:space:]]+|[[:space:]]+$','')) as char(100) character set utf8mb3) collate utf8mb3_bin
+             and cast(lower(regexp_replace(coalesce(address,''),'^[[:space:]]+|[[:space:]]+$','')) as char(255) character set utf8mb3) collate utf8mb3_bin
+             =cast(lower(regexp_replace(coalesce(:address,''),'^[[:space:]]+|[[:space:]]+$','')) as char(255) character set utf8mb3) collate utf8mb3_bin
              and (:excluded is null or hotel_id<>:excluded)
             """, nativeQuery = true)
     long countIdentity(@Param("name") String name, @Param("country") String country,
@@ -28,22 +32,23 @@ public interface HotelRepository extends JpaRepository<Hotel,Integer>,
 
     @Query(value = """
             select hotel_id as hotelId,name,city,country,status from hotel
-            where name like :prefix escape '!' and status=:status
+            where lower(name) like lower(:pattern) escape '!' and status=:status
             order by name,hotel_id limit 20
             """, nativeQuery = true)
     List<ManagementHotelOption> options(
-            @Param("prefix") String prefix, @Param("status") String status);
+            @Param( "pattern" ) String pattern, @Param( "status" ) String status );
 
-    // Two bounded status ranges reuse V001's status/name index; sort at most 40 rows.
+    // Each status branch returns at most 20 rows; the final sort sees at most 40.
+    // Contains matching may scan the status range instead of using a name-prefix range.
     @Query(value = """
             (select hotel_id as hotelId,name,city,country,status from hotel
-             where status='ACTIVE' and name like :prefix escape '!' order by name,hotel_id limit 20)
+             where status='ACTIVE' and lower(name) like lower(:pattern) escape '!' order by name,hotel_id limit 20)
             union all
             (select hotel_id as hotelId,name,city,country,status from hotel
-             where status='INACTIVE' and name like :prefix escape '!' order by name,hotel_id limit 20)
+             where status='INACTIVE' and lower(name) like lower(:pattern) escape '!' order by name,hotel_id limit 20)
             order by name,hotelId limit 20
             """, nativeQuery = true)
-    List<ManagementHotelOption> allStatusOptions(@Param("prefix") String prefix);
+    List<ManagementHotelOption> allStatusOptions( @Param( "pattern" ) String pattern );
 
     @Query(value = "select hotel_id as hotelId,name,city,country,status from hotel where hotel_id=:id", nativeQuery = true)
     Optional<ManagementHotelOption> option(@Param("id") Integer id);

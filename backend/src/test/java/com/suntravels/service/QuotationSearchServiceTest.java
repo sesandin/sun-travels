@@ -84,7 +84,8 @@ class QuotationSearchServiceTest
         service.hotelSuggestions( " Oc ", " Colombo ", "LK" );
         verify( data ).citySuggestions( "Co", "Sri Lanka" );
         verify( data ).hotelSuggestions( "Oc", " Colombo ", "Sri Lanka" );
-        assertThrows( QuotationSearchException.class, () -> service.citySuggestions( "Co", "x".repeat(101) ) );
+        String longCountry = "x".repeat(101);
+        assertThrows( QuotationSearchException.class, () -> service.citySuggestions( "Co", longCountry ) );
     }
 
     @Test
@@ -92,7 +93,8 @@ class QuotationSearchServiceTest
     {
         assertTrue( service.hotelSuggestions( "   " ).isEmpty() );
         assertTrue( service.hotelSuggestions( "" ).isEmpty() );
-        assertThrows( QuotationSearchException.class, () -> service.hotelSuggestions( "x".repeat( 101 ) ) );
+        String longTerm = "x".repeat(101);
+        assertThrows( QuotationSearchException.class, () -> service.hotelSuggestions( longTerm ) );
         verifyNoInteractions( data, hotels );
         when( data.hotelSuggestions( "Ocean", null, null ) ).thenReturn( List.of() );
         assertTrue( service.hotelSuggestions( " Ocean " ).isEmpty() );
@@ -165,7 +167,7 @@ class QuotationSearchServiceTest
         assertEquals( 201, result.hotels().get( 0 ).offerings().size() );
         assertTrue( result.hotels().get( 0 ).offerings().stream().allMatch(
                 o -> o.availabilityStatus() == AvailabilityStatus.AVAILABLE &&
-                             o.quotation().totalPrice().equals( new BigDecimal( "1035.00" ) ) &&
+                             o.quotation().totalPrice().compareTo( new BigDecimal( "1035.00" ) ) == 0 &&
                              o.quotation().rooms().get( 0 ).allocatedRoomsForOffering() == 2 ) );
         var batches = ArgumentCaptor.forClass( Set.class );
         verify( data, times( 2 ) ).bookedRooms( batches.capture(), org.mockito.ArgumentMatchers.eq( in ),
@@ -178,9 +180,11 @@ class QuotationSearchServiceTest
     @Test
     void candidateDiscoveryValidatesBeforeQuerying()
     {
-        assertThrows( QuotationSearchException.class, () -> service.candidatePage( request( 0 ), null ) );
-        assertThrows( QuotationSearchException.class, () -> service.candidatePage( request( 2 ), 0 ) );
-        assertThrows( QuotationSearchException.class, () -> service.candidatePage( request( 2 ), -1 ) );
+        var invalidRequest = request( 0 );
+        var validRequest = request( 2 );
+        assertThrows( QuotationSearchException.class, () -> service.candidatePage( invalidRequest, null ) );
+        assertThrows( QuotationSearchException.class, () -> service.candidatePage( validRequest, 0 ) );
+        assertThrows( QuotationSearchException.class, () -> service.candidatePage( validRequest, -1 ) );
         verifyNoInteractions( data );
     }
 

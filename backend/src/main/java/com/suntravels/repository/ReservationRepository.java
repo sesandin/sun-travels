@@ -29,6 +29,9 @@ import java.util.Set;
 public class ReservationRepository
 {
     public static final int PAGE_SIZE = 10;
+    private static final String CHECK_OUT_DATE = "check_out_date";
+    private static final String CONFIRMED = "CONFIRMED";
+    private static final String SUSPENDED = "SUSPENDED";
     private static final String STATUS_COLUMN = "status";
     private static final String HOTEL_ID_COLUMN = "hotel_id";
     private static final String CONTRACT_ID_COLUMN = "contract_id";
@@ -109,7 +112,7 @@ public class ReservationRepository
         var rows = jdbc.query( HEADER + " where r.reservation_id=?", ( r, n ) ->
         {
             var in = r.getObject( "check_in_date", LocalDate.class );
-            var out = r.getObject( "check_out_date", LocalDate.class );
+            var out = r.getObject( CHECK_OUT_DATE, LocalDate.class );
             var items = items( id, in, out );
             BigDecimal total =
                     items.isEmpty() || items.stream().anyMatch( i -> i.totalPrice() == null ) ? null :
@@ -119,7 +122,7 @@ public class ReservationRepository
                     r.getString( "phone" ), r.getString( "email" ), in, out, ChronoUnit.DAYS.between( in, out ),
                     r.getString( STATUS_COLUMN ), r.getObject( "created_at", LocalDateTime.class ),
                     r.getString( "currency_code" ), total, items,
-                    "CONFIRMED".equals( r.getString( STATUS_COLUMN ) ) && out.isAfter( LocalDate.now( clock ) ) ?
+                    CONFIRMED.equals( r.getString( STATUS_COLUMN ) ) && out.isAfter( LocalDate.now( clock ) ) ?
                             warnings( id ) : List.of() );
         }, id );
         if( rows.isEmpty() )
@@ -149,14 +152,14 @@ public class ReservationRepository
                         WarningCode.HOTEL_INACTIVE,
                         "This hotel is currently inactive. Please verify whether this reservation can still be honored." ) );
             }
-            if( "SUSPENDED".equals( r.getString( "contract_status" ) ) )
+            if( SUSPENDED.equals( r.getString( "contract_status" ) ) )
             {
                 result.add( new OperationalWarning( r.getInt( HOTEL_ID_COLUMN ), r.getString( "name" ),
                         WarningCode.CONTRACT_SUSPENDED,
                         "This reservation is confirmed, but its hotel contract is currently suspended. Please verify the booking arrangements with the hotel.",
                         r.getInt( CONTRACT_ID_COLUMN ), null, null ) );
             }
-            if( "SUSPENDED".equals( r.getString( "offering_status" ) ) )
+            if( SUSPENDED.equals( r.getString( "offering_status" ) ) )
             {
                 result.add( new OperationalWarning( r.getInt( HOTEL_ID_COLUMN ), r.getString( "name" ),
                         WarningCode.OFFERING_SUSPENDED,
@@ -231,7 +234,7 @@ public class ReservationRepository
             throw new ReservationException( 400, "INVALID_FILTER", "Stay From must be on or before Stay To" );
         }
         if( page < 0 || size < 1 || size > 50 || query.length() > 150 ||
-                    !Set.of( "", "CONFIRMED", "CANCELLED" ).contains( status ) )
+                    !Set.of( "", CONFIRMED, "CANCELLED" ).contains( status ) )
         {
             throw new ReservationException( 400, "INVALID_FILTER",
                     "Use a valid status, page and page size (1–50)" );
@@ -319,15 +322,15 @@ public class ReservationRepository
                 """ + placeholders + ") group by i.reservation_item_id order by i.reservation_item_id", r -> {
             int id = r.getInt("reservation_id");
             rooms.computeIfAbsent(id, ignored -> new ArrayList<>()).add(new ReservationResponse.RoomSummary(
-                    r.getInt("hotel_id"), r.getString("hotel_name"), r.getString("room_name"), r.getInt("number_of_adults")));
+                    r.getInt(HOTEL_ID_COLUMN), r.getString("hotel_name"), r.getString("room_name"), r.getInt("number_of_adults")));
             BigDecimal total = r.getBigDecimal("room_total");
             if (total == null) incomplete.add(id);
             else totals.merge(id, total, BigDecimal::add);
-            if ("CONFIRMED".equals(r.getString("status"))
-                    && r.getObject("check_out_date", LocalDate.class).isAfter(LocalDate.now(clock))
+            if (CONFIRMED.equals(r.getString(STATUS_COLUMN))
+                    && r.getObject(CHECK_OUT_DATE, LocalDate.class).isAfter(LocalDate.now(clock))
                     && ("INACTIVE".equals(r.getString("hotel_status"))
-                    || "SUSPENDED".equals(r.getString("contract_status"))
-                    || "SUSPENDED".equals(r.getString("offering_status")))) affected.add(id);
+                    || SUSPENDED.equals(r.getString("contract_status"))
+                    || SUSPENDED.equals(r.getString("offering_status")))) affected.add(id);
         }, ids.toArray());
         return jdbc.query("""
                 select r.reservation_id,r.customer_id,c.name,r.check_in_date,r.check_out_date,r.status,r.currency_code
@@ -335,8 +338,8 @@ public class ReservationRepository
                 """ + placeholders + ") order by r.reservation_id desc", (r, n) -> {
             int id = r.getInt("reservation_id");
             return new ReservationResponse.Summary(id, r.getInt("customer_id"), r.getString("name"),
-                    r.getObject("check_in_date", LocalDate.class), r.getObject("check_out_date", LocalDate.class),
-                    r.getString("status"), r.getString("currency_code"), incomplete.contains(id) ? null : totals.get(id),
+                    r.getObject("check_in_date", LocalDate.class), r.getObject(CHECK_OUT_DATE, LocalDate.class),
+                    r.getString(STATUS_COLUMN), r.getString("currency_code"), incomplete.contains(id) ? null : totals.get(id),
                     List.copyOf(rooms.getOrDefault(id, List.of())), affected.contains(id));
         }, ids.toArray());
     }

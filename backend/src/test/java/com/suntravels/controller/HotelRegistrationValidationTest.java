@@ -1,5 +1,6 @@
 package com.suntravels.controller;
 
+import static org.mockito.Mockito.when;
 import com.suntravels.service.HotelService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -21,12 +22,12 @@ class HotelRegistrationValidationTest
     @org.junit.jupiter.api.Test
     void duplicatesAndConcurrentUniqueConflictsReturn409() throws Exception
     {
-        org.mockito.Mockito.when(service.createHotel(any())).thenThrow(new com.suntravels.exception.DuplicateHotelException());
+        when(service.createHotel(any())).thenThrow(new com.suntravels.exception.DuplicateHotelException());
         mvc.perform(post("/api/hotels").contentType("application/json").content(request("name","Hotel")))
                 .andExpect(status().isConflict())
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.message")
                         .value(com.suntravels.exception.DuplicateHotelException.MESSAGE));
-        org.mockito.Mockito.when(service.updateHotel(org.mockito.ArgumentMatchers.eq(1),any())).thenThrow(
+        when(service.updateHotel(org.mockito.ArgumentMatchers.eq(1),any())).thenThrow(
                 new org.springframework.dao.DataIntegrityViolationException("Duplicate entry for key 'hotel.uq_hotel_identity'"));
         mvc.perform(put("/api/hotels/1").contentType("application/json").content(request("name","Hotel")))
                 .andExpect(status().isConflict())

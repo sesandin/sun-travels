@@ -44,6 +44,7 @@ public final class CountryCatalog
     /** Filters may refer to historical stored names; registration still requires an ISO country. */
     public static String filterName( String value )
     {
+        if( value == null ) throw new IllegalArgumentException( "Country filter must not be null" );
         return contains( value ) ? canonicalName( value ) : value.trim();
     }
 }
