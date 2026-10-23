@@ -164,7 +164,7 @@ public class QuotationSearchService
             var results = offerings.stream().map( o -> new EvaluatedHotelPage.Offering(
                     o.offeringId(), o.roomTypeId(), o.contractedRooms(), choices.get( o.offeringId() ),
                     quotes.containsKey( o.offeringId() ) ? AvailabilityStatus.AVAILABLE : AvailabilityStatus.NOT_AVAILABLE,
-                    quotes.get( o.offeringId() ), unavailable.get( o.offeringId() ) ) ).toList();
+                    quotes.get( o.offeringId() ), unavailable.get( o.offeringId() ), o.roomDescription() ) ).toList();
             return new EvaluatedHotelPage.Hotel( id, hotel.hotelName(), hotel.city(), results );
         } ).toList();
         return new EvaluatedHotelPage( today, request.checkIn(), request.checkOut(), nights,

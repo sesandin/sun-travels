@@ -162,7 +162,7 @@ public class QuotationSearchRepository
         String sql = """
                 select o.offering_id,c.contract_id,h.hotel_id,h.name as hotel_name,h.city,c.contract_code,
                  c.currency_code,c.markup_percentage,c.valid_from,c.valid_to,rt.room_type_id,rt.name as room_type_name,
-                 o.rate_per_person_per_night,o.contracted_room_count,o.max_adults
+                 o.rate_per_person_per_night,o.contracted_room_count,o.max_adults,o.room_description
                 from contract_room_offering o join contract c on c.contract_id=o.contract_id
                 join hotel h on h.hotel_id=c.hotel_id join room_type rt on rt.room_type_id=o.room_type_id
                 where h.status='ACTIVE' and c.status='APPROVED' and o.status='ENABLED'
@@ -202,7 +202,7 @@ public class QuotationSearchRepository
                 r.getBigDecimal( "markup_percentage" ), r.getObject( "valid_from", LocalDate.class ),
                 r.getObject( "valid_to", LocalDate.class ), r.getInt( "room_type_id" ),
                 r.getString( "room_type_name" ), r.getBigDecimal( "rate_per_person_per_night" ),
-                r.getInt( "contracted_room_count" ), r.getInt( "max_adults" ) ) );
+                r.getInt( "contracted_room_count" ), r.getInt( "max_adults" ), r.getString( "room_description" ) ) );
     }
 
     // Loads the seasonal periods for all candidate offerings.
@@ -268,9 +268,19 @@ public class QuotationSearchRepository
             String roomTypeName,
             BigDecimal baseRate,
             int contractedRooms,
-            int maxAdults
+            int maxAdults,
+            String roomDescription
     )
     {
+        public Candidate( int offeringId, int contractId, int hotelId, String hotelName,
+                          String city, String contractCode, String currency, BigDecimal markup,
+                          LocalDate validFrom, LocalDate validTo, int roomTypeId, String roomTypeName,
+                          BigDecimal baseRate, int contractedRooms, int maxAdults )
+        {
+            this( offeringId, contractId, hotelId, hotelName, city, contractCode, currency,
+                    markup, validFrom, validTo, roomTypeId, roomTypeName, baseRate,
+                    contractedRooms, maxAdults, null );
+        }
     }
 
     public record Season(

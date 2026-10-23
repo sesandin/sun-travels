@@ -115,6 +115,7 @@ export class QuotationSearch implements OnInit {
     'businessDate' | 'checkIn' | 'checkOut' | 'nights' | 'quotations' | 'selectionOfferings'
   > | null>(null);
   readonly nextAfterHotelId = signal<number | null>(null);
+  readonly roomDescriptions = signal<Record<number, string>>({});
   private searchVersion = 0;
   private customizationLoaded = false;
   readonly hotelGroups = computed(() => {
@@ -759,6 +760,13 @@ export class QuotationSearch implements OnInit {
   }
 
   private appendPage(page: HotelPage, append: boolean) {
+    const descriptions = append ? { ...this.roomDescriptions() } : {};
+    for (const hotel of page.hotels) {
+      for (const offering of hotel.offerings) {
+        if (offering.roomDescription?.trim()) descriptions[offering.offeringId] = offering.roomDescription;
+      }
+    }
+    this.roomDescriptions.set(descriptions);
     const previous = append ? this.response() : null;
     const seen = new Set(previous?.quotations.map((q) => q.hotelId) ?? []);
     const hotels = page.hotels.filter((hotel) => {

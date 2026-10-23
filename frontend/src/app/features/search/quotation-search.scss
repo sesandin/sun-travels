@@ -525,6 +525,13 @@ summary {
   margin: 8px 0 0;
   font-size: 13px;
 }
+.quote-heading .room-description {
+  color: var(--muted);
+  max-width: 65ch;
+  line-height: 1.6;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
 .quotation .offering-group {
   padding: 12px 0 0;
 }

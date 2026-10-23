@@ -1,5 +1,6 @@
 export type OfferingStatus = 'ENABLED' | 'SUSPENDED';
 export interface OfferingRequest {
+  roomDescription?: string | null;
   roomTypeId: number;
   ratePerPersonPerNight: number;
   contractedRoomCount: number;

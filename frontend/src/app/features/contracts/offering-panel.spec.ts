@@ -86,6 +86,7 @@ describe('Contract offerings', () => {
   // Populates the form with valid test input.
   function fill() {
     c.form.setValue({
+      roomDescription: '',
       roomTypeId: 3,
       ratePerPersonPerNight: 125.25,
       contractedRoomCount: 12,
@@ -123,6 +124,7 @@ describe('Contract offerings', () => {
     const r = http.expectOne(api + '/contracts/7/offerings');
     expect(r.request.method).toBe('POST');
     expect(r.request.body).toEqual({
+      roomDescription: '',
       roomTypeId: 3,
       ratePerPersonPerNight: 125.25,
       contractedRoomCount: 12,

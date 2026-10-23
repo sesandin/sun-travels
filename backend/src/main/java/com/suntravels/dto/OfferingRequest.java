@@ -13,7 +13,13 @@ public record OfferingRequest(
         @NotNull @DecimalMin( value = "0", inclusive = false ) @Digits( integer = 8, fraction = 2 ) BigDecimal ratePerPersonPerNight,
         @NotNull @Positive Integer contractedRoomCount,
         @NotNull @Positive Integer maxAdults,
-        @NotNull OfferingStatus status
+        @NotNull OfferingStatus status,
+        @jakarta.validation.constraints.Size( max = 500, message = "Room specifications must be at most 500 characters" ) String roomDescription
 )
 {
+    public OfferingRequest( Integer roomTypeId, BigDecimal ratePerPersonPerNight,
+                            Integer contractedRoomCount, Integer maxAdults, OfferingStatus status )
+    {
+        this( roomTypeId, ratePerPersonPerNight, contractedRoomCount, maxAdults, status, null );
+    }
 }

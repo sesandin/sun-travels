@@ -20,6 +20,7 @@ export interface HotelResult {
     offeringId: number;
     roomTypeId: number;
     contractedRooms: number;
+    roomDescription?: string | null;
     roomChoices: SelectionOffering;
     availabilityStatus: 'AVAILABLE';
     quotation: AccommodationQuotation;

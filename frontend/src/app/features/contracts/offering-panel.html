@@ -203,6 +203,13 @@
             </select>
           </div>
         </div>
+          <div>
+            <label for="offering-description">Room Specifications (optional)</label>
+            <textarea id="offering-description" formControlName="roomDescription" maxlength="500" rows="3"></textarea>
+            @if (form.controls.roomDescription.touched && form.controls.roomDescription.hasError('maxlength')) {
+              <p class="field-error">Room specifications must be at most 500 characters.</p>
+            }
+          </div>
         <div class="editor-actions">
           <button (click)="cancel()" [disabled]="saving()" class="secondary" type="button">
             Cancel

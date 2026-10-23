@@ -20,6 +20,19 @@ import java.math.BigDecimal;
 @Table( name = "contract_room_offering" )
 public class ContractRoomOffering
 {
+    @Column( name = "room_description", length = 500 )
+    private String roomDescription;
+
+    public String getRoomDescription()
+    {
+        return roomDescription;
+    }
+
+    public void setRoomDescription( String value )
+    {
+        roomDescription = value;
+    }
+
     @Id
     @GeneratedValue( strategy = GenerationType.IDENTITY )
     @Column( name = "offering_id" )

@@ -296,6 +296,8 @@ public class OfferingService
         offering.setContractedRoomCount( r.contractedRoomCount() );
         offering.setMaxAdults( r.maxAdults() );
         offering.setStatus( r.status() );
+        offering.setRoomDescription( r.roomDescription() == null || r.roomDescription().isBlank() ?
+                                            null : r.roomDescription().strip() );
     }
 
     // Maps an offering or seasonal rate entity to its API response.
@@ -304,7 +306,8 @@ public class OfferingService
         return new OfferingResponse( offering.getOfferingId(), offering.getContract().getContractId(),
                 offering.getRoomType().getRoomTypeId(), offering.getRoomType().getName(),
                 offering.getRatePerPersonPerNight(), offering.getContractedRoomCount(),
-                offering.getMaxAdults(), offering.getStatus(), offering.getContract().getCurrencyCode() );
+                offering.getMaxAdults(), offering.getStatus(), offering.getContract().getCurrencyCode(),
+                offering.getRoomDescription() );
     }
 
     // Maps an offering or seasonal rate entity to its API response.

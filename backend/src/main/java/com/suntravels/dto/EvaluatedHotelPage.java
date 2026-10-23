@@ -31,5 +31,14 @@ public record EvaluatedHotelPage(
     public record Offering(
             int offeringId, int roomTypeId, int contractedRooms,
             SelectionOffering roomChoices, AvailabilityStatus availabilityStatus,
-            Quotation quotation, UnavailableOption unavailableOption ) {}
+            Quotation quotation, UnavailableOption unavailableOption, String roomDescription )
+    {
+        public Offering( int offeringId, int roomTypeId, int contractedRooms,
+                         SelectionOffering roomChoices, AvailabilityStatus availabilityStatus,
+                         Quotation quotation, UnavailableOption unavailableOption )
+        {
+            this( offeringId, roomTypeId, contractedRooms, roomChoices, availabilityStatus,
+                    quotation, unavailableOption, null );
+        }
+    }
 }

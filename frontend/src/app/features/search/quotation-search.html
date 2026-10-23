@@ -347,10 +347,7 @@
     </p>
     <details class="search-help">
       <summary>About these prices</summary>
-      <p class="muted">
-        Results are not sorted by price; currencies are not converted. Each option covers all
-        requested rooms and nights. Prices may change until booking.
-      </p>
+      <p class="muted">Totals include all rooms and nights. Final prices are checked at booking.</p>
     </details>
     @if (!groupedQuotations().length) {
       <div aria-atomic="true" aria-live="polite" class="panel state">
@@ -380,6 +377,9 @@
                   <h3 class="room-type-title">{{ quote.rooms[0].roomTypeName }}</h3>
                   <span class="availability-status available">Available</span>
                 </div>
+                @if (roomDescriptions()[quote.rooms[0].offeringId]; as description) {
+                  <p class="room-description">{{ description }}</p>
+                }
                 <p>
                   {{ quote.rooms.length }}
                   {{ quote.rooms.length === 1 ? 'room' : 'rooms' }} requested &middot;

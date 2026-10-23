@@ -13,7 +13,16 @@ public record OfferingResponse(
         Integer contractedRoomCount,
         Integer maxAdults,
         OfferingStatus status,
-        String currencyCode
+        String currencyCode,
+        String roomDescription
 )
 {
+    public OfferingResponse( Integer offeringId, Integer contractId, Integer roomTypeId,
+                             String roomTypeName, BigDecimal ratePerPersonPerNight,
+                             Integer contractedRoomCount, Integer maxAdults,
+                             OfferingStatus status, String currencyCode )
+    {
+        this( offeringId, contractId, roomTypeId, roomTypeName, ratePerPersonPerNight,
+                contractedRoomCount, maxAdults, status, currencyCode, null );
+    }
 }

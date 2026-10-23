@@ -48,6 +48,7 @@ export class OfferingPanel implements OnInit, OnChanges {
   readonly selected = signal<Offering | null>(null);
   readonly mode = signal<'draft' | 'rate' | 'status' | null>(null);
   readonly form = new FormGroup({
+    roomDescription: new FormControl('', { nonNullable: true, validators: [Validators.maxLength(500)] }),
     roomTypeId: new FormControl<number | null>(null, [Validators.required, positiveInteger]),
     ratePerPersonPerNight: new FormControl<number | null>(null, [Validators.required, money]),
     contractedRoomCount: new FormControl<number | null>(null, [
@@ -204,6 +205,7 @@ export class OfferingPanel implements OnInit, OnChanges {
     this.failure.set('');
     this.notice.set('');
     this.form.reset({
+      roomDescription: row?.roomDescription ?? '',
       roomTypeId: row?.roomTypeId ?? null,
       ratePerPersonPerNight: row?.ratePerPersonPerNight ?? null,
       contractedRoomCount: row?.contractedRoomCount ?? null,
@@ -258,7 +260,7 @@ export class OfferingPanel implements OnInit, OnChanges {
         );
         this.saving.set(false);
         this.mode.set(null);
-        this.notice.set('Offering saved. Confirmed reservations remain unchanged.');
+        this.notice.set('Offering saved successfully.');
       },
       error: (e) => {
         this.saving.set(false);
